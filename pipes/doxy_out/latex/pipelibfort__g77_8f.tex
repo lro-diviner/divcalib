@@ -1,0 +1,440 @@
+\hypertarget{pipelibfort__g77_8f}{\section{pipelibfort\-\_\-g77.\-f File Reference}
+\label{pipelibfort__g77_8f}\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}}
+}
+\subsection*{Functions/\-Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_aeaae93b6dc684342c79487a745a99a51}{adddesline} (pos, newstitle, newltitle, header, stitle, ltitle, nlines)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a8a8336a9de43f7daefefb8ac9ba79fac}{chkcmdkey} (c)
+\item 
+integer function \hyperlink{pipelibfort__g77_8f_ac98fc153e9cc6c46cd09a4bcbae2dae6}{close5} ()
+\item 
+integer function \hyperlink{pipelibfort__g77_8f_a02f39a677a711c769bbd2fe8c22e4f2e}{close6} ()
+\item 
+integer function \hyperlink{pipelibfort__g77_8f_afe940e5adaa17f7cdb0081228000d09a}{colsproc} (cols, stitle, colnum)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a61b134a644292f1f143d10d073d9cb78}{findcol} (char, cdesstitle, nc, col)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_acf76d7e0af8a4d1e7a1b8d50d4739390}{getcharval} (arg, value)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_ac1c58de61b7ee46ab7166316e1ea8c46}{getcmdchar} (keyword, number, reqoropt, ifound, value)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a567b5ca9b7bd0af6eedf1c988db9e706}{getcmdint} (keyword, number, reqoropt, ifound, value)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_aaa68fe2ce6013f2cba27f4cf85dbb29b}{getcmdreal} (keyword, number, reqoropt, ifound, value)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a9129bdbde4a26040a37c118c0b7334b5}{getcmdreals} (cdesstitle, ndeslines, nvals, ngood, idescol, vals)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a2d8503979198b8f2448f729e5683a394}{getintval} (arg, value)
+\item 
+integer function \hyperlink{pipelibfort__g77_8f_a275fead53d8835197d08cc4cc8adb752}{getlen} (string)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a45ad46cc0b60db26b8d4b7de85339138}{getnumval} (arg, numval)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a0efa42379f68585938b1d5ba0aaa3512}{getparam} (arg, param)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_aef060947b738b74ec1a20e9e10d9914a}{getrealval} (arg, value)
+\item 
+integer function \hyperlink{pipelibfort__g77_8f_ab54da8d38cd228aaf9d7e99b5b54874e}{icolnum} (colname, colnames, ncolnames)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a5c737d3c291fd9b2f044fd1846be82a5}{open5} ()
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a9d901279aff8d349ac9c4aa4a7a21237}{open6} ()
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_ae7b933ee92ff930ccca2af1f19b4e2d6}{openform} (myunit, myfile, mystatus)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a4a3a96633fe9c2da447872dcf96c8add}{openunform} (myunit, myfile, myaccess, mystatus, myrecl)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a1eca3ee376e5a7bd97f524c887db8c8d}{pdesread} (unit, des, header, stitle, ltitle, nlines)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_aaae06328c5bf55b850e70d772c565f66}{pdeswrite} (unit, des, header, stitle, ltitle, nlines)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_ac0fb3fe597c7b440fe8c68571c30eb2b}{postprocess} (value)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a2becb1505bcb9eae70d47254ab85ef05}{rdesfil} (unit, header, stitle, ltitle, nlines)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_adcc6bcf04e48f425b6d1692e04bada68}{subdesline} (pos, count, number, type, stitle, ltitle, units, format, nlines)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_ab652d28b0aba6acee788a8b67161570d}{uptolow} (string)
+\item 
+subroutine \hyperlink{pipelibfort__g77_8f_a69b264a7ce1eef222643464103ff8a72}{wdesfil} (unit, header, stitle, ltitle, nlines)
+\end{DoxyCompactItemize}
+
+
+\subsection{Function/\-Subroutine Documentation}
+\hypertarget{pipelibfort__g77_8f_aeaae93b6dc684342c79487a745a99a51}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!adddesline@{adddesline}}
+\index{adddesline@{adddesline}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{adddesline}]{\setlength{\rightskip}{0pt plus 5cm}subroutine adddesline (
+\begin{DoxyParamCaption}
+\item[{integer}]{pos, }
+\item[{character$\ast$($\ast$)}]{newstitle, }
+\item[{character$\ast$($\ast$)}]{newltitle, }
+\item[{character$\ast$($\ast$)}]{header, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{ltitle, }
+\item[{integer}]{nlines}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_aeaae93b6dc684342c79487a745a99a51}
+
+
+Definition at line 951 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a8a8336a9de43f7daefefb8ac9ba79fac}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!chkcmdkey@{chkcmdkey}}
+\index{chkcmdkey@{chkcmdkey}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{chkcmdkey}]{\setlength{\rightskip}{0pt plus 5cm}subroutine chkcmdkey (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{c}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a8a8336a9de43f7daefefb8ac9ba79fac}
+
+
+Definition at line 1623 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_ac98fc153e9cc6c46cd09a4bcbae2dae6}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!close5@{close5}}
+\index{close5@{close5}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{close5}]{\setlength{\rightskip}{0pt plus 5cm}integer function close5 (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_ac98fc153e9cc6c46cd09a4bcbae2dae6}
+
+
+Definition at line 1166 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a02f39a677a711c769bbd2fe8c22e4f2e}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!close6@{close6}}
+\index{close6@{close6}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{close6}]{\setlength{\rightskip}{0pt plus 5cm}integer function close6 (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a02f39a677a711c769bbd2fe8c22e4f2e}
+
+
+Definition at line 1172 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_afe940e5adaa17f7cdb0081228000d09a}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!colsproc@{colsproc}}
+\index{colsproc@{colsproc}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{colsproc}]{\setlength{\rightskip}{0pt plus 5cm}integer function colsproc (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{cols, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{integer, dimension($\ast$)}]{colnum}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_afe940e5adaa17f7cdb0081228000d09a}
+
+
+Definition at line 453 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a61b134a644292f1f143d10d073d9cb78}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!findcol@{findcol}}
+\index{findcol@{findcol}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{findcol}]{\setlength{\rightskip}{0pt plus 5cm}subroutine findcol (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{char, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{cdesstitle, }
+\item[{integer}]{nc, }
+\item[{integer}]{col}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a61b134a644292f1f143d10d073d9cb78}
+
+
+Definition at line 1663 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_acf76d7e0af8a4d1e7a1b8d50d4739390}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getcharval@{getcharval}}
+\index{getcharval@{getcharval}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getcharval}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getcharval (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{arg, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_acf76d7e0af8a4d1e7a1b8d50d4739390}
+
+
+Definition at line 193 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_ac1c58de61b7ee46ab7166316e1ea8c46}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getcmdchar@{getcmdchar}}
+\index{getcmdchar@{getcmdchar}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getcmdchar}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getcmdchar (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{keyword, }
+\item[{}]{number, }
+\item[{character$\ast$($\ast$)}]{reqoropt, }
+\item[{}]{ifound, }
+\item[{character$\ast$($\ast$)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_ac1c58de61b7ee46ab7166316e1ea8c46}
+
+
+Definition at line 1227 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a567b5ca9b7bd0af6eedf1c988db9e706}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getcmdint@{getcmdint}}
+\index{getcmdint@{getcmdint}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getcmdint}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getcmdint (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{keyword, }
+\item[{}]{number, }
+\item[{character$\ast$($\ast$)}]{reqoropt, }
+\item[{}]{ifound, }
+\item[{integer$\ast$4, dimension(number)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a567b5ca9b7bd0af6eedf1c988db9e706}
+
+
+Definition at line 1473 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_aaa68fe2ce6013f2cba27f4cf85dbb29b}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getcmdreal@{getcmdreal}}
+\index{getcmdreal@{getcmdreal}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getcmdreal}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getcmdreal (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{keyword, }
+\item[{}]{number, }
+\item[{character$\ast$($\ast$)}]{reqoropt, }
+\item[{}]{ifound, }
+\item[{real$\ast$8, dimension(number)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_aaa68fe2ce6013f2cba27f4cf85dbb29b}
+
+
+Definition at line 1351 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a9129bdbde4a26040a37c118c0b7334b5}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getcmdreals@{getcmdreals}}
+\index{getcmdreals@{getcmdreals}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getcmdreals}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getcmdreals (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{cdesstitle, }
+\item[{}]{ndeslines, }
+\item[{}]{nvals, }
+\item[{}]{ngood, }
+\item[{integer$\ast$4, dimension(ndeslines)}]{idescol, }
+\item[{real$\ast$8, dimension(nvals,ndeslines)}]{vals}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a9129bdbde4a26040a37c118c0b7334b5}
+
+
+Definition at line 1595 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a2d8503979198b8f2448f729e5683a394}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getintval@{getintval}}
+\index{getintval@{getintval}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getintval}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getintval (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{arg, }
+\item[{integer, dimension($\ast$)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a2d8503979198b8f2448f729e5683a394}
+
+
+Definition at line 255 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a275fead53d8835197d08cc4cc8adb752}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getlen@{getlen}}
+\index{getlen@{getlen}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getlen}]{\setlength{\rightskip}{0pt plus 5cm}integer function getlen (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{string}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a275fead53d8835197d08cc4cc8adb752}
+
+
+Definition at line 26 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a45ad46cc0b60db26b8d4b7de85339138}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getnumval@{getnumval}}
+\index{getnumval@{getnumval}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getnumval}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getnumval (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{arg, }
+\item[{integer}]{numval}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a45ad46cc0b60db26b8d4b7de85339138}
+
+
+Definition at line 133 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a0efa42379f68585938b1d5ba0aaa3512}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getparam@{getparam}}
+\index{getparam@{getparam}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getparam}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getparam (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{arg, }
+\item[{character$\ast$($\ast$)}]{param}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a0efa42379f68585938b1d5ba0aaa3512}
+
+
+Definition at line 72 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_aef060947b738b74ec1a20e9e10d9914a}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!getrealval@{getrealval}}
+\index{getrealval@{getrealval}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{getrealval}]{\setlength{\rightskip}{0pt plus 5cm}subroutine getrealval (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{arg, }
+\item[{real$\ast$8, dimension($\ast$)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_aef060947b738b74ec1a20e9e10d9914a}
+
+
+Definition at line 322 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_ab54da8d38cd228aaf9d7e99b5b54874e}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!icolnum@{icolnum}}
+\index{icolnum@{icolnum}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{icolnum}]{\setlength{\rightskip}{0pt plus 5cm}integer function icolnum (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{colname, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{colnames, }
+\item[{}]{ncolnames}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_ab54da8d38cd228aaf9d7e99b5b54874e}
+
+
+Definition at line 1178 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a5c737d3c291fd9b2f044fd1846be82a5}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!open5@{open5}}
+\index{open5@{open5}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{open5}]{\setlength{\rightskip}{0pt plus 5cm}subroutine open5 (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a5c737d3c291fd9b2f044fd1846be82a5}
+
+
+Definition at line 1155 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a9d901279aff8d349ac9c4aa4a7a21237}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!open6@{open6}}
+\index{open6@{open6}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{open6}]{\setlength{\rightskip}{0pt plus 5cm}subroutine open6 (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a9d901279aff8d349ac9c4aa4a7a21237}
+
+
+Definition at line 1159 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_ae7b933ee92ff930ccca2af1f19b4e2d6}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!openform@{openform}}
+\index{openform@{openform}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{openform}]{\setlength{\rightskip}{0pt plus 5cm}subroutine openform (
+\begin{DoxyParamCaption}
+\item[{integer}]{myunit, }
+\item[{character$\ast$($\ast$)}]{myfile, }
+\item[{character$\ast$($\ast$)}]{mystatus}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_ae7b933ee92ff930ccca2af1f19b4e2d6}
+
+
+Definition at line 1130 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a4a3a96633fe9c2da447872dcf96c8add}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!openunform@{openunform}}
+\index{openunform@{openunform}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{openunform}]{\setlength{\rightskip}{0pt plus 5cm}subroutine openunform (
+\begin{DoxyParamCaption}
+\item[{integer}]{myunit, }
+\item[{character$\ast$($\ast$)}]{myfile, }
+\item[{character$\ast$($\ast$)}]{myaccess, }
+\item[{character$\ast$($\ast$)}]{mystatus, }
+\item[{integer}]{myrecl}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a4a3a96633fe9c2da447872dcf96c8add}
+
+
+Definition at line 1139 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a1eca3ee376e5a7bd97f524c887db8c8d}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!pdesread@{pdesread}}
+\index{pdesread@{pdesread}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{pdesread}]{\setlength{\rightskip}{0pt plus 5cm}subroutine pdesread (
+\begin{DoxyParamCaption}
+\item[{integer}]{unit, }
+\item[{character$\ast$($\ast$)}]{des, }
+\item[{character$\ast$($\ast$)}]{header, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{ltitle, }
+\item[{integer}]{nlines}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a1eca3ee376e5a7bd97f524c887db8c8d}
+
+
+Definition at line 754 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_aaae06328c5bf55b850e70d772c565f66}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!pdeswrite@{pdeswrite}}
+\index{pdeswrite@{pdeswrite}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{pdeswrite}]{\setlength{\rightskip}{0pt plus 5cm}subroutine pdeswrite (
+\begin{DoxyParamCaption}
+\item[{integer}]{unit, }
+\item[{character$\ast$($\ast$)}]{des, }
+\item[{character$\ast$($\ast$)}]{header, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{ltitle, }
+\item[{integer}]{nlines}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_aaae06328c5bf55b850e70d772c565f66}
+
+
+Definition at line 834 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_ac0fb3fe597c7b440fe8c68571c30eb2b}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!postprocess@{postprocess}}
+\index{postprocess@{postprocess}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{postprocess}]{\setlength{\rightskip}{0pt plus 5cm}subroutine postprocess (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{value}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_ac0fb3fe597c7b440fe8c68571c30eb2b}
+
+
+Definition at line 1206 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a2becb1505bcb9eae70d47254ab85ef05}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!rdesfil@{rdesfil}}
+\index{rdesfil@{rdesfil}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{rdesfil}]{\setlength{\rightskip}{0pt plus 5cm}subroutine rdesfil (
+\begin{DoxyParamCaption}
+\item[{integer}]{unit, }
+\item[{character$\ast$($\ast$)}]{header, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{ltitle, }
+\item[{integer}]{nlines}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a2becb1505bcb9eae70d47254ab85ef05}
+
+
+Definition at line 582 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_adcc6bcf04e48f425b6d1692e04bada68}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!subdesline@{subdesline}}
+\index{subdesline@{subdesline}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{subdesline}]{\setlength{\rightskip}{0pt plus 5cm}subroutine subdesline (
+\begin{DoxyParamCaption}
+\item[{integer}]{pos, }
+\item[{integer, dimension($\ast$)}]{count, }
+\item[{integer, dimension($\ast$)}]{number, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{type, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{ltitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{units, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{format, }
+\item[{integer}]{nlines}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_adcc6bcf04e48f425b6d1692e04bada68}
+
+
+Definition at line 1075 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_ab652d28b0aba6acee788a8b67161570d}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!uptolow@{uptolow}}
+\index{uptolow@{uptolow}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{uptolow}]{\setlength{\rightskip}{0pt plus 5cm}subroutine uptolow (
+\begin{DoxyParamCaption}
+\item[{character$\ast$($\ast$)}]{string}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_ab652d28b0aba6acee788a8b67161570d}
+
+
+Definition at line 390 of file pipelibfort\-\_\-g77.\-f.
+
+\hypertarget{pipelibfort__g77_8f_a69b264a7ce1eef222643464103ff8a72}{\index{pipelibfort\-\_\-g77.\-f@{pipelibfort\-\_\-g77.\-f}!wdesfil@{wdesfil}}
+\index{wdesfil@{wdesfil}!pipelibfort_g77.f@{pipelibfort\-\_\-g77.\-f}}
+\subsubsection[{wdesfil}]{\setlength{\rightskip}{0pt plus 5cm}subroutine wdesfil (
+\begin{DoxyParamCaption}
+\item[{integer}]{unit, }
+\item[{character$\ast$($\ast$)}]{header, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{stitle, }
+\item[{character$\ast$($\ast$), dimension($\ast$)}]{ltitle, }
+\item[{integer}]{nlines}
+\end{DoxyParamCaption}
+)}}\label{pipelibfort__g77_8f_a69b264a7ce1eef222643464103ff8a72}
+
+
+Definition at line 683 of file pipelibfort\-\_\-g77.\-f.
+

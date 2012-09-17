@@ -1,0 +1,213 @@
+.TH "pipelibfort_gfortran.f" 3 "Tue Sep 4 2012" "Diviner pipes" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+pipelibfort_gfortran.f \- 
+.SH SYNOPSIS
+.br
+.PP
+.SS "Functions/Subroutines"
+
+.in +1c
+.ti -1c
+.RI "subroutine \fBadddesline\fP (pos, newstitle, newltitle, header, stitle, ltitle, nlines)"
+.br
+.ti -1c
+.RI "subroutine \fBchkcmdkey\fP (c)"
+.br
+.ti -1c
+.RI "integer function \fBclose5\fP ()"
+.br
+.ti -1c
+.RI "integer function \fBclose6\fP ()"
+.br
+.ti -1c
+.RI "integer function \fBcolsproc\fP (cols, stitle, colnum)"
+.br
+.ti -1c
+.RI "subroutine \fBfindcol\fP (char, cdesstitle, nc, col)"
+.br
+.ti -1c
+.RI "subroutine \fBgetcharval\fP (arg, value)"
+.br
+.ti -1c
+.RI "subroutine \fBgetcmdchar\fP (keyword, number, reqoropt, ifound, value)"
+.br
+.ti -1c
+.RI "subroutine \fBgetcmdint\fP (keyword, number, reqoropt, ifound, value)"
+.br
+.ti -1c
+.RI "subroutine \fBgetcmdreal\fP (keyword, number, reqoropt, ifound, value)"
+.br
+.ti -1c
+.RI "subroutine \fBgetcmdreals\fP (cdesstitle, ndeslines, nvals, ngood, idescol, vals)"
+.br
+.ti -1c
+.RI "subroutine \fBgetintval\fP (arg, value)"
+.br
+.ti -1c
+.RI "integer function \fBgetlen\fP (string)"
+.br
+.ti -1c
+.RI "subroutine \fBgetnumval\fP (arg, numval)"
+.br
+.ti -1c
+.RI "subroutine \fBgetparam\fP (arg, param)"
+.br
+.ti -1c
+.RI "subroutine \fBgetrealval\fP (arg, value)"
+.br
+.ti -1c
+.RI "integer function \fBicolnum\fP (colname, colnames, ncolnames)"
+.br
+.ti -1c
+.RI "subroutine \fBopen5\fP ()"
+.br
+.ti -1c
+.RI "subroutine \fBopen6\fP ()"
+.br
+.ti -1c
+.RI "subroutine \fBopenform\fP (myunit, myfile, mystatus)"
+.br
+.ti -1c
+.RI "subroutine \fBopenunform\fP (myunit, myfile, myaccess, mystatus, myrecl)"
+.br
+.ti -1c
+.RI "subroutine \fBpdesread\fP (unit, des, header, stitle, ltitle, nlines)"
+.br
+.ti -1c
+.RI "subroutine \fBpdeswrite\fP (unit, des, header, stitle, ltitle, nlines)"
+.br
+.ti -1c
+.RI "subroutine \fBpostprocess\fP (value)"
+.br
+.ti -1c
+.RI "subroutine \fBrdesfil\fP (unit, header, stitle, ltitle, nlines)"
+.br
+.ti -1c
+.RI "subroutine \fBsubdesline\fP (pos, count, number, type, stitle, ltitle, units, format, nlines)"
+.br
+.ti -1c
+.RI "subroutine \fBuptolow\fP (string)"
+.br
+.ti -1c
+.RI "subroutine \fBwdesfil\fP (unit, header, stitle, ltitle, nlines)"
+.br
+.in -1c
+.SH "Function/Subroutine Documentation"
+.PP 
+.SS "subroutine adddesline (integerpos, character*(*)newstitle, character*(*)newltitle, character*(*)header, character*(*), dimension(*)stitle, character*(*), dimension(*)ltitle, integernlines)"
+
+.PP
+Definition at line 951 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine chkcmdkey (character*(*)c)"
+
+.PP
+Definition at line 1623 of file pipelibfort_gfortran\&.f\&.
+.SS "integer function close5 ()"
+
+.PP
+Definition at line 1166 of file pipelibfort_gfortran\&.f\&.
+.SS "integer function close6 ()"
+
+.PP
+Definition at line 1172 of file pipelibfort_gfortran\&.f\&.
+.SS "integer function colsproc (character*(*), dimension(*)cols, character*(*), dimension(*)stitle, integer, dimension(*)colnum)"
+
+.PP
+Definition at line 453 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine findcol (character*(*)char, character*(*), dimension(*)cdesstitle, integernc, integercol)"
+
+.PP
+Definition at line 1663 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getcharval (character*(*)arg, character*(*), dimension(*)value)"
+
+.PP
+Definition at line 193 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getcmdchar (character*(*)keyword, number, character*(*)reqoropt, ifound, character*(*)value)"
+
+.PP
+Definition at line 1227 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getcmdint (character*(*)keyword, number, character*(*)reqoropt, ifound, integer*4, dimension(number)value)"
+
+.PP
+Definition at line 1473 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getcmdreal (character*(*)keyword, number, character*(*)reqoropt, ifound, real*8, dimension(number)value)"
+
+.PP
+Definition at line 1351 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getcmdreals (character*(*), dimension(*)cdesstitle, ndeslines, nvals, ngood, integer*4, dimension(ndeslines)idescol, real*8, dimension(nvals,ndeslines)vals)"
+
+.PP
+Definition at line 1595 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getintval (character*(*)arg, integer, dimension(*)value)"
+
+.PP
+Definition at line 255 of file pipelibfort_gfortran\&.f\&.
+.SS "integer function getlen (character*(*)string)"
+
+.PP
+Definition at line 26 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getnumval (character*(*)arg, integernumval)"
+
+.PP
+Definition at line 133 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getparam (character*(*)arg, character*(*)param)"
+
+.PP
+Definition at line 72 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine getrealval (character*(*)arg, real*8, dimension(*)value)"
+
+.PP
+Definition at line 322 of file pipelibfort_gfortran\&.f\&.
+.SS "integer function icolnum (character*(*)colname, character*(*), dimension(*)colnames, ncolnames)"
+
+.PP
+Definition at line 1178 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine open5 ()"
+
+.PP
+Definition at line 1155 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine open6 ()"
+
+.PP
+Definition at line 1159 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine openform (integermyunit, character*(*)myfile, character*(*)mystatus)"
+
+.PP
+Definition at line 1130 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine openunform (integermyunit, character*(*)myfile, character*(*)myaccess, character*(*)mystatus, integermyrecl)"
+
+.PP
+Definition at line 1139 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine pdesread (integerunit, character*(*)des, character*(*)header, character*(*), dimension(*)stitle, character*(*), dimension(*)ltitle, integernlines)"
+
+.PP
+Definition at line 754 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine pdeswrite (integerunit, character*(*)des, character*(*)header, character*(*), dimension(*)stitle, character*(*), dimension(*)ltitle, integernlines)"
+
+.PP
+Definition at line 834 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine postprocess (character*(*)value)"
+
+.PP
+Definition at line 1206 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine rdesfil (integerunit, character*(*)header, character*(*), dimension(*)stitle, character*(*), dimension(*)ltitle, integernlines)"
+
+.PP
+Definition at line 582 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine subdesline (integerpos, integer, dimension(*)count, integer, dimension(*)number, character*(*), dimension(*)type, character*(*), dimension(*)stitle, character*(*), dimension(*)ltitle, character*(*), dimension(*)units, character*(*), dimension(*)format, integernlines)"
+
+.PP
+Definition at line 1075 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine uptolow (character*(*)string)"
+
+.PP
+Definition at line 390 of file pipelibfort_gfortran\&.f\&.
+.SS "subroutine wdesfil (integerunit, character*(*)header, character*(*), dimension(*)stitle, character*(*), dimension(*)ltitle, integernlines)"
+
+.PP
+Definition at line 683 of file pipelibfort_gfortran\&.f\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for Diviner pipes from the source code\&.
