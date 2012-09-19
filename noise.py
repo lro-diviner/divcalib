@@ -6,8 +6,9 @@ import numpy as np
 from diviner import read_pprint, read_pds, divplot
 from scipy import fft
 
-# all available channels in pprint files for noise
-channels = [1,8,9]
+# choose channel
+channel = 9
+
 # choose detector
 det = 11
 
@@ -22,14 +23,12 @@ def plot_channels(ax, data):
     for tb,ch in zip(data,channels):
         ax.plot(tb, label="{0}_{1}".format(ch, det))
 
-def plot_all(fig, tbdata, azdata, elevdata, title):
-    ax = fig.add_subplot(111)
-    plot_channels(ax, tbdata)
+def plot_all(ax, tbdata, azdata, elevdata, title):
+    ax.plot(tbdata, label='tb')
     ax.plot(azdata, label='az_cmd')
     ax.plot(elevdata, label='el_cmd')
     ax.set_title(title)
     ax.legend(loc='best')
-    return ax
 
 def get_abs_fft(data):
     f = fft(data)
@@ -45,12 +44,10 @@ def get_abs_fft(data):
     print(len(f_sorted))
     return t,abs(f_sorted)
     
-def plot_fft(fig, datatuple, title):
-    ax = fig.add_subplot(111)
+def plot_fft(ax, datatuple, title):
     for t,data in datatuple:
         ax.plot(t,data)
     ax.set_title(title)
-    return ax
    
 def main(): 
     fclean = '/Users/maye/data/diviner/201204090110_RDR.TAB'
@@ -65,7 +62,7 @@ def main():
     print('Reading dataframes.')
     # dfclean = read_pds(fclean)
     dfclean = store['dfclean']
-    dfnoise = store['dfnoise1']
+    dfnoise = [store['dfnoise1'],store['dfnoise2'],store['dfnoise3']]
     print('Done.')
     store.close()
     # # fnoise was created by pprint, different format therefore different reader
@@ -73,34 +70,42 @@ def main():
 
     ##############
     ### watch out!
-    dfnoise.tb[dfnoise.tb < -9990] = 0
+    for df in dfnoise:
+        df.tb[df.tb < -9990] = 0
+        df.tb[np.isnan(df.tb)] = 0
     dfclean.tb[dfclean.tb < -9990] = 0
-    dfnoise.tb[np.isnan(dfnoise.tb)] = 0
     dfclean.tb[np.isnan(dfclean.tb)] = 0
     ### watch this!
     ##############
 
-    tbcleans = [get_label(dfclean, 'tb', ch, det) for ch in channels]
-    azclean = get_label(dfclean, 'az_cmd', 1)
-    elevclean = get_label(dfclean, 'el_cmd', 1)
-    tbnoise = [get_label(dfnoise, 'tb', ch, det) for ch in channels]
-    aznoise = get_label(dfnoise, 'az_cmd', 1)
-    elevnoise = get_label(dfnoise, 'el_cmd', 1)
+    tbcleans = get_label(dfclean, 'tb', channel, det)
+    azclean = get_label(dfclean, 'az_cmd', channel)
+    elevclean = get_label(dfclean, 'el_cmd', channel)
+    tbnoise = [get_label(df, 'tb', channel, det) for df in dfnoise]
+    aznoise = [get_label(df, 'az_cmd', channel) for df in dfnoise]
+    elevnoise = [get_label(df, 'el_cmd', channel) for df in dfnoise]
 
-    figclean = plt.figure()
-    axclean = plot_all(figclean, tbcleans, azclean, elevclean, 'Random PDS dataset')
+    fig, axes = plt.subplots(2,2, figsize=(8,8))
+    
+    plot_all(axes[0,0], tbcleans, azclean, elevclean, 
+        'Random PDS dataset, Ch {0}, Det {1}'.format(channel,det))
 
-    fignoise = plt.figure()
-    axnoise = plot_all(fignoise, tbnoise, aznoise, elevnoise, 'Noisy dataset')
+    for i,tbdata,azdata,elevdata,ax in zip([1,2,3],
+                                         tbnoise,
+                                         aznoise,
+                                         elevnoise,
+                                         axes.flatten()[1:]):
+        plot_all(ax, tbdata, azdata, elevdata, 
+            'Noisy dataset {0}, Ch {1}, Det {2}'.format(i,channel,det))
 
-    cleantup = [get_abs_fft(data) for data in tbcleans]
+    cleantup = get_abs_fft(tbcleans)
     noisetub = [get_abs_fft(data) for data in tbnoise]
     
-    figfftclean = plt.figure()
-    axfftclean = plot_fft(figfftclean, cleantup, 'FFT of random data')
-    
-    figfftnoise = plt.figure()
-    axfftnoise = plot_fft(figfftnoise, noisetub, 'FFT of noisy data')
+    # figff, axes = plt.figure()
+    # axfftclean = plot_fft(, cleantup, 'FFT of random data')
+    # 
+    # figfftnoise = plt.figure()
+    # axfftnoise = plot_fft(figfftnoise, noisetub, 'FFT of noisy data')
 
     plt.show()
     
