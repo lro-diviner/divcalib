@@ -20,20 +20,33 @@ def parse_header_line(line):
     return [i.strip() for i in newline]
     
 def get_headers_pprint(fname):
+    """Get headers from pprint output.
+    
+    >>> fname = '/Users/maye/data/diviner/noise2.tab'
+    >>> headers = get_headers_pprint(fname)
+    >>> headers[:7]
+    ['date', 'month', 'year', 'hour', 'minute', 'second', 'jdate']
+    """
     with open(fname) as f:
-        headers = f.readline().strip().split()
+        headers = parse_header_line(f.readline())
     return headers
 
-def get_headers_pds(fname):
+def get_headers_pds_rdr(fname):
+    """Get headers from PDS RDR files.
+    
+    >>> fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
+    >>> headers = get_headers_pds_rdr(fname)
+    >>> headers[:7]
+    ['utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk']
+    """
     with open(fname) as f:
         for i in range(3):
             f.readline()
-        # [1:] pops off the first '#' character from the line
-        headers = f.readline().strip().split()
+        headers = parse_header_line(f.readline())
         if '#' in headers[0]:
             headers.pop(0)
     # previous strip only removes whitespace, now strip off comma
-    return [i.rstrip(',') for i in headers]
+    return headers
     
 def read_pprint(fname):
     "Read tabular diviner data into pandas data frame and return it."
@@ -51,7 +64,7 @@ def read_pprint(fname):
     dataframe.sort('jdate',inplace=True)
     return dataframe
 
-def read_pds(fname,nrows=None):
+def read_pds_rdr(fname,nrows=None):
     "Read tabular files from the PDS depository."
     headers = get_headers_pds(fname)
     return pandas.io.parsers.read_csv(fname, names=headers, 
