@@ -3,17 +3,35 @@ import pandas
 import numpy as np
 from dateutil.parser import parse
 
+def parse_header_line(line):
+    """Parse header lines.
+    
+    >>> s = ' a   b  c    '
+    >>> parse_header_line(s)
+    ['a', 'b', 'c']
+    >>> s = '  a, b  ,   c '
+    >>> parse_header_line(s)
+    ['a', 'b', 'c']
+    """
+    if ',' in line:
+        newline = line.split(',')
+    else:
+        newline = line.split()
+    return [i.strip() for i in newline]
+    
 def get_headers_pprint(fname):
     with open(fname) as f:
         headers = f.readline().strip().split()
     return headers
-    
+
 def get_headers_pds(fname):
     with open(fname) as f:
         for i in range(3):
             f.readline()
         # [1:] pops off the first '#' character from the line
-        headers = f.readline().strip().split()[1:]
+        headers = f.readline().strip().split()
+        if '#' in headers[0]:
+            headers.pop(0)
     # previous strip only removes whitespace, now strip off comma
     return [i.rstrip(',') for i in headers]
     
