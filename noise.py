@@ -7,7 +7,7 @@ from diviner import read_pprint, read_pds, divplot
 from scipy import fft
 
 # choose channel
-channel = 9
+channel = 1
 
 # choose detector
 det = 11
@@ -32,21 +32,19 @@ def plot_all(ax, tbdata, azdata, elevdata, title):
 
 def get_abs_fft(data):
     f = fft(data)
-    print(len(f))
     half = len(f)/2
     fix = 0
     if isodd(len(f)):
         fix = 1
-    print(half)
     t = np.arange(-half,half+fix,1)
-    print(len(t))
     f_sorted = np.concatenate( (f[half:], f[:half]) )
-    print(len(f_sorted))
     return t,abs(f_sorted)
     
 def plot_fft(ax, datatuple, title):
-    for t,data in datatuple:
-        ax.plot(t,data)
+    t, data = datatuple
+    ax.semilogy(t,data)
+    ax.set_xlim(0,0.5*len(data))
+    ax.set_ylim(0,0.2*data.max())
     ax.set_title(title)
    
 def main(): 
@@ -85,10 +83,10 @@ def main():
     aznoise = [get_label(df, 'az_cmd', channel) for df in dfnoise]
     elevnoise = [get_label(df, 'el_cmd', channel) for df in dfnoise]
 
-    fig, axes = plt.subplots(2,2, figsize=(8,8))
+    fig, axes = plt.subplots(2,2, figsize=(10,10))
     
     plot_all(axes[0,0], tbcleans, azclean, elevclean, 
-        'Random PDS dataset, Ch {0}, Det {1}'.format(channel,det))
+        'Random 2012 PDS dataset, Ch {0}, Det {1}'.format(channel,det))
 
     for i,tbdata,azdata,elevdata,ax in zip([1,2,3],
                                          tbnoise,
@@ -99,13 +97,17 @@ def main():
             'Noisy dataset {0}, Ch {1}, Det {2}'.format(i,channel,det))
 
     cleantup = get_abs_fft(tbcleans)
+    print(len(cleantup))
     noisetub = [get_abs_fft(data) for data in tbnoise]
     
-    # figff, axes = plt.figure()
-    # axfftclean = plot_fft(, cleantup, 'FFT of random data')
-    # 
-    # figfftnoise = plt.figure()
-    # axfftnoise = plot_fft(figfftnoise, noisetub, 'FFT of noisy data')
+    figff, axes = plt.subplots(2,2, figsize=(10,10))
+    plot_fft(axes[0,0], cleantup, 'FFT of a 2012 PDS dataset')
+    
+    for i,ftbdata,ax in zip([1,2,3],
+                            noisetub,
+                            axes.flatten()[1:]):
+        plot_fft(ax, ftbdata, 
+            'FFT of noisy data {0}, Ch {1}, Det {2}'.format(i,channel, det))
 
     plt.show()
     
