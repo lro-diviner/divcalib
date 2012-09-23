@@ -35,7 +35,7 @@ def get_headers_pds(fname):
     """Get headers from PDS RDR files.
     
     >>> fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
-    >>> headers = get_headers_pds_rdr(fname)
+    >>> headers = get_headers_pds(fname)
     >>> headers[:7]
     ['utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk']
     """
