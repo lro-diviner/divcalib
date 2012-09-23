@@ -51,7 +51,7 @@ def make_date_index(dataframe):
         d.year, d.month, d.date, d.hour, d.minute, d.second)
     return di
 
-def divplot(df, col, ch_nr=1, det=11):
+def divplot(df, col, c=1, det=11):
     plt.plot(df[col][(df.c==ch_nr) & (df.det==det)])
     
     
