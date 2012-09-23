@@ -31,7 +31,7 @@ def get_headers_pprint(fname):
         headers = parse_header_line(f.readline())
     return headers
 
-def get_headers_pds_rdr(fname):
+def get_headers_pds(fname):
     """Get headers from PDS RDR files.
     
     >>> fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
@@ -64,7 +64,7 @@ def read_pprint(fname):
     dataframe.sort('jdate',inplace=True)
     return dataframe
 
-def read_pds_rdr(fname,nrows=None):
+def read_pds(fname,nrows=None):
     "Read tabular files from the PDS depository."
     headers = get_headers_pds(fname)
     return pandas.io.parsers.read_csv(fname, names=headers, 
