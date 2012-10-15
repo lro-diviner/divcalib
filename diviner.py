@@ -87,5 +87,10 @@ def divplot(df, col, c=1, det=11):
     plt.plot(df[col][(df.c==ch_nr) & (df.det==det)])
     
     
-
-
+def read_rdrplus(fpath,nrows):
+    with open(fpath) as f:
+        line = f.readline()
+        headers = parse_header_line(line)
+        
+    return pandas.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
+                                      skiprows=1, nrows=nrows)
