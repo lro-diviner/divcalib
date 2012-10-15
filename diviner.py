@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from matplotlib import pyplot as plt
 import pandas
 import numpy as np
@@ -67,7 +68,7 @@ def read_pprint(fname):
 def read_pds(fname,nrows=None):
     "Read tabular files from the PDS depository."
     headers = get_headers_pds(fname)
-    return pandas.io.parsers.read_csv(fname, names=headers, 
+    return pandas.io.parsers.read_csv(fname, names=headers, na_values=['-9999'], 
                                       skiprows=4, nrows=nrows)
     
 def make_date_index(dataframe):
