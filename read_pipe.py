@@ -2,6 +2,8 @@ import sys
 from collections import OrderedDict
 import struct
 import time
+import pandas
+import matplotlib.pyplot as plt
 
 def split_by_n(seq, n):
     while seq:
@@ -44,7 +46,10 @@ def main():
         if (len(l) % 100000) == 0:
             print('100 k lines read.')
     print len(l), 'lines of data collected.'
-        
+    return d,l    
         
 if __name__ == '__main__':
-    main()
+    d,l = main()
+    pdata = pandas.DataFrame(l,columns=d.keys())
+    print(pdata)
+    print(pdata.describe())
