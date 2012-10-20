@@ -3,6 +3,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 import pandas
+from os.path import splitext
 
 def split_by_n(seq, n):
     while seq:
@@ -34,7 +35,7 @@ def parse_des_header(f):
 def main(f):
     "f has to expose the file methods readline and seek"
     d = parse_des_header(f)
-    
+    dataset_name = splitext(f.name)[0]
     # each colum is piped as a double, so 8 chars.
     ncols = len(d.keys())
 
@@ -43,9 +44,10 @@ def main(f):
     print('\nStarting the read.')
     data = np.fromfile(f, dtype = rec_dtype)
     print data.shape
-    # pdata = pandas.DataFrame(l,columns=d.keys())
-    # print(pdata)
-    # print(pdata.describe())        
+    df = pandas.DataFrame(data)
+    store = pandas.HDFStore(dataset_name + '.h5','w')
+    store[dataset_name] = df
+    store.close()
 
 if __name__ == '__main__':
     with open(sys.argv[1]) as f:
