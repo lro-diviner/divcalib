@@ -35,6 +35,8 @@ def parse_des_header(f):
 def main(f):
     "f has to expose the file methods readline and seek"
     d = parse_des_header(f)
+    # f.name is the way to get to the filename of a file handle
+    # splitext creates tuple with everything until extension and .extension
     dataset_name = splitext(f.name)[0]
     # each colum is piped as a double, so 8 chars.
     ncols = len(d.keys())
