@@ -4,6 +4,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 from os.path import splitext
+import time
 
 def split_by_n(seq, n):
     while seq:
@@ -44,7 +45,9 @@ def main(f):
     rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
     print(rec_dtype)
     print('\nStarting the read.')
+    t1 = time.time()
     data = np.fromfile(f, dtype = rec_dtype)
+    print("Reading time: {0}".format(time.time()-t1))
     print data.shape
     df = pandas.DataFrame(data)
     store = pandas.HDFStore(dataset_name + '.h5','w')
