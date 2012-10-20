@@ -2,6 +2,7 @@
 import sys
 from collections import OrderedDict
 import numpy as np
+import pandas
 
 def split_by_n(seq, n):
     while seq:
@@ -39,8 +40,9 @@ def main(f):
 
     rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
     print(rec_dtype)
+    print('\nStarting the read.')
     data = np.fromfile(f, dtype = rec_dtype)
-    print data
+    print data.shape
     # pdata = pandas.DataFrame(l,columns=d.keys())
     # print(pdata)
     # print(pdata.describe())        
