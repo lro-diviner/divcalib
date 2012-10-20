@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 import pandas
-from os.path import splitext
+from os.path import splitext,basename,dirname,join
 import time
 
 def split_by_n(seq, n):
@@ -38,7 +38,10 @@ def main(f):
     d = parse_des_header(f)
     # f.name is the way to get to the filename of a file handle
     # splitext creates tuple with everything until extension and .extension
-    dataset_name = splitext(f.name)[0]
+    root = dirname(f.name)
+    fname = f.name
+    dataset_name = splitext(basename(fname))[0]
+    
     # each colum is piped as a double, so 8 chars.
     ncols = len(d.keys())
 
@@ -50,7 +53,9 @@ def main(f):
     print("Reading time: {0}".format(time.time()-t1))
     print data.shape
     df = pandas.DataFrame(data)
-    store = pandas.HDFStore(dataset_name + '.h5','w')
+    newfname = join(root,dataset_name+'.h5')
+    print 'New filename:',newfname
+    store = pandas.HDFStore(newfname,'w')
     store[dataset_name] = df
     store.close()
 
