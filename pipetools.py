@@ -33,12 +33,11 @@ def parse_des_header(f):
             break
     return d
     
-def main(f):
+def des2hdf(f):
     "f has to expose the file methods readline and seek"
     d = parse_des_header(f)
     # f.name is the way to get to the filename of a file handle
     # splitext creates tuple with everything until extension and .extension
-    root = dirname(f.name)
     fname = f.name
     dataset_name = splitext(basename(fname))[0]
     
@@ -53,12 +52,20 @@ def main(f):
     print("Reading time: {0}".format(time.time()-t1))
     print data.shape
     df = pandas.DataFrame(data)
-    newfname = join(root,dataset_name+'.h5')
+    newfname = join('/luna1/maye',dataset_name+'.h5')
     print 'New filename:',newfname
-    store = pandas.HDFStore(newfname,'w')
+    store = pandas.HDFStore(newfname,'w')#,complevel=1,complib='zlib')
     store[dataset_name] = df
     store.close()
 
+def time_reading(f):
+    t1 = time.time()
+    store = pandas.HDFStore(f,'r')
+    dataset_name = splitext(basename(f))[0].split('_')[0]
+    df = store[dataset_name]
+    print("Reading time: {0}".format(time.time()-t1))
+    store.close()
+    
 if __name__ == '__main__':
     with open(sys.argv[1]) as f:
-        main(f)
+        des2hdf(f)
