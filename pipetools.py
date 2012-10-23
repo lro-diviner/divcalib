@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 import pandas
-from os.path import splitext,basename,dirname,join
+from os.path import splitext,basename,join
 import time
 
 def split_by_n(seq, n):
