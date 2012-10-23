@@ -3,6 +3,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 import pandas
+import os
 from os.path import splitext,basename,join
 import time
 
@@ -33,22 +34,24 @@ def parse_des_header(f):
             break
     return d
     
-def des2hdf(f):
+def des2hdf(fname,cleanup=True):
     "f has to expose the file methods readline and seek"
-    d = parse_des_header(f)
-    # f.name is the way to get to the filename of a file handle
-    # splitext creates tuple with everything until extension and .extension
-    fname = f.name
-    dataset_name = splitext(basename(fname))[0]
+    with open(fname) as f:
+        d = parse_des_header(f)
+        # f.name is the way to get to the filename of a file handle
+        # splitext creates tuple with everything until extension and .extension
+        dataset_name = splitext(basename(fname))[0]
     
-    # each colum is piped as a double, so 8 chars.
-    ncols = len(d.keys())
+        # each colum is piped as a double, so 8 chars.
+        ncols = len(d.keys())
 
-    rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
-    print(rec_dtype)
-    print('\nStarting the read.')
-    t1 = time.time()
-    data = np.fromfile(f, dtype = rec_dtype)
+        rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
+        print(rec_dtype)
+        print('\nStarting the read.')
+        t1 = time.time()
+        data = np.fromfile(f, dtype = rec_dtype)
+    if cleanup:
+        os.remove(fname)
     print("Reading time: {0}".format(time.time()-t1))
     print data.shape
     df = pandas.DataFrame(data)
@@ -67,5 +70,4 @@ def time_reading(f):
     store.close()
     
 if __name__ == '__main__':
-    with open(sys.argv[1]) as f:
-        des2hdf(f)
+        des2hdf(sys.argv[1])
