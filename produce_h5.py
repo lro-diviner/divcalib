@@ -19,21 +19,24 @@ fpaths = glob.glob(srcdir+'/*.zip')
 # descriptor files that have not been converted to hdf yet
 despaths = glob.glob(destdir+'/*.des')
 
-for despath in despaths:
-    print despath
-    des2hdf(despath)
-    
-for fpath in fpaths:
+def rdrp2hdf(fpath):
+    """Again, fpath/fname only used to define the time-stamp for rdrp."""
     fname = os.path.basename(fpath)
     timestamp = fname.split('_')[0]
     if os.path.exists(os.path.join(destdir,timestamp+'.h5')):
         print timestamp,'exists.'
-        continue
+        return
     newfname = os.path.join(destdir,timestamp+'.des')
     cmd = 'rdrp daterange=' + timestamp + ' > ' + newfname
     print(cmd)
-    # call(cmd, shell=True)
+    call(cmd, shell=True)
     print("Produced {}.des".format(timestamp))
-    break
+    des2hdf(newfname)
     
+pool = Pool(3)
+if despaths:
+    print "Found des files. First converting them:", despaths
+    pool.map(des2hdf, despaths)
+pool.map(rdrp2hdf, fpaths)    
+
     
