@@ -46,8 +46,7 @@ def des2hdf(fname,cleanup=True):
         ncols = len(d.keys())
 
         rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
-        print(rec_dtype)
-        print('\nStarting the read.')
+        print('\nStarting the read of {0}'.format(fname))
         t1 = time.time()
         data = np.fromfile(f, dtype = rec_dtype)
     if cleanup:
