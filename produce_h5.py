@@ -2,8 +2,12 @@
 import os
 import glob
 from pipetools import des2hdf
-from subprocess import call
+import subprocess as sp
 from multiprocessing import Pool
+from pipetools import parse_des_header
+import numpy as np
+import pandas
+import time
 
 # working only with the testdata range that was provided by JPL
 # this is only done to define the time range
@@ -27,11 +31,25 @@ def rdrp2hdf(fpath):
         print timestamp,'exists.'
         return
     newfname = os.path.join(destdir,timestamp+'.des')
-    cmd = 'rdrp daterange=' + timestamp + ' > ' + newfname
+    cmd = 'rdrp daterange=' + timestamp
     print(cmd)
-    call(cmd, shell=True)
-    print("Produced {}.des".format(timestamp))
-    des2hdf(newfname)
+    proc = sp.Popen(cmd, stdout = sp.PIPE, shell=True)
+
+    d = parse_des_header(proc.stdout)
+    rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
+
+    data = bytearray(proc.stdout.read())
+    print('\nStarting the read of {0}'.format(timestamp))
+    t1 = time.time()
+    ndata = np.frombuffer(data, dtype = rec_dtype)
+    print("Reading time: {0}".format(time.time()-t1))
+    print ndata.shape
+    df = pandas.DataFrame(ndata)
+    newfname = os.path.join('/luna1/maye',timestamp+'.h5')
+    print 'New filename:',newfname
+    store = pandas.HDFStore(newfname,'w')
+    store[timestamp] = df
+    store.close()
     
 pool = Pool(3)
 if despaths:
