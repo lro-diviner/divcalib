@@ -34,31 +34,25 @@ def parse_des_header(f):
             break
     return d
     
-def des2hdf(fname,cleanup=True):
-    "f has to expose the file methods readline and seek"
-    with open(fname) as f:
-        d = parse_des_header(f)
-        # f.name is the way to get to the filename of a file handle
-        # splitext creates tuple with everything until extension and .extension
-        dataset_name = splitext(basename(fname))[0]
+def des2hdf(f, dataset_name):
+    d = parse_des_header(f)
     
-        # each colum is piped as a double, so 8 chars.
-        ncols = len(d.keys())
-
-        rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
-        print('\nStarting the read of {0}'.format(fname))
-        t1 = time.time()
-        data = np.fromfile(f, dtype = rec_dtype)
-    if cleanup:
-        os.remove(fname)
+    rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
+    
+    # read all from the point where parse_des_header has left off
+    datastr = f.read()
+    print('\nStarting the read of {0}'.format(dataset_name))
+    t1 = time.time()
+    data = np.fromstring(datastr, dtype = rec_dtype)
     print("Reading time: {0}".format(time.time()-t1))
     print data.shape
     df = pandas.DataFrame(data)
     newfname = join('/luna1/maye',dataset_name+'.h5')
     print 'New filename:',newfname
-    store = pandas.HDFStore(newfname,'w')#,complevel=1,complib='zlib')
+    store = pandas.HDFStore(newfname,'w')
     store[dataset_name] = df
     store.close()
+    f.close()
 
 def time_reading(f):
     t1 = time.time()
