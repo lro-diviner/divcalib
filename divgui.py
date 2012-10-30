@@ -1,24 +1,33 @@
-#  Copyright (c) 2007, Enthought, Inc.
-#  License: BSD Style.# Imports:
 from traits.api \
-    import HasTraits, List
-
+    import HasTraits, List, Property, File, Directory, Instance
 from traitsui.api \
-    import Item, Group, View, CheckListEditor
-
+    import Item, Group, View, CheckListEditor,FileEditor
+from chaco.api \
+    import ArrayPlotData, Plot
+from enable.component_editor import ComponentEditor    
 from numpy import arange
+import os
+import diviner as d
 
-# Define the demo class:
-class CheckListEditorDemo ( HasTraits ):
-    """ Define the main CheckListEditor demo class. """
+def get_cond(c,det):
+    return '(df.c==' + c + ') & (df.det==' + det + ')'
 
+class DivGui ( HasTraits ):
+    """ Define the main DivGui class. """
+
+    workdir = Directory(os.path.join(os.environ['HOME'],'data','diviner'))
+    fpath = File('/Users/maye/data/diviner/',
+                 filter=['*.h5','*.tab','*.TAB'])
     no_of_ch = 9
     no_of_det = 21
-    # Define a trait for each of three formations:
-    checklist_c = List( editor = CheckListEditor(
+    selection = Property
+    plot = Instance(Plot)
+    # Channel List
+    checklist_c = List( value=['1'], editor = CheckListEditor(
                                values = [str(i) for i in arange(no_of_ch)+1],
                                cols   = no_of_ch/2+1 ) )
-    checklist_det = List( editor = CheckListEditor(
+    # Detectors List
+    checklist_det = List( value=['11'], editor = CheckListEditor(
                                values = [str(i) for i in arange(no_of_det)+1],
                                cols   = no_of_det/2+1 ) )
 
@@ -30,24 +39,41 @@ class CheckListEditorDemo ( HasTraits ):
         Item( '_' ),
         Item( 'checklist_det', style = 'custom',     label = 'Detectors' ),
         Item( '_' ),
-        label = 'Ch and Det choice'
+        label = 'Channel and Detector choice'
     )
 
     # The view includes one group per column formation.  These will be displayed
     # on separate tabbed panels.
     view1 = View(
+        Item('fpath', label='Inputfile'),
         cl_ch_group,
-        title     = 'CheckListEditor',
+        Item('plot', editor=ComponentEditor(), show_label=False),
+        title     = 'DivGui',
         buttons   = [ 'OK' ],
-        resizable = True
+        width=500, height=500,
+            resizable = True
     )
 
     def _checklist_c_changed(self):
-        print self.checklist_c
+        for c in self.checklist_c:
+            for det in self.checklist_det:
+                print get_cond(c,det)
+    
+    def _checklist_det_changed(self):
+        for c in self.checklist_c:
+            for det in self.checklist_det:
+                print get_cond(c,det)
+    
+    def _fpath_changed(self):
+        print "Reading",self.fpath
+        # self.df = d.read_pds(self.fpath)
+        # print self.df.columns
+    def _get_selection(self):
+        return '(df.c=='+self.checklist_c[0]+') & (df.det==' + \
+                self.checklist_det[0]+')'
+# Create the GUI:
+gui = DivGui()
 
-# Create the demo:
-demo = CheckListEditorDemo()
-
-# Run the demo (if invoked from the command line):
+# Run the GUI (if invoked from the command line):
 if __name__ == '__main__':
-    demo.configure_traits()
+    gui.configure_traits()
