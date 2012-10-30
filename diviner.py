@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import pandas
 import numpy as np
 from dateutil.parser import parse
+from multiprocessing import Pool
 
 def parse_header_line(line):
     """Parse header lines.
@@ -84,7 +85,7 @@ def make_date_index(dataframe):
     return di
 
 def divplot(df, col, c=1, det=11):
-    plt.plot(df[col][(df.c==ch_nr) & (df.det==det)])
+    plt.plot(df[col][(df.c==c) & (df.det==det)])
     
     
 def read_rdrplus(fpath,nrows):
@@ -94,3 +95,20 @@ def read_rdrplus(fpath,nrows):
         
     return pandas.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
                                       skiprows=1, nrows=nrows)
+
+def get_df_from_h5(fname):
+    """Provide df from h5 file."""
+    store = pandas.HDFStore(fname)
+    return store[store.keys()[0]]
+
+def get_channel_means(df, channel):
+    """Loop over detectors"""
+    dfc = df[df.c==channel]
+    jdates = dfc.jdate[dfc.det==1]
+    jdates.sort()
+    c_means = []
+    for i,jdate in enumerate(jdates):
+        if i % 1000 == 0 : print i 
+        c_means.append(dfc.counts[df.jdate==jdate].mean())
+    return np.array(c_means)
+    
