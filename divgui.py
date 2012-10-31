@@ -1,5 +1,5 @@
 from traits.api \
-    import HasTraits, List, Property, File, Directory, Instance
+    import HasTraits, List, Property, File, Instance, Bool, Range, Directory
 from traitsui.api \
     import Item, Group, View, CheckListEditor,FileEditor
 from chaco.api \
@@ -9,14 +9,24 @@ from numpy import arange
 import os
 import diviner as d
 
-def get_cond(c,det):
-    return '(df.c==' + c + ') & (df.det==' + det + ')'
+class DivChanDet(HasTraits):
+    c = Range(1,9)
+    det = Range(1,21)
+    plotted = Bool(False)
+    def __call__(self):
+        """Constructs boolean condition for picking channel and detector."""
+        return '(df.c==' + str(self.c) + ') & (df.det==' + str(self.det) + ')'
+    
+class PlotManager(HasTraits):
+    """Fill me."""
+    pass
+    
 
 class DivGui ( HasTraits ):
     """ Define the main DivGui class. """
 
     workdir = Directory(os.path.join(os.environ['HOME'],'data','diviner'))
-    fpath = File('/Users/maye/data/diviner/',
+    fpath = File(workdir,
                  filter=['*.h5','*.tab','*.TAB'])
     no_of_ch = 9
     no_of_det = 21
