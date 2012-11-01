@@ -32,3 +32,6 @@ pip-log.txt
 *.wav
 *.h5
 .DS_Store
+nohup.out
+*.bin
+*.tab
