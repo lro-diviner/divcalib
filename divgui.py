@@ -34,10 +34,12 @@ class DivChannel(HasTraits):
 class DivGui ( HasTraits ):
     """ Define the main DivGui class. """
     if sys.platform == 'darwin':
-        workdir = os.path.join(os.environ['HOME'],'data','diviner')
+        # workdir = os.path.join(os.environ['HOME'],'data','diviner')
+        fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
     else:
-        workdir = '/luna1/maye'
-    fpath = File(workdir)#,
+        # workdir = '/luna1/maye'
+        fname = '/luna1/maye/2009071500.h5'
+    fpath = File(fname)#,
                  # filter=['*.h5','*.tab','*.TAB'])
     no_of_ch = 9
     no_of_det = 21
