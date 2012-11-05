@@ -124,6 +124,6 @@ def get_df_from_h5(fname):
     store = pandas.HDFStore(fname)
     return store[store.keys()[0]]
 
-def get_channel_means(df, col_str, channel):
+def get_channel_mean(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
-    return df.groupby(['c','jdate'])[col_str].mean()[channel]
+    return df.groupby(['c',df.index])[col_str].mean()[channel]
