@@ -1,6 +1,6 @@
 from traits.api \
     import HasTraits, List, Property, File, Instance, Bool, Range, \
-        Button, Directory
+        Button, Dict
 from traitsui.api \
     import Item, Group, View, CheckListEditor,FileEditor
 from chaco.api \
@@ -9,6 +9,7 @@ from enable.component_editor import ComponentEditor
 from numpy import arange, nan
 import os
 import diviner as d
+import sys
 
 class DivChanDet(HasTraits):
     c = Range(1,9)
@@ -26,15 +27,22 @@ class DivChanDet(HasTraits):
     def get_id(self):
         return str(self.c)+str(self.det).zfill(2)
 
+class DivChannel(HasTraits):
+    id = Range(1,9)
+    d = dict([(i+1, False) for i in range(21)])
+    
 class DivGui ( HasTraits ):
     """ Define the main DivGui class. """
-
-    workdir = Directory(os.path.join(os.environ['HOME'],'data','diviner'))
-    fpath = File('/Users/maye',
-                 filter=['*.h5','*.tab','*.TAB'])
+    if sys.platform == 'darwin':
+        workdir = os.path.join(os.environ['HOME'],'data','diviner')
+    else:
+        workdir = '/luna1/maye'
+    fpath = File(workdir)#,
+                 # filter=['*.h5','*.tab','*.TAB'])
     no_of_ch = 9
     no_of_det = 21
     cdet = DivChanDet(c=1, det=11)
+    channels = Dict([(i+1, DivChannel(id=i+1)) for i in range(9)])
     plot = Instance(Plot)
     plotted = []
     plotbutton = Button(label='Plot')
@@ -54,7 +62,6 @@ class DivGui ( HasTraits ):
         Item( '_' ),
         Item( 'checklist_det', style = 'custom',     label = 'Detectors' ),
         Item( '_' ),
-        label = 'Channel and Detector choice'
     )
 
     # The view includes one group per column formation.  These will be displayed
@@ -66,17 +73,10 @@ class DivGui ( HasTraits ):
         # Item('plotbutton', show_label=False),
         title     = 'DivGui',
         buttons   = ['OK' ],
-        width=500, height=500,
-            resizable = True
+        width=800, height=800,
+        resizable = True
     )
 
-    def plotdata(self,cdet):
-        x = self.df.jdate[cdet]
-    def _plotbutton_fired(self):
-        for c in self.checklist_c:
-            for det in self.checklist_det:
-                print get_cond(c,det)
-        
     def _prepare_dataset(self):
         cdet = self.cdet
         self.plotdata = ArrayPlotData(x=cdet.get_jdates(self.df).values,
@@ -88,7 +88,7 @@ class DivGui ( HasTraits ):
                 
     def _fpath_changed(self):
         print "Reading",self.fpath
-        self.df = d.read_pds(self.fpath)
+        self.df = d.get_df_from_h5(self.fpath)
         print self.df.columns
         self._prepare_dataset()
     
