@@ -115,14 +115,6 @@ def get_df_from_h5(fname):
     store = pandas.HDFStore(fname)
     return store[store.keys()[0]]
 
-def get_channel_means(df, channel):
-    """Loop over detectors"""
-    dfc = df[df.c==channel]
-    jdates = dfc.jdate[dfc.det==1]
-    jdates.sort()
-    c_means = []
-    for i,jdate in enumerate(jdates):
-        if i % 1000 == 0 : print i 
-        c_means.append(dfc.counts[df.jdate==jdate].mean())
-    return np.array(c_means)
-    
+def get_channel_means(df, col_str, channel):
+    "The dataframe has to contain c and jdate for this to work."
+    return df.groupby(['c','jdate'])[col_str].mean()[channel]
