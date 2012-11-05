@@ -51,7 +51,10 @@ def get_headers_pds(fname):
     return headers
     
 def read_pprint(fname):
-    "Read tabular diviner data into pandas data frame and return it."
+    """Read tabular diviner data into pandas data frame and return it.
+    
+    Lower level function. Use read_div_data which calls this as appropriate.    
+    """
 
     # pandas parser does not read this file correctly, but loadtxt does.
     # first will get the column headers
@@ -67,11 +70,22 @@ def read_pprint(fname):
     return dataframe
 
 def read_pds(fname,nrows=None):
-    "Read tabular files from the PDS depository."
+    """Read tabular files from the PDS depository.
+    
+    Lower level function. Use read_div_data which calls this as appropriate.
+    """
     headers = get_headers_pds(fname)
     return pandas.io.parsers.read_csv(fname, names=headers, na_values=['-9999'], 
                                       skiprows=4, nrows=nrows)
     
+def read_div_data(fname, **kwargs):
+    with open(fname) as f:
+        line = f.readline()
+        if any(['dlre_edr.c' in line, 'Header' in line]):
+            return read_pds(fname, **kwargs)
+        else:
+            return read_pprint(fname)
+
 def make_date_index(dataframe):
     """Parse date fields/columns with pandas date converter parsers.
 
