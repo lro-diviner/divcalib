@@ -4,6 +4,7 @@ import pandas
 import numpy as np
 from dateutil.parser import parse
 from multiprocessing import Pool
+import csv
 
 def parse_header_line(line):
     """Parse header lines.
@@ -15,6 +16,7 @@ def parse_header_line(line):
     >>> parse_header_line(s)
     ['a', 'b', 'c']
     """
+    line = line.strip('#')
     if ',' in line:
         newline = line.split(',')
     else:
@@ -45,9 +47,6 @@ def get_headers_pds(fname):
         for i in range(3):
             f.readline()
         headers = parse_header_line(f.readline())
-        if '#' in headers[0]:
-            headers.pop(0)
-    # previous strip only removes whitespace, now strip off comma
     return headers
     
 def read_pprint(fname):
@@ -75,8 +74,18 @@ def read_pds(fname,nrows=None):
     Lower level function. Use read_div_data which calls this as appropriate.
     """
     headers = get_headers_pds(fname)
-    return pandas.io.parsers.read_csv(fname, names=headers, na_values=['-9999'], 
-                                      skiprows=4, nrows=nrows)
+    with open(fname) as f:
+        dialect = csv.Sniffer().sniff(f.read(2048))
+    return pandas.io.parsers.read_csv(fname,
+                                      dialect = dialect,
+                                      comment='#',
+                                      names=headers, 
+                                      na_values=['-9999.0'], 
+                                      skiprows=4, 
+                                      nrows=nrows,
+                                      parse_dates=[[0,1]],
+                                      index_col=0,
+                                      )
     
 def read_div_data(fname, **kwargs):
     with open(fname) as f:
