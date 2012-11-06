@@ -95,6 +95,7 @@ class DivGui ( HasTraits ):
         self._create_plot_component(int(new[-1]))
         
     def add_status(self,txt):
+        print(txt)
         self.status += txt + '\n'
         
     def _fpath_changed(self,new):
