@@ -3,6 +3,8 @@ from matplotlib import pyplot as plt
 import pandas
 import numpy as np
 from dateutil.parser import parse
+from multiprocessing import Pool
+import csv
 
 def parse_header_line(line):
     """Parse header lines.
@@ -14,6 +16,7 @@ def parse_header_line(line):
     >>> parse_header_line(s)
     ['a', 'b', 'c']
     """
+    line = line.strip('#')
     if ',' in line:
         newline = line.split(',')
     else:
@@ -44,13 +47,13 @@ def get_headers_pds(fname):
         for i in range(3):
             f.readline()
         headers = parse_header_line(f.readline())
-        if '#' in headers[0]:
-            headers.pop(0)
-    # previous strip only removes whitespace, now strip off comma
     return headers
     
 def read_pprint(fname):
-    "Read tabular diviner data into pandas data frame and return it."
+    """Read tabular diviner data into pandas data frame and return it.
+    
+    Lower level function. Use read_div_data which calls this as appropriate.    
+    """
 
     # pandas parser does not read this file correctly, but loadtxt does.
     # first will get the column headers
@@ -66,11 +69,34 @@ def read_pprint(fname):
     return dataframe
 
 def read_pds(fname,nrows=None):
-    "Read tabular files from the PDS depository."
-    headers = get_headers_pds(fname)
-    return pandas.io.parsers.read_csv(fname, names=headers, na_values=['-9999'], 
-                                      skiprows=4, nrows=nrows)
+    """Read tabular files from the PDS depository.
     
+    Lower level function. Use read_div_data which calls this as appropriate.
+    """
+    headers = get_headers_pds(fname)
+    with open(fname) as f:
+        dialect = csv.Sniffer().sniff(f.read(2048))
+    return pandas.io.parsers.read_csv(fname,
+                                      dialect = dialect,
+                                      comment='#',
+                                      names=headers, 
+                                      na_values=['-9999.0'], 
+                                      skiprows=4, 
+                                      nrows=nrows,
+                                      parse_dates=[[0,1]],
+                                      index_col=0,
+                                      )
+    
+def read_div_data(fname, **kwargs):
+    with open(fname) as f:
+        line = f.readline()
+        if any(['dlre_edr.c' in line, 'Header' in line]):
+            return read_pds(fname, **kwargs)
+        elif fname.endswith('.h5'):
+            return get_df_from_h5(fname)
+        else:
+            return read_pprint(fname)
+
 def make_date_index(dataframe):
     """Parse date fields/columns with pandas date converter parsers.
 
@@ -84,7 +110,7 @@ def make_date_index(dataframe):
     return di
 
 def divplot(df, col, c=1, det=11):
-    plt.plot(df[col][(df.c==ch_nr) & (df.det==det)])
+    plt.plot(df[col][(df.c==c) & (df.det==det)])
     
     
 def read_rdrplus(fpath,nrows):
@@ -94,3 +120,12 @@ def read_rdrplus(fpath,nrows):
         
     return pandas.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
                                       skiprows=1, nrows=nrows)
+
+def get_df_from_h5(fname):
+    """Provide df from h5 file."""
+    store = pandas.HDFStore(fname)
+    return store[store.keys()[0]]
+
+def get_channel_mean(df, col_str, channel):
+    "The dataframe has to contain c and jdate for this to work."
+    return df.groupby(['c',df.index])[col_str].mean()[channel]

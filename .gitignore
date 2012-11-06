@@ -29,3 +29,9 @@ pip-log.txt
 # Mac dot underscore files
 ._*
 
+*.wav
+*.h5
+.DS_Store
+nohup.out
+*.bin
+*.tab
