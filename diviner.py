@@ -92,6 +92,8 @@ def read_div_data(fname, **kwargs):
         line = f.readline()
         if any(['dlre_edr.c' in line, 'Header' in line]):
             return read_pds(fname, **kwargs)
+        elif fname.endswith('.h5'):
+            return get_df_from_h5(fname)
         else:
             return read_pprint(fname)
 
