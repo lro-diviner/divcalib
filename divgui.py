@@ -1,8 +1,8 @@
 from traits.api \
     import HasTraits, List, Property, File, Instance, Bool, Range, \
-        Button, Dict
+        Button, Dict, String
 from traitsui.api \
-    import Item, Group, View, CheckListEditor,FileEditor
+    import Item, Group, View, CheckListEditor,FileEditor, UItem
 from chaco.api \
     import ArrayPlotData, Plot
 from enable.component_editor import ComponentEditor    
@@ -10,7 +10,9 @@ from numpy import arange, nan
 import os
 import diviner as d
 import sys
+from threading import Thread
 
+        
 class DivChanDet(HasTraits):
     c = Range(1,9)
     det = Range(1,21)
@@ -33,23 +35,18 @@ class DivChannel(HasTraits):
     
 class DivGui ( HasTraits ):
     """ Define the main DivGui class. """
-    if sys.platform == 'darwin':
-        # workdir = os.path.join(os.environ['HOME'],'data','diviner')
-        fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
-    else:
-        # workdir = '/luna1/maye'
-        fname = '/luna1/maye/2009071500.h5'
-    fpath = File(fname)#,
+    fpath = File#,
                  # filter=['*.h5','*.tab','*.TAB'])
     no_of_ch = 9
     no_of_det = 21
+    status = String
     cdet = DivChanDet(c=1, det=11)
     channels = Dict([(i+1, DivChannel(id=i+1)) for i in range(9)])
     plot = Instance(Plot)
     plotted = []
     plotbutton = Button(label='Plot')
     # Channel List
-    checklist_c = List( value=['1'], editor = CheckListEditor(
+    checklist_c = List(editor = CheckListEditor(
                                values = [str(i) for i in arange(no_of_ch)+1],
                                cols   = no_of_ch/2+1 ) )
     # Detectors List
@@ -62,8 +59,10 @@ class DivGui ( HasTraits ):
     cl_ch_group = Group(
         Item( 'checklist_c', style = 'custom',   label = 'Channels' ),
         Item( '_' ),
-        Item( 'checklist_det', style = 'custom',     label = 'Detectors' ),
-        Item( '_' ),
+        UItem('status',style='custom'),
+        Item( '_'),
+        # Item( 'checklist_det', style = 'custom',     label = 'Detectors' ),
+        # Item( '_' ),
     )
 
     # The view includes one group per column formation.  These will be displayed
@@ -72,32 +71,54 @@ class DivGui ( HasTraits ):
         Item('fpath', label='Inputfile'),
         cl_ch_group,
         Item('plot', editor=ComponentEditor(), show_label=False),
-        # Item('plotbutton', show_label=False),
+        # UItem('plotbutton'),
         title     = 'DivGui',
         buttons   = ['OK' ],
         width=800, height=800,
         resizable = True
     )
 
-    def _prepare_dataset(self):
-        cdet = self.cdet
-        self.plotdata = ArrayPlotData(x=cdet.get_jdates(self.df).values,
-                                      y=cdet.get_data(self.df,'tb').values)
+    def _create_plot_component(self,channel):
+        # series = d.get_channel_mean(self.df,'tb',channel)
+        # series = self.df.groupby(['c','jdate'])['tb'].mean()[channel]
+        # print(len(series.))
+        self.add_status("Printing channel {0}".format(channel))
+        x = self.df.jdate[(self.df.c==channel) & (self.df.det ==11)].values
+        y = self.df.tb[(self.df.c==channel) & (self.df.det ==11)].values
+        self.plotdata = ArrayPlotData(x=x, y=y)
         plot = Plot(self.plotdata)
-        plot.plot(("x", "y"), type='line', color='blue')
+        plot.plot(("x", "y"), type='scatter', color='blue')
         self.plot = plot
                 
-                
-    def _fpath_changed(self):
-        print "Reading",self.fpath
-        self.df = d.get_df_from_h5(self.fpath)
-        print self.df.columns
-        self._prepare_dataset()
+    def _checklist_c_changed(self, old, new):
+        print old,new
+        self._create_plot_component(int(new[-1]))
+        
+    def add_status(self,txt):
+        self.status += txt + '\n'
+        
+    def _fpath_changed(self,new):
+        self.add_status('Loading new file...')
+        Thread(target=self.fpath_changed, args=(new,)).start()
+        
+    def fpath_changed(self,new):
+        print "Reading",new
+        #### 
+        ### FIX ME: nrows = 1000 for develepment
+        ####
+        self.df = d.read_div_data(new,nrows=35000)
+        self.add_status("Done loading new file.")
+        self.checklist_c=['1']
     
-
-# Create the GUI:
-gui = DivGui()
 
 # Run the GUI (if invoked from the command line):
 if __name__ == '__main__':
+    if sys.platform == 'darwin':
+        # workdir = os.path.join(os.environ['HOME'],'data','diviner')
+        fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
+    else:
+        # workdir = '/luna1/maye'
+        fname = '/luna1/maye/2009071500.h5'
+    # Create the GUI:
+    gui = DivGui(fpath=fname)
     gui.configure_traits()
