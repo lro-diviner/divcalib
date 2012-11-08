@@ -161,8 +161,9 @@ if __name__ == '__main__':
     fnames = glob(workdir+'*.h5')
     fnames.sort()
     try:
-        col_str, i_start, i_end = sys.argv[1:]
-    except IndexError:
+        col_str = sys.argv[1]
+        i_start, i_end = [int(i) for i in sys.argv[2:]]
+    except (IndexError, ValueError):
         print 'Provide "data_col i_start i_end" to work on.'
         sys.exit()
     fnames_and_col_str = [(fname,col_str) for fname in fnames]
