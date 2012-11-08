@@ -1,20 +1,20 @@
 import glob
 import pandas
-import numpy as np
 from multiprocessing import Pool
+from noise import fix_columns
 
 fnames = glob.glob('/luna1/maye/*.h5')
 
-def fixing_nan(fname):
+def fixing_colums(fname):
     print 'Doing',fname
     store = pandas.HDFStore(fname)
     df = store[store.keys()[0]]
-    df[df==-9999.0]=np.nan
+    fix_columns(df)
     store[store.keys()[0]]=df
     store.close()
 
-p = Pool(8)
+p = Pool(4)
 
-p.map(fixing_nan,fnames[1:])
+p.map(fixing_columns,fnames)
 
  
