@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import division
 import matplotlib
 matplotlib.use('Agg')
@@ -160,9 +161,9 @@ if __name__ == '__main__':
     fnames = glob(workdir+'*.h5')
     fnames.sort()
     try:
-        col_str = sys.argv[1]
+        col_str, i_start, i_end = sys.argv[1:]
     except IndexError:
-        print 'Provide column string to work on.'
+        print 'Provide "data_col i_start i_end" to work on.'
         sys.exit()
     fnames_and_col_str = [(fname,col_str) for fname in fnames]
-    p.map(process_fname, fnames_and_col_str[:4])
+    p.map(process_fname, fnames_and_col_str[i_start:i_end])
