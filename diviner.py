@@ -129,3 +129,8 @@ def get_df_from_h5(fname):
 def get_channel_mean(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
     return df.groupby(['c',df.index])[col_str].mean()[channel]
+    
+def get_channel_std(df, col_str, channel):
+    "The dataframe has to contain c and jdate for this to work."
+    return df.groupby(['c',df.index])[col_str].std()[channel]
+    
