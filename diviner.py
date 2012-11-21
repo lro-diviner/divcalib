@@ -124,7 +124,9 @@ def read_rdrplus(fpath,nrows):
 def get_df_from_h5(fname):
     """Provide df from h5 file."""
     store = pandas.HDFStore(fname)
-    return store[store.keys()[0]]
+    df = store[store.keys()[0]]
+    store.close()
+    return df
 
 def get_channel_mean(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
