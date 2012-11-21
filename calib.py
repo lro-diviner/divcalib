@@ -80,7 +80,22 @@ class MiscFlag(Flag):
     def __init__(self,value=0):
         super(MiscFlag,self).__init__(value,dic=self.flags)
 
-def get_offset_leftSV(chan, det):
+
+def plot_calib_data(df, c, det):
+    """plot the area around calibration data in different colors"""
+    miscflags = MiscFlag()
+    movingflag = miscflags.dic['moving']
+    cdet = df[(df.c==c) & (df.det==det)]
+    # use sclk as index
+    cdet.set_index('sclk',inplace=True)
+    # plot data in space orientation 
+    cdet.counts[cdet.el_cmd==80].plot(style='ko')
+    # plot bb counts in blue
+    cdet.counts[cdet.el_cmd==0].plot(style='bx')
+    # plot moving data in red
+    cdet.counts[cdet.qmi.astype(int) & movingflag !=0].plot(style='r+')
+    
+def get_offset_leftSV(df, chan, det):
     """docstring for get_offset_leftSV"""
     pass
 
