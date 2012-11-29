@@ -83,6 +83,12 @@ class MiscFlag(Flag):
 def get_cdet_frame(df,c,det):
     return df[(df.c==c) & (df.det==det)]
 
+def get_spaceviews(df):
+    return df[df.el_cmd==80]
+    
+def get_bbviews(df):
+    return df[df.el_cmd==0]
+    
 def plot_calib_data(df, c, det):
     """plot the area around calibration data in different colors"""
     miscflags = MiscFlag()
