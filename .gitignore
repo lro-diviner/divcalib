@@ -35,3 +35,4 @@ pip-log.txt
 nohup.out
 *.bin
 *.tab
+.fuse*
