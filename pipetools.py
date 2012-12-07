@@ -39,7 +39,6 @@ def des2npy(fname):
         d = parse_des_header(f)
         # f.name is the way to get to the filename of a file handle
         # splitext creates tuple with everything until extension and .extension
-        dataset_name = splitext(basename(fname))[0]
     
         # each colum is piped as a double, so 8 chars.
         ncols = len(d.keys())
@@ -56,11 +55,10 @@ def des2df(fname):
     
 def des2hdf(fname,cleanup=False):
     "f has to expose the file methods readline and seek"
-    data = des2npy(fname)
+    dataset_name = splitext(basename(fname))[0]
+    df = des2df(fname)
     if cleanup:
         os.remove(fname)
-    print data.shape
-    df = pandas.DataFrame(data)
     newfname = join('/luna1/maye',dataset_name+'.h5')
     print 'New filename:',newfname
     store = pandas.HDFStore(newfname,'w')#,complevel=1,complib='zlib')
