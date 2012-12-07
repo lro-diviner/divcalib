@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import glob
+import sys
 from pipetools import des2hdf
 from subprocess import call
 from multiprocessing import Pool
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         try:
             start, end = sys.argv[1:]
         except ValueError:
-            print("Usage: {0} START END [OUTTYPE]")
+            print("Usage: {0} START END [OUTTYPE]".format(sys.argv[0]))
             sys.exit()
     rdrp2des_or_csv(start, end, outtype)
     
