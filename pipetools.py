@@ -56,11 +56,9 @@ def des2df(fname):
     
 def des2hdf(fname,cleanup=False):
     "f has to expose the file methods readline and seek"
-    data = des2npy(fname)
+    df = des2df(fname)
     if cleanup:
         os.remove(fname)
-    print data.shape
-    df = pandas.DataFrame(data)
     newfname = join('/luna1/maye',dataset_name+'.h5')
     print 'New filename:',newfname
     store = pandas.HDFStore(newfname,'w')#,complevel=1,complib='zlib')
