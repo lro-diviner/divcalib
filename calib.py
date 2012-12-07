@@ -88,11 +88,14 @@ def get_spaceviews(df):
     
 def get_bbviews(df):
     return df[df.el_cmd==0]
+
+def check_moving_flag(df):
+    miscflags = MiscFlag()
+    movingflag = miscflags.dic['moving']
+    return df.qmi.astype(int) & movingflag !=0
     
 def plot_calib_data(df, c, det):
     """plot the area around calibration data in different colors"""
-    miscflags = MiscFlag()
-    movingflag = miscflags.dic['moving']
     cdet = get_cdet_frame(df, c, det)
     # use sclk as index
     cdet.set_index('sclk',inplace=True)
@@ -101,12 +104,13 @@ def plot_calib_data(df, c, det):
     # plot bb counts in blue
     cdet.counts[cdet.el_cmd==0].plot(style='bx',markersize=10)
     # plot moving data in red
-    return cdet.counts[cdet.qmi.astype(int) & movingflag !=0].plot(style='r+',markersize=10)
+    return cdet.counts[check_moving_flag(cdet)].plot(style='r+',markersize=10)
     
-def get_offset_leftSV(df, chan, det):
-    """docstring for get_offset_leftSV"""
+def thermal_alternative():
+    """using the offset of visual channels???"""
     pass
-
+    
+    
 def thermal_nearest(node, tmnearest):
     """Calibrate for nearest node only.
     
@@ -119,4 +123,17 @@ def thermal_nearest(node, tmnearest):
     tmnearest: ThermalMarkerNode container
     """
     counts = node.counts
-    offset = tmnearest.offset
+    offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
+    gain = tmnearest.gain
+    radiance = (counts - offset) * gain
+    radiance = rconverttable.convertR(radiance, chan, det)
+    tb = rbbtable.TB(radiance, chan, det)
+    radiance *= config.CalRadConstant(chan)
+   
+def calc_gain(chan, det, thermal_marker_node):
+    numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+    denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
+                   thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+    denominator -= thermal_marker_node.calc_CBB(chan, det)
+    return numerator/denominator
+    
