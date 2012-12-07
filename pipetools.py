@@ -50,6 +50,10 @@ def des2npy(fname):
         data = np.fromfile(f, dtype = rec_dtype)
     return data
 
+def des2df(fname):
+    data = des2npy(fname)
+    return pandas.DataFrame(data)
+    
 def des2hdf(fname,cleanup=False):
     "f has to expose the file methods readline and seek"
     data = des2npy(fname)
