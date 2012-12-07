@@ -32,6 +32,14 @@ def rdrp2hdf(fpath):
     call(cmd, shell=True)
     print("Produced {}.des".format(timestamp))
     des2hdf(newfname)
+
+def rdrp2csv(start, end):
+    """start and end in format YYYYMM[DD[HH]]."""
+    outpath = os.path.join(destdir,str(start)+'_'+str(end)+'.csv')
+    cmd = 'rdrp daterange={0},{1} outtype=text > {2}'.format(start,end,outpath)
+    print(cmd)
+    call(cmd, shell=True)
+    print("Done.")
     
 pool = Pool(3)
 if despaths:
