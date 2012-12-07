@@ -33,18 +33,30 @@ def rdrp2hdf(fpath):
     print("Produced {}.des".format(timestamp))
     des2hdf(newfname)
 
-def rdrp2csv(start, end):
+def rdrp2des_or_csv(start, end, outtype='pipes'):
     """start and end in format YYYYMM[DD[HH]]."""
     outpath = os.path.join(destdir,str(start)+'_'+str(end)+'.csv')
-    cmd = 'rdrp daterange={0},{1} outtype=text > {2}'.format(start,end,outpath)
+    cmd = 'rdrp daterange={0},{1} outtype={3} > {2}'.format(start,end,outpath,outtype)
     print(cmd)
     call(cmd, shell=True)
     print("Done.")
-    
-pool = Pool(3)
-if despaths:
-    print "Found des files. First converting them:", despaths
-    pool.map(des2hdf, despaths)
-pool.map(rdrp2hdf, fpaths)    
 
+def produce_h5():
+    pool = Pool(3)
+    if despaths:
+        print "Found des files. First converting them:", despaths
+        pool.map(des2hdf, despaths)
+    pool.map(rdrp2hdf, fpaths)    
+
+if __name__ == '__main__':
+    outtype = None
+    try:
+        start, end, outtype = sys.argv[1:]
+    except ValueError:
+        try:
+            start, end = sys.argv[1:]
+        except ValueError:
+            print("Usage: {0} START END [OUTTYPE]")
+            sys.exit()
+    rdrp2des_or_csv(start, end, outtype)
     
