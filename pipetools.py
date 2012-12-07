@@ -34,8 +34,7 @@ def parse_des_header(f):
             break
     return d
     
-def des2hdf(fname,cleanup=True):
-    "f has to expose the file methods readline and seek"
+def des2npy(fname):
     with open(fname) as f:
         d = parse_des_header(f)
         # f.name is the way to get to the filename of a file handle
@@ -49,9 +48,13 @@ def des2hdf(fname,cleanup=True):
         print('\nStarting the read of {0}'.format(fname))
         t1 = time.time()
         data = np.fromfile(f, dtype = rec_dtype)
+    return data
+
+def des2hdf(fname,cleanup=False):
+    "f has to expose the file methods readline and seek"
+    data = des2npy(fname)
     if cleanup:
         os.remove(fname)
-    print("Reading time: {0}".format(time.time()-t1))
     print data.shape
     df = pandas.DataFrame(data)
     newfname = join('/luna1/maye',dataset_name+'.h5')
