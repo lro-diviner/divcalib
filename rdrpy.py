@@ -34,16 +34,19 @@ def rdrp2hdf(fpath):
     print("Produced {}.des".format(timestamp))
     des2hdf(newfname)
 
-def rdrp2des_or_csv(start, end, outtype):
+def rdrp2des_or_csv(start, end=None, outtype=None):
     """start and end in format YYYYMM[DD[HH]]."""
-    if outtype==None:
-        outtype='pipes'
+    if end == None:
+        daterange_option = str(start)
+    else:
+        daterange_option = "{0},{1}".format(start,end)
+    if outtype == None:
+        outtype = 'pipes'
         ext = '.des'
     else:
-        outtype='text'
         ext = '.csv'
-    outpath = os.path.join(destdir, str(start) + '_' + str(end) + ext)
-    cmd = 'rdrp daterange={0},{1} outtype={3} > {2}'.format(start,end,outpath,outtype)
+    outpath = os.path.join(destdir, str(start) + ext)
+    cmd = 'rdrp {0} outtype={1} > {2}'.format(daterange_option,outpath,outtype)
     print(cmd)
     call(cmd, shell=True)
     print("Done.")
