@@ -1,4 +1,8 @@
+from __future__ import division
 from collections import OrderedDict
+import pandas as pd
+import numpy as np
+from scipy import ndimage as nd
 
 SV_LENGTH = 80
 
@@ -83,8 +87,11 @@ class MiscFlag(Flag):
 def get_cdet_frame(df,c,det):
     return df[(df.c==c) & (df.det==det)]
 
-def get_spaceviews(df):
-    return df[df.el_cmd==80]
+def get_spaceviews(df, moving=False):
+    newdf = df[df.el_cmd==80]
+    if not moving:
+        newdf = get_non_moving_data(newdf)
+    return newdf
     
 def get_bbviews(df):
     return df[df.el_cmd==0]
@@ -94,6 +101,16 @@ def check_moving_flag(df):
     movingflag = miscflags.dic['moving']
     return df.qmi.astype(int) & movingflag !=0
     
+def get_non_moving_data(df):
+    """take dataframe and filter for moving flag"""
+    return df[-(check_moving_flag(df))]
+
+def label_calibdata(cdet, calibdf, label):
+    calib_id = pd.Series(np.zeros_like(cdet.index), index=cdet.index)
+    calib_id[calibdf.index] = 1
+    cdet[label] = nd.label(calib_id)[0]
+
+
 def plot_calib_data(df, c, det):
     """plot the area around calibration data in different colors"""
     cdet = get_cdet_frame(df, c, det)
@@ -109,8 +126,7 @@ def plot_calib_data(df, c, det):
 def thermal_alternative():
     """using the offset of visual channels???"""
     pass
-    
-    
+        
 def thermal_nearest(node, tmnearest):
     """Calibrate for nearest node only.
     
