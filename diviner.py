@@ -2,9 +2,17 @@
 from matplotlib import pyplot as plt
 import pandas
 import numpy as np
-from dateutil.parser import parse
+from dateutil.parser import parse as dateparser
 from multiprocessing import Pool
 import csv
+import sys
+import os
+from datetime import timedelta
+
+if sys.platform == 'darwin':
+    datapath = '/Users/maye/data/diviner'
+else:
+    datapath = '/luna1/maye'
 
 def parse_header_line(line):
     """Parse header lines.
@@ -135,4 +143,38 @@ def get_channel_mean(df, col_str, channel):
 def get_channel_std(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
     return df.groupby(['c',df.index])[col_str].std()[channel]
+
+class DataPump(object):
+    """class to provide Diviner data in different ways."""
+    def __init__(self, timestr):
+        self.timestr = timestr
+        self.time = dateparser(timestr)
+        self.fname = os.path.join(datapath,
+                                  self.time.strftime("%Y%m%d%H") + '.h5')
+        self.increment = timedelta(hours=1)
+    def next(self, fname_only=False):
+        current_fname = self.fname
+        if not fname_only:
+            df = read_div_data(self.fname)
+        self.update_time()
+        return df if not fname_only else current_fname
+
+    def update_time(self):
+        "Can't be used the first time, because then I don't want to increase."
+        self.time += self.increment
+        self.fname = os.path.join(datapath,
+                                  self.time.strftime("%Y%m%d%H") + '.h5')
+    
+    def __repr__(self):
+        return self.time.isoformat()
+
+
+
+
+
+
+
+
+
+
     
