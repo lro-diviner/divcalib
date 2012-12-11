@@ -84,33 +84,6 @@ class MiscFlag(Flag):
     def __init__(self,value=0):
         super(MiscFlag,self).__init__(value,dic=self.flags)
 
-def get_cdet_frame(df,c,det):
-    return df[(df.c==c) & (df.det==det)]
-
-def get_spaceviews(df, moving=False):
-    newdf = df[df.el_cmd==80]
-    if not moving:
-        newdf = get_non_moving_data(newdf)
-    return newdf
-    
-def get_bbviews(df):
-    return df[df.el_cmd==0]
-
-def check_moving_flag(df):
-    miscflags = MiscFlag()
-    movingflag = miscflags.dic['moving']
-    return df.qmi.astype(int) & movingflag !=0
-    
-def get_non_moving_data(df):
-    """take dataframe and filter for moving flag"""
-    return df[-(check_moving_flag(df))]
-
-def label_calibdata(cdet, calibdf, label):
-    calib_id = pd.Series(np.zeros_like(cdet.index), index=cdet.index)
-    calib_id[calibdf.index] = 1
-    cdet[label] = nd.label(calib_id)[0]
-
-
 def plot_calib_data(df, c, det):
     """plot the area around calibration data in different colors"""
     cdet = get_cdet_frame(df, c, det)
@@ -122,7 +95,73 @@ def plot_calib_data(df, c, det):
     cdet.counts[cdet.el_cmd==0].plot(style='bx',markersize=10)
     # plot moving data in red
     return cdet.counts[check_moving_flag(cdet)].plot(style='r+',markersize=10)
+
+def get_cdet_frame(df,c,det):
+    return df[(df.c==c) & (df.det==det)]
+
+def get_spaceviews(df, moving=False):
+    newdf = df[df.el_cmd==80]
+    if not moving:
+        newdf = get_non_moving_data(newdf)
+    return newdf
     
+def get_bbviews(df, moving=False):
+    newdf = df[df.el_cmd==0]
+    if not moving:
+        newdf = get_non_moving_data(newdf)
+    return newdf
+
+def check_moving_flag(df):
+    miscflags = MiscFlag()
+    movingflag = miscflags.dic['moving']
+    return df.qmi.astype(int) & movingflag !=0
+    
+def get_non_moving_data(df):
+    """take dataframe and filter for moving flag"""
+    return df[-(check_moving_flag(df))]
+
+def label_calibdata(cdet, calibdf, label):
+    """This needs the index to be integer, time indices are not supported by nd.label"""
+    calib_id = pd.Series(np.zeros_like(cdet.index), index=cdet.index)
+    calib_id[calibdf.index] = 1
+    cdet[label] = nd.label(calib_id)[0]
+
+def add_bbxtemp_col(df, chan):
+    if chan in [3,4,5,6]:
+        bbtemp = cdet.bb_1_temp
+        label = 'bb1temp'
+    elif chan in [7,8,9]:
+        bbtemp = cdet.bb_2_temp
+        label = 'bb2temp'
+    # drop the Nans
+    bbtemp = bbtemp.dropna()
+    # crude for now, better later
+    df[label] = bbtemp.reindex_like(df, method='bfill')
+
+def get_offset_use_limits(grouped):
+    # for now, use the end of 2nd spaceview as end of application time
+    # for mean value of set of spaceviews
+    return [g.index[-1] for i,g in grouped.counts if not i==0][1::2]
+
+def add_offset_col(df, grouped):
+    index = get_offset_use_limits
+    data = grouped.coutns.mean()[[2,4,6,8]].values
+    offsets = pd.Series(data, index=index)
+    df['offsets'] = offsets.reindex_like(cdet, method='bfill')
+
+def get_grouped(cdet):
+    bbviews = get_bbviews(cdet)
+    label_calibdata(cdet, bbviews, 'bbviews')
+    grouped_bb = cdet.groupby('bbviews')
+    spaceviews = get_spaceviews(cdet)
+    label_calibdata(cdet, spaceviews, 'spaceviews')
+    grouped_sv = cdet.groupby('spaceviews')
+    return grouped_bb, grouped_sv
+
+def get_bb_means(grouped_bb):
+    return grouped_bb.counts.mean()[1:]
+
+   
 def thermal_alternative():
     """using the offset of visual channels???"""
     pass
