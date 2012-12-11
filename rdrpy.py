@@ -46,7 +46,7 @@ def rdrp2des_or_csv(start, end=None, outtype=None):
     else:
         ext = '.csv'
     outpath = os.path.join(destdir, str(start) + ext)
-    cmd = 'rdrp {0} outtype={1} > {2}'.format(daterange_option,outpath,outtype)
+    cmd = 'rdrp daterange={0} outtype={1} > {2}'.format(daterange_option,outtype,outpath)
     print(cmd)
     call(cmd, shell=True)
     print("Done.")
