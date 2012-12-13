@@ -128,10 +128,10 @@ def label_calibdata(cdet, calibdf, label):
 
 def add_bbxtemp_col(df, chan):
     if chan in [3,4,5,6]:
-        bbtemp = cdet.bb_1_temp
+        bbtemp = df.bb_1_temp
         label = 'bb1temp'
     elif chan in [7,8,9]:
-        bbtemp = cdet.bb_2_temp
+        bbtemp = df.bb_2_temp
         label = 'bb2temp'
     # drop the Nans
     bbtemp = bbtemp.dropna()
