@@ -7,6 +7,7 @@ from multiprocessing import Pool
 import csv
 import sys
 import os
+import glob
 from datetime import timedelta
 
 if sys.platform == 'darwin':
@@ -150,12 +151,13 @@ class DataPump(object):
         self.timestr = timestr
         self.time = dateparser(timestr)
         self.fname = os.path.join(datapath,
-                                  self.time.strftime("%Y%m%d%H") + '.h5')
+                                  self.time.strftime("%Y%m%d%H"))
         self.increment = timedelta(hours=1)
     def next(self, fname_only=False):
         current_fname = self.fname
+        found_path = glob.glob(current_fname + '*')[0]
         if not fname_only:
-            df = read_div_data(self.fname)
+            df = read_div_data(found_path)
         self.update_time()
         return df if not fname_only else current_fname
 
