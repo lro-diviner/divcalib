@@ -3,6 +3,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 from scipy import ndimage as nd
+from scipy.interpolate import InterpolatedUnivariateSpline as IUS
 
 SV_LENGTH = 80
 
@@ -94,7 +95,7 @@ def plot_calib_data(df, c, det):
     # plot bb counts in blue
     cdet.counts[cdet.el_cmd==0].plot(style='bx',markersize=10)
     # plot moving data in red
-    return cdet.counts[check_moving_flag(cdet)].plot(style='r+',markersize=10)
+    return cdet.counts[is_moving(cdet)].plot(style='r+',markersize=10)
 
 def get_cdet_frame(df,c,det):
     return df[(df.c==c) & (df.det==det)]
@@ -111,32 +112,20 @@ def get_bbviews(df, moving=False):
         newdf = get_non_moving_data(newdf)
     return newdf
 
-def check_moving_flag(df):
+def is_moving(df):
     miscflags = MiscFlag()
     movingflag = miscflags.dic['moving']
     return df.qmi.astype(int) & movingflag !=0
     
 def get_non_moving_data(df):
     """take dataframe and filter for moving flag"""
-    return df[-(check_moving_flag(df))]
+    return df[-(is_moving(df))]
 
 def label_calibdata(cdet, calibdf, label):
     """This needs the index to be integer, time indices are not supported by nd.label"""
     calib_id = pd.Series(np.zeros_like(cdet.index), index=cdet.index)
     calib_id[calibdf.index] = 1
     cdet[label] = nd.label(calib_id)[0]
-
-def add_bbxtemp_col(df, chan):
-    if chan in [3,4,5,6]:
-        bbtemp = df.bb_1_temp
-        label = 'bb1temp'
-    elif chan in [7,8,9]:
-        bbtemp = df.bb_2_temp
-        label = 'bb2temp'
-    # drop the Nans
-    bbtemp = bbtemp.dropna()
-    # crude for now, better later
-    df[label] = bbtemp.reindex_like(df, method='bfill')
 
 def get_offset_use_limits(grouped):
     # for now, use the end of 2nd spaceview as end of application time
@@ -161,7 +150,22 @@ def get_grouped(cdet):
 def get_bb_means(grouped_bb):
     return grouped_bb.counts.mean()[1:]
 
-   
+def get_bb2_col(df):
+    # get the bb2 temps without the nans
+    bb2temps = df.bb_2_temp.dropna()
+    #create interpolater function by interpolating over bb2temps.index (needs
+    # to be integer!) and its values
+    s = IUS(bb2temps.index.values, bb2temps.values, k=1)
+    return pd.Series(s(df.index), index=df.index)
+
+class DivCalib(object):
+    """docstring for DivCalib"""
+    def __init__(self, inputdf):
+        self.inputdf = inputdf
+        add_bb2_col(self.inputdf)
+        self.bbv = get_bbviews(self.inputdf)
+        
+
 def thermal_alternative():
     """using the offset of visual channels???"""
     pass
