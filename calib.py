@@ -123,8 +123,11 @@ def get_non_moving_data(df):
 
 def label_calibdata(cdet, calibdf, label):
     """This needs the index to be integer, time indices are not supported by nd.label"""
+    # get a series with the size and index of the incoming dataframe
     calib_id = pd.Series(np.zeros_like(cdet.index), index=cdet.index)
+    # set the value to 1 (or True) where the calibdf has an index
     calib_id[calibdf.index] = 1
+    # label the calib_id series and add to the incoming dataframe
     cdet[label] = nd.label(calib_id)[0]
 
 def get_offset_use_limits(grouped):
@@ -158,14 +161,45 @@ def get_bb2_col(df):
     s = IUS(bb2temps.index.values, bb2temps.values, k=1)
     return pd.Series(s(df.index), index=df.index)
 
+def calc_gain():
+    pass
+
 class DivCalib(object):
     """docstring for DivCalib"""
-    def __init__(self, inputdf):
-        self.inputdf = inputdf
-        add_bb2_col(self.inputdf)
-        self.bbv = get_bbviews(self.inputdf)
+    def __init__(self, df):
+        self.df = df
+        self.t2nrad = pd.load('T_to_Normalized_Radiance.df')
+        # get interpolated bb temps
+        self.add_bb_cols()
+        # get the normalized radiance
+        self.get_nrad()
+    def add_bb_cols(self):
+        # TODO: This method is slightly wrong, it interpolates for indices
+        # where the temperature should not increase because there's no 
+        # progress in time over the repetitive channels and detectors
+        df = self.df
+        bb2temps = df.bb_2_temp.dropna()
+        s = IUS(bb2temps.index.values, bb2temps, k=1)
+        df['bb2_interp'] = pd.Series(s(df.index),
+                                     index=df.index)
+        bb1temps = df.bb_1_temp.dropna()
+        s = IUS(bb1temps.index.values, bb1temps, k=1)
+        df['bb1_interp'] = pd.Series(s(df.index),
+                                     index=df.index)
+    def get_nrad(self):
+        bbv = get_bbviews(self.df)
+        bbv['nrad'] = np.zeros_like(bbv.index,dtype='float')
+        for ch in range(3,10):
+            if ch < 7:
+                bbv.nrad[bbv.c==ch] = \
+                    self.t2nrad.ix[bbv.bb1_interp[bbv.c==ch].round(), 
+                                                  ch].astype('float')
+            else:
+                bbv.nrad[bbv.c==ch] = \
+                    self.t2nrad.ix[bbv.bb2_interp[bbv.c==ch].round(), 
+                                                  ch].astype('float')
+        self.bbv = bbv
         
-
 def thermal_alternative():
     """using the offset of visual channels???"""
     pass
@@ -193,6 +227,7 @@ def calc_gain(chan, det, thermal_marker_node):
     numerator = -1 * thermal_marker_node.calcRBB(chan,det)
     denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
                    thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+                   # calc_CBB is just the mean of counts in BB view
     denominator -= thermal_marker_node.calc_CBB(chan, det)
     return numerator/denominator
     
