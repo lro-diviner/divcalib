@@ -3,7 +3,8 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 from scipy import ndimage as nd
-from scipy.interpolate import InterpolatedUnivariateSpline as IUS
+from scipy.interpolate import UnivariateSpline as InterpSpline
+import diviner as div
 
 SV_LENGTH = 80
 
@@ -129,7 +130,11 @@ def label_calibdata(cdet, calibdf, label):
     calib_id[calibdf.index] = 1
     # label the calib_id series and add to the incoming dataframe
     cdet[label] = nd.label(calib_id)[0]
-
+    # cdet[label] = 0
+    # calib_id = cdet[label]
+    # calib_id[calibdf.index] = 1
+    # cdet[label] = nd.label(calib_id)[0]
+    
 def get_offset_use_limits(grouped):
     # for now, use the end of 2nd spaceview as end of application time
     # for mean value of set of spaceviews
@@ -158,7 +163,7 @@ def get_bb2_col(df):
     bb2temps = df.bb_2_temp.dropna()
     #create interpolater function by interpolating over bb2temps.index (needs
     # to be integer!) and its values
-    s = IUS(bb2temps.index.values, bb2temps.values, k=1)
+    s = InterpSpline(bb2temps.index.values, bb2temps.values, k=1)
     return pd.Series(s(df.index), index=df.index)
 
 def calc_gain():
@@ -168,36 +173,43 @@ class DivCalib(object):
     """docstring for DivCalib"""
     def __init__(self, df):
         self.df = df
+        self.dfsmall = df[['c','det','counts','bb_1_temp','bb_2_temp','el_cmd','az_cmd',
+                      'year','month','date','hour','minute','second','qmi','clat','clon',
+                      'scalt']]
+        self.timed = div.index_by_time(self.dfsmall)
+        # self.timed.set_index(['c','det',self.timed.index], inplace=True)
+        # self.timed.index.names = ['c','det','time']
         self.t2nrad = pd.load('T_to_Normalized_Radiance.df')
         # get interpolated bb temps
         self.add_bb_cols()
         # get the normalized radiance
         self.get_nrad()
     def add_bb_cols(self):
-        # TODO: This method is slightly wrong, it interpolates for indices
-        # where the temperature should not increase because there's no 
-        # progress in time over the repetitive channels and detectors
-        df = self.df
-        bb2temps = df.bb_2_temp.dropna()
-        s = IUS(bb2temps.index.values, bb2temps, k=1)
-        df['bb2_interp'] = pd.Series(s(df.index),
-                                     index=df.index)
-        bb1temps = df.bb_1_temp.dropna()
-        s = IUS(bb1temps.index.values, bb1temps, k=1)
-        df['bb1_interp'] = pd.Series(s(df.index),
-                                     index=df.index)
+        df = self.timed
+        # take temperature measurements of ch1/det1
+        # (only way to guarantee unique T-measurements)
+        bb2temps = df.bb_2_temp[(df.c==1) & (df.det==1)].dropna()
+        bb1temps = df.bb_1_temp[(df.c==1) & (df.det==1)].dropna()
+        all_times = df.index.unique()
+        for bbtemp in [bb1temps,bb2temps]:
+            # converting the time series to floats for interpolation
+            ind = bbtemp.index.values.astype('float64')
+            s = InterpSpline(ind, bbtemp, s=0.05, k=3)
+            # adding interpolated data to the timed dataframe
+            df[bbtemp.name + '_interp'] = pd.Series(s(all_times.astype('float64')),
+                                                      index=all_times)
+                                     
     def get_nrad(self):
-        bbv = get_bbviews(self.df)
-        bbv['nrad'] = np.zeros_like(bbv.index,dtype='float')
+        bbv = get_bbviews(self.timed)
+        bbv['nrad'] = 0.0
+        # create dictionary to look up the right temperature for different channels
+        l = [(i,'bb_1_temp_interp') for i in range(3,7)]
+        l2 = [(i,'bb_2_temp_interp') for i in range(7,10)]
+        d = dict(l+l2)
         for ch in range(3,10):
-            if ch < 7:
                 bbv.nrad[bbv.c==ch] = \
-                    self.t2nrad.ix[bbv.bb1_interp[bbv.c==ch].round(), 
-                                                  ch].astype('float')
-            else:
-                bbv.nrad[bbv.c==ch] = \
-                    self.t2nrad.ix[bbv.bb2_interp[bbv.c==ch].round(), 
-                                                  ch].astype('float')
+                    self.t2nrad.ix[bbv[d[ch]][bbv.c==ch].round(), 
+                                   ch].astype('float')
         self.bbv = bbv
         
 def thermal_alternative():
