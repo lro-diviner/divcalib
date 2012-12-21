@@ -179,7 +179,8 @@ class DivCalib(object):
         self.timed = div.index_by_time(self.dfsmall)
         # self.timed.set_index(['c','det',self.timed.index], inplace=True)
         # self.timed.index.names = ['c','det','time']
-        self.t2nrad = pd.load('T_to_Normalized_Radiance.df')
+        # loading conversion table indexed in T*100 (for resolution)
+        self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
         # get interpolated bb temps
         self.add_bb_cols()
         # get the normalized radiance
@@ -207,9 +208,11 @@ class DivCalib(object):
         l2 = [(i,'bb_2_temp_interp') for i in range(7,10)]
         d = dict(l+l2)
         for ch in range(3,10):
-                bbv.nrad[bbv.c==ch] = \
-                    self.t2nrad.ix[bbv[d[ch]][bbv.c==ch].round(), 
-                                   ch].astype('float')
+            # rounding to 2 digits and * 100 to lookup the values that have been 
+            # indexed by T*100 to enable float value table lookup
+            bbv.nrad[bbv.c==ch] = \
+                self.t2nrad.ix[bbv[d[ch]][bbv.c==ch].round(2)*100, 
+                               ch].astype('float')
         self.bbv = bbv
         
 def thermal_alternative():
