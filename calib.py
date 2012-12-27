@@ -113,6 +113,10 @@ def get_bbviews(df, moving=False):
         newdf = get_non_moving_data(newdf)
     return newdf
 
+def get_calib_data(df, moving=False):
+    newdf = df[(df.el_cmd==0) | (df.el_cmd==80)]
+    return newdf if moving else get_non_moving_data(newdf)
+    
 def is_moving(df):
     miscflags = MiscFlag()
     movingflag = miscflags.dic['moving']
