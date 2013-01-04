@@ -89,14 +89,14 @@ class MiscFlag(Flag):
 def plot_calib_data(df, c, det):
     """plot the area around calibration data in different colors"""
     cdet = get_cdet_frame(df, c, det)
-    # use sclk as index
-    cdet.set_index('sclk',inplace=True)
+    # # use sclk as index
+    # cdet.set_index('sclk',inplace=True)
     # plot data in space orientation 
     cdet.counts[cdet.el_cmd==80].plot(style='ko')
     # plot bb counts in blue
-    cdet.counts[cdet.el_cmd==0].plot(style='bx',markersize=10)
+    cdet.counts[cdet.el_cmd==0].plot(style='ro')
     # plot moving data in red
-    return cdet.counts[is_moving(cdet)].plot(style='r+',markersize=10)
+    return cdet.counts[is_moving(cdet)].plot(style='gx',markersize=15)
 
 def get_cdet_frame(df,c,det):
     return df[(df.c==c) & (df.det==det)]
