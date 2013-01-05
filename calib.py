@@ -6,7 +6,25 @@ from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as InterpSpline
 import diviner as div
 
-SV_LENGTH = 80
+# define the default number of points that each view should have
+SV_LENGTH = STV_LENGTH = BBV_LENGTH = 80
+
+# define pointing boundaries for the spaceview (for offset calibration)
+SV_AZ_MIN = 150.0
+SV_AZ_MAX = 270.0
+SV_EL_MIN = 45.0
+SV_EL_MAX = 100.0
+
+# define pointing boundaries for the blackbody view (for gain calibration)
+BB_AZ_MIN = BB_EL_MIN = 0.0
+BB_AZ_MAX = 270.0
+BB_EL_MAX = 3.0
+
+# define pointing boundaries for the solar target view (for visual channel calibration)
+ST_AZ_MIN = 10.0
+ST_AZ_MAX = 270.0
+ST_EL_MIN = 35.00
+ST_EL_MAX = 45.00
 
 SV_NUM_SKIP_SAMPLE = 16
 BBV_NUM_SKIP_SAMPLE = 16
@@ -101,18 +119,6 @@ def plot_calib_data(df, c, det):
 def get_cdet_frame(df,c,det):
     return df[(df.c==c) & (df.det==det)]
 
-def get_spaceviews(df, moving=False):
-    newdf = df[df.el_cmd==80]
-    if not moving:
-        newdf = get_non_moving_data(newdf)
-    return newdf
-    
-def get_bbviews(df, moving=False):
-    newdf = df[df.el_cmd==0]
-    if not moving:
-        newdf = get_non_moving_data(newdf)
-    return newdf
-
 def get_calib_data(df, moving=False):
     newdf = df[df.el_cmd.isin([80,0])]
     return newdf if moving else get_non_moving_data(newdf)
@@ -146,15 +152,6 @@ def add_offset_col(df, grouped):
     offsets = pd.Series(data, index=index)
     df['offsets'] = offsets.reindex_like(cdet, method='bfill')
 
-def get_grouped(cdet, moving=False):
-    bbviews = get_bbviews(cdet, moving)
-    label_calibdata(cdet, bbviews, 'bbviews')
-    grouped_bb = cdet.groupby('bbviews')
-    spaceviews = get_spaceviews(cdet, moving)
-    label_calibdata(cdet, spaceviews, 'spaceviews')
-    grouped_sv = cdet.groupby('spaceviews')
-    return grouped_bb, grouped_sv
-
 def get_bb_means(grouped_bb):
     return grouped_bb.counts.mean()[1:]
 
@@ -167,18 +164,6 @@ def get_bb2_col(df):
     return pd.Series(s(df.index), index=df.index)
 
 def define_sdtype(df):
-    SV_AZ_MIN = 150.0
-    SV_AZ_MAX = 270.0
-    SV_EL_MIN = 45.0
-    SV_EL_MAX = 100.0
-    BB_AZ_MIN = 0.0
-    BB_AZ_MAX = 270.0
-    BB_EL_MIN = 0.0
-    BB_EL_MAX = 3.0
-    ST_AZ_MIN = 10.0
-    ST_AZ_MAX = 270.0
-    ST_EL_MIN = 35.00
-    ST_EL_MAX = 45.00
     
     sv_selector = (df.az_cmd >= SV_AZ_MIN) & (df.az_cmd <= SV_AZ_MAX) & \
                   (df.el_cmd >= SV_EL_MIN) & (df.el_cmd <= SV_EL_MAX)
