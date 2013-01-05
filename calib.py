@@ -146,11 +146,11 @@ def add_offset_col(df, grouped):
     offsets = pd.Series(data, index=index)
     df['offsets'] = offsets.reindex_like(cdet, method='bfill')
 
-def get_grouped(cdet):
-    bbviews = get_bbviews(cdet)
+def get_grouped(cdet, moving=False):
+    bbviews = get_bbviews(cdet, moving)
     label_calibdata(cdet, bbviews, 'bbviews')
     grouped_bb = cdet.groupby('bbviews')
-    spaceviews = get_spaceviews(cdet)
+    spaceviews = get_spaceviews(cdet, moving)
     label_calibdata(cdet, spaceviews, 'spaceviews')
     grouped_sv = cdet.groupby('spaceviews')
     return grouped_bb, grouped_sv
