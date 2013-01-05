@@ -186,21 +186,20 @@ def define_sdtype(df):
                   (df.el_cmd >= BB_EL_MIN) & (df.el_cmd <= BB_EL_MAX)
     st_selector = (df.az_cmd >= ST_AZ_MIN) & (df.az_cmd <= ST_AZ_MAX) & \
                   (df.el_cmd >= ST_EL_MIN) & (df.el_cmd <= ST_EL_MAX)
-    # sv = df[sv_selector]
-    # bb = df[bb_selector]
-    # st = df[st_selector]
-    # sv['is_spaceview'] = True
-    # bb['is_bbview'] = True
-    # st['is_stview'] = True
-    # df['is_spaceview'] = sv['is_spaceview']
-    # df['is_bbview'] = bb['is_bbview']
-    # df['is_stview'] = st['is_stview']
     df['sdtype'] = 0
     df.sdtype[sv_selector] = 1
     df.sdtype[bb_selector] = 2
     df.sdtype[st_selector] = 3
     
-    
+def add_view_booleans(df):
+    """after the sdtypes have been defined, booleans for types are helpful"""
+    df['is_spaceview'] = (df.sdtype == 1)
+    df['is_bbview']    = (df.sdtype == 2)
+    df['is_stview']    = (df.sdtype == 3)
+    df['sv_blocks'] = nd.label(df.is_spaceview)[0]
+    df['bb_blocks'] = nd.label(df.is_bbview)[0]
+
+
 class DivCalib(object):
     """docstring for DivCalib"""
     def __init__(self, df):
