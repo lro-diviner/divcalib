@@ -207,19 +207,19 @@ class DivCalib(object):
                       'year','month','date','hour','minute','second','qmi','clat','clon',
                       'scalt']]
         self.timed = div.index_by_time(self.dfsmall)
-        # self.timed.set_index(['c','det',self.timed.index], inplace=True)
-        # self.timed.index.names = ['c','det','time']
+        self.timed.set_index(['c','det',self.timed.index], inplace=True)
+        self.timed.index.names = ['c','det','time']
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
         # get interpolated bb temps
-        self.add_bb_cols()
+        # self.add_bb_cols()
         # get the normalized radiance
-        self.get_nrad()
-        self.spaceviews = get_spaceviews(self.timed)
+        # self.get_nrad()
         # bbv is created in get_nrad()
         self.get_calib_blocks()
         
     def add_bb_cols(self):
+        # FIXME: does not work with c,det,time based multi-index. but it should
         df = self.timed
         # take temperature measurements of ch1/det1
         # (only way to guarantee unique T-measurements)
@@ -272,21 +272,6 @@ class CalibBlock(object):
     >>> cb.offset
     <value>
     """
-    SV_LENGTH = 80;
-    SV_AZ_MIN = 150.0;
-    SV_AZ_MAX = 270.0;
-    SV_EL_MIN = 45.0;
-    SV_EL_MAX = 100.0;
-    BBV_LENGTH = 80;
-    BB_AZ_MIN = 0.0;
-    BB_AZ_MAX = 270.0;
-    BB_EL_MIN = 0.0;
-    BB_EL_MAX = 3.0;
-    STV_LENGTH = 80;
-    ST_AZ_MIN = 10.0;
-    ST_AZ_MAX = 270.0;
-    ST_EL_MIN = 35.00;
-    ST_EL_MAX = 45.00;        
     def __init__(self, df):
         self.df = df
         self.alltimes = self.df.index.levels[2]
