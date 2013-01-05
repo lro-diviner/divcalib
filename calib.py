@@ -166,13 +166,44 @@ def get_bb2_col(df):
     s = InterpSpline(bb2temps.index.values, bb2temps.values, k=1)
     return pd.Series(s(df.index), index=df.index)
 
-def calc_gain():
-    pass
-
+def define_sdtype(df):
+    SV_AZ_MIN = 150.0
+    SV_AZ_MAX = 270.0
+    SV_EL_MIN = 45.0
+    SV_EL_MAX = 100.0
+    BB_AZ_MIN = 0.0
+    BB_AZ_MAX = 270.0
+    BB_EL_MIN = 0.0
+    BB_EL_MAX = 3.0
+    ST_AZ_MIN = 10.0
+    ST_AZ_MAX = 270.0
+    ST_EL_MIN = 35.00
+    ST_EL_MAX = 45.00
+    
+    sv_selector = (df.az_cmd >= SV_AZ_MIN) & (df.az_cmd <= SV_AZ_MAX) & \
+                  (df.el_cmd >= SV_EL_MIN) & (df.el_cmd <= SV_EL_MAX)
+    bb_selector = (df.az_cmd >= BB_AZ_MIN) & (df.az_cmd <= BB_AZ_MAX) & \
+                  (df.el_cmd >= BB_EL_MIN) & (df.el_cmd <= BB_EL_MAX)
+    st_selector = (df.az_cmd >= ST_AZ_MIN) & (df.az_cmd <= ST_AZ_MAX) & \
+                  (df.el_cmd >= ST_EL_MIN) & (df.el_cmd <= ST_EL_MAX)
+    # sv = df[sv_selector]
+    # bb = df[bb_selector]
+    # st = df[st_selector]
+    # sv['is_spaceview'] = True
+    # bb['is_bbview'] = True
+    # st['is_stview'] = True
+    # df['is_spaceview'] = sv['is_spaceview']
+    # df['is_bbview'] = bb['is_bbview']
+    # df['is_stview'] = st['is_stview']
+    df['sdtype'] = 0
+    df.sdtype[sv_selector] = 1
+    df.sdtype[bb_selector] = 2
+    df.sdtype[st_selector] = 3
+    
+    
 class DivCalib(object):
     """docstring for DivCalib"""
     def __init__(self, df):
-        self.df = df
         self.dfsmall = df[['c','det','counts','bb_1_temp','bb_2_temp','el_cmd','az_cmd',
                       'year','month','date','hour','minute','second','qmi','clat','clon',
                       'scalt']]
