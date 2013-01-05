@@ -114,7 +114,7 @@ def get_bbviews(df, moving=False):
     return newdf
 
 def get_calib_data(df, moving=False):
-    newdf = df[(df.el_cmd==0) | (df.el_cmd==80)]
+    newdf = df[df.el_cmd.isin([80,0])]
     return newdf if moving else get_non_moving_data(newdf)
     
 def is_moving(df):
