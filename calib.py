@@ -126,18 +126,14 @@ def get_non_moving_data(df):
     """take dataframe and filter for moving flag"""
     return df[-(is_moving(df))]
 
-def label_calibdata(cdet, calibdf, label):
+def label_calibdata(df, calibdf, label):
     """This needs the index to be integer, time indices are not supported by nd.label"""
     # get a series with the size and index of the incoming dataframe
-    calib_id = pd.Series(np.zeros_like(cdet.index), index=cdet.index)
+    calib_id = pd.Series(np.zeros(len(df.index)), index=df.index)
     # set the value to 1 (or True) where the calibdf has an index
     calib_id[calibdf.index] = 1
     # label the calib_id series and add to the incoming dataframe
-    cdet[label] = nd.label(calib_id)[0]
-    # cdet[label] = 0
-    # calib_id = cdet[label]
-    # calib_id[calibdf.index] = 1
-    # cdet[label] = nd.label(calib_id)[0]
+    df[label] = nd.label(calib_id)[0]
     
 def get_offset_use_limits(grouped):
     # for now, use the end of 2nd spaceview as end of application time
