@@ -216,6 +216,10 @@ class DivCalib(object):
         self.add_bb_cols()
         # get the normalized radiance
         self.get_nrad()
+        self.spaceviews = get_spaceviews(self.timed)
+        # bbv is created in get_nrad()
+        self.get_calib_blocks()
+        
     def add_bb_cols(self):
         df = self.timed
         # take temperature measurements of ch1/det1
@@ -246,6 +250,66 @@ class DivCalib(object):
                                ch].astype('float')
         self.bbv = bbv
         
+    def get_calib_blocks(self):
+        # first search for data that is within definiton of calib data, and still moving
+        # to find a continuous block of calibration measurements
+        multiindexed = self.timed.set_index(['c','det',self.timed.index])
+        calibdata = get_calib_data(multiindexed, moving=True)
+        calib_id = pd.Series(np.zeros(len(multiindexed.index)), index=multiindexed.index)
+        calib_id[calibdata.index] = 1
+        self.timed['calib_data'] = nd.label(calib_id)[0]
+        
+
+class CalibBlock(object):
+    """docstring for CalibBlock
+    
+    >>> cb = CalibBlock(df)
+    >>> cb.start_time
+    <timestamp>
+    >>> cb.end_time
+    <timestamp>
+    >>> cb.mean_time
+    <timestamp>
+    >>> cb.offset
+    <value>
+    """
+    SV_LENGTH = 80;
+    SV_AZ_MIN = 150.0;
+    SV_AZ_MAX = 270.0;
+    SV_EL_MIN = 45.0;
+    SV_EL_MAX = 100.0;
+    BBV_LENGTH = 80;
+    BB_AZ_MIN = 0.0;
+    BB_AZ_MAX = 270.0;
+    BB_EL_MIN = 0.0;
+    BB_EL_MAX = 3.0;
+    STV_LENGTH = 80;
+    ST_AZ_MIN = 10.0;
+    ST_AZ_MAX = 270.0;
+    ST_EL_MIN = 35.00;
+    ST_EL_MAX = 45.00;        
+    def __init__(self, df):
+        self.df = df
+        self.alltimes = self.df.index.levels[2]
+        # levels[2] to pick out the timestamp from hierarchical index
+        self.start_time_moving = self.alltimes[0]
+        self.end_time_moving = self.alltimes[-1]
+        self.static_df = get_non_moving_data(df)
+        self.static_times = self.static_df.index.levels[2]
+        self.static_start = self.static_times[0]
+        self.static_end = self.static_times[-1]
+        self.get_offset()
+    def get_offset(self):
+        pass
+
+class SpaceView(object):
+    """methods to deal with spaceviews"""
+    def __init__(self, df):
+        self.df = df
+    def get_counts_mean(offset_left=0,offset_right=0):
+        return df.counts
+        
+
 def thermal_alternative():
     """using the offset of visual channels???"""
     pass
