@@ -122,12 +122,7 @@ def get_cdet_frame(df,c,det):
 def get_calib_data(df, moving=False):
     newdf = df[df.el_cmd.isin([80,0])]
     return newdf if moving else get_non_moving_data(newdf)
-    
-def is_moving(df):
-    miscflags = MiscFlag()
-    movingflag = miscflags.dic['moving']
-    return df.qmi.astype(int) & movingflag !=0
-    
+        
 def get_non_moving_data(df):
     """take dataframe and filter for moving flag"""
     return df[-(is_moving(df))]
@@ -163,6 +158,11 @@ def get_bb2_col(df):
     s = InterpSpline(bb2temps.index.values, bb2temps.values, k=1)
     return pd.Series(s(df.index), index=df.index)
 
+def is_moving(df):
+    miscflags = MiscFlag()
+    movingflag = miscflags.dic['moving']
+    return df.qmi.astype(int) & movingflag !=0
+    
 def define_sdtype(df):
     
     sv_selector = (df.az_cmd >= SV_AZ_MIN) & (df.az_cmd <= SV_AZ_MAX) & \
@@ -187,13 +187,16 @@ def add_view_booleans(df):
 
 class DivCalib(object):
     """docstring for DivCalib"""
+    time_columns = ['year','month','date','hour','minute','second']
     def __init__(self, df):
-        self.dfsmall = df[['c','det','counts','bb_1_temp','bb_2_temp','el_cmd','az_cmd',
-                      'year','month','date','hour','minute','second','qmi','clat','clon',
-                      'scalt']]
-        self.timed = div.index_by_time(self.dfsmall)
-        self.timed.set_index(['c','det',self.timed.index], inplace=True)
-        self.timed.index.names = ['c','det','time']
+        self.dfsmall = df[self.time_columns + 
+                          ['c','det','counts','bb_1_temp','bb_2_temp',
+                           'el_cmd','az_cmd',
+                           'qmi','clat','clon','scalt']]
+        index = div.generate_date_index(self.dfsmall)
+        self.df = self.dfsmall.set_index(['c','det',index])
+        self.df.index.names = ['c','det','time']
+        self.df = self.df.drop(self.time_columns, axis=1)
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
         # get interpolated bb temps
@@ -202,14 +205,17 @@ class DivCalib(object):
         # self.get_nrad()
         # bbv is created in get_nrad()
         self.get_calib_blocks()
-        
+        self.df['is_moving'] = is_moving(self.df)
+        define_sdtype(self.df)
+        add_view_booleans(self.df)
+                
     def add_bb_cols(self):
         # FIXME: does not work with c,det,time based multi-index. but it should
-        df = self.timed
+        df = self.df
         # take temperature measurements of ch1/det1
         # (only way to guarantee unique T-measurements)
-        bb2temps = df.bb_2_temp[(df.c==1) & (df.det==1)].dropna()
-        bb1temps = df.bb_1_temp[(df.c==1) & (df.det==1)].dropna()
+        bb1temps = df.ix[1].ix[1].bb_2_temp.dropna()
+        bb2temps = df.ix[1].ix[1].bb_2_temp.dropna()
         all_times = df.index.unique()
         for bbtemp in [bb1temps,bb2temps]:
             # converting the time series to floats for interpolation
@@ -220,7 +226,7 @@ class DivCalib(object):
                                                       index=all_times)
                                      
     def get_nrad(self):
-        bbv = get_bbviews(self.timed)
+        bbv = get_bbviews(self.df)
         bbv['nrad'] = 0.0
         # create dictionary to look up the right temperature for different channels
         l = [(i,'bb_1_temp_interp') for i in range(3,7)]
@@ -237,11 +243,10 @@ class DivCalib(object):
     def get_calib_blocks(self):
         # first search for data that is within definiton of calib data, and still moving
         # to find a continuous block of calibration measurements
-        multiindexed = self.timed.set_index(['c','det',self.timed.index])
-        calibdata = get_calib_data(multiindexed, moving=True)
-        calib_id = pd.Series(np.zeros(len(multiindexed.index)), index=multiindexed.index)
+        calibdata = get_calib_data(self.df, moving=True)
+        calib_id = pd.Series(np.zeros(len(self.df.index)), index=self.df.index)
         calib_id[calibdata.index] = 1
-        self.timed['calib_data'] = nd.label(calib_id)[0]
+        self.df['calib_data'] = nd.label(calib_id)[0]
         
 
 class CalibBlock(object):
