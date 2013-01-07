@@ -175,29 +175,39 @@ def define_sdtype(df):
     df.sdtype[sv_selector] = 1
     df.sdtype[bb_selector] = 2
     df.sdtype[st_selector] = 3
-    # has to be last to switch back previous cases that are moving
-    df.sdtype[is_moving(df)] = 4
     
-def add_view_booleans(df):
-    """after the sdtypes have been defined, booleans for types are helpful"""
-    # because the last sdtype defined above was 'is_moving', no need to check
-    # for moving anymore for 1,2,3
+    # the following defines the sequential list of calibration blocks inside
+    # the dataframe. nd.label provides an ID for each sequential part where
+    # the given condition is true.
+    # this still includes the moving areas, because i want the sv and bbv
+    # attached to each other to deal with them later as a separate calibration
+    # block
+    df['calib_blocks'] = nd.label( (df.sdtype==2) | (df.sdtype==1) )[0]
+    
+    # this resets data from sdtypes >0 above that is still 'moving' to be 
+    # sdtype=-1 (i.e. 'moving', defined by me)
+    df.sdtype[is_moving(df)] = -1
+    
+    # now I don't need to check for moving anymore, the sdtypes are clean
     df['is_spaceview'] = (df.sdtype == 1)
     df['is_bbview']    = (df.sdtype == 2)
     df['is_stview']    = (df.sdtype == 3)
-    df['is_moving']    = (df.sdtype == 4)
+    df['is_moving']    = (df.sdtype == -1)
+    df['is_calib'] = df.is_spaceview | df.is_bbview | df.is_stview
+
+    # this does the same as above labeling, albeit here the blocks are numbered
+    # individually. Not sure I will need it but might come in handy.
     df['sv_blocks'] = nd.label(df.is_spaceview)[0]
     df['bb_blocks'] = nd.label(df.is_bbview)[0]
-
-
+    
 class DivCalib(object):
     """docstring for DivCalib"""
     time_columns = ['year','month','date','hour','minute','second']
     def __init__(self, df):
         self.dfsmall = df[self.time_columns + 
                           ['c','det','counts','bb_1_temp','bb_2_temp',
-                           'el_cmd','az_cmd',
-                           'qmi','clat','clon','scalt']]
+                           'el_cmd','az_cmd','qmi']]
+                           # 'clat','clon','scalt']]
         index = div.generate_date_index(self.dfsmall)
         self.df = self.dfsmall.set_index(['c','det',index])
         self.df.index.names = ['c','det','time']
@@ -207,52 +217,90 @@ class DivCalib(object):
         self.interpolate_bb_temps()
         # get the normalized radiance
         self.get_nrad()
-        self.get_calib_blocks()
+        # define science datatypes and boolean views
         define_sdtype(self.df)
-        add_view_booleans(self.df)
+        # drop these columns as they are not required anymore (i think)
+        df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
+        # sort the first level of index (channels) for indexing efficiency
+        df.sortlevel(0, inplace=True)
+        # get the calib blocks, i.e. 
+        self.calib_blocks = dict(list(df.groupby('calib_blocks')))
                 
     def interpolate_bb_temps(self):
+        # just a shortcutting reference
         df = self.df
+        
         # take temperature measurements of ch1/det1
-        # all temps were copied for all channel/detector pairs
+        # all temps were copied for all channel/detector pairs, so they are all
+        # the same for all other channel-detector pairs
         bb1temps = df.ix[1].ix[1].bb_1_temp.dropna()
         bb2temps = df.ix[1].ix[1].bb_2_temp.dropna()
-        # because this comes from a unique multi-index, these times are 
-        # already unique, so no unification required
+
+        # accessing the multi-index like this provides the unique index set
+        # at that level, in this case the dataframe timestamps
         all_times = df.index.levels[2]
+
+        # loop over both temperature arrays, to adhere to DRY principle
+        # the number of data points in bb1temps are much higher, but most
+        # consistently we should interpolate both the same way.
         for bbtemp in [bb1temps,bb2temps]:
             # converting the time series to floats for interpolation
             ind = bbtemp.index.values.astype('float64')
+            
+            # I found the best parameters by trial and error, as to what looked
+            # like a best compromise between smoothing and overfitting
             s = InterpSpline(ind, bbtemp, s=0.05, k=3)
-            # adding interpolated data to the timed dataframe
-            newseries = pd.Series(s(all_times.values.astype('float64')), index=all_times)
+            
+            # interpolate all_times to this function 
+            newtemps = s(all_times.values.astype('float64'))
+            
+            # create a new pd.Series to be incorporated into the dataframe
+            newseries = pd.Series(newtemps, index=all_times)
+            
             # reindex the time indexed series to have c,det,time multi-index
+            # the level index is the number of the index in the multi-index that
+            # is already covered by the index of newseries
             df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
                                      
     def get_nrad(self):
+        # add the nrad column to be filled in pieces later
         self.df['nrad'] = 0.0
-        # create mapping to look up the right temperature for different channels
+        
+        # getting the interpolated bb temperatures. as before, they are all the same
+        # for the other channel/detector pairs
         bb1temp = self.df.ix[1].ix[1].bb_1_temp_interp
         bb2temp = self.df.ix[1].ix[1].bb_2_temp_interp
-        mapping = {3: bb1temp,
-                   4: bb1temp,
-                   5: bb1temp,
-                   6: bb1temp,
-                   7: bb2temp,
-                   8: bb2temp,
-                   9: bb2temp}
+        
+        # create mapping to look up the right temperature for different channels
+        mapping = {3: bb1temp, 4: bb1temp, 5: bb1temp, 6: bb1temp,
+                   7: bb2temp, 8: bb2temp, 9: bb2temp}
+        
+        # loop over thermal channels 3..9           
         for ch in range(3,10):
-            #link to the correct bb temps and cast them to int
+            #link to the correct bb temps
             bbtemps = mapping[ch]
+            
             # rounding to 2 digits and * 100 to lookup the values that have been 
-            # indexed by T*100 to enable float value table lookup
+            # indexed by T*100 (to enable float value table lookup)
             bbtemps = (bbtemps.round(2)*100).astype('int')
+            
             #look up the radiances for this channel
             nrads = self.t2nrad.ix[bbtemps, ch]
+            # nrads has still the T*100 as index, set them to the timestamps of 
+            # the bb temperatures
             nrads.index = bbtemps.index
+            
+            # pick the target area inside the nrad column for this channel
+            # this provides a view (= reference) inside the dataframe
             target = self.df.nrad.ix[ch]
+            
+            # reindex the nrads time index to include the detectors
+            # the target index is ('det','time') therefore the level that is already
+            # covered by nrads is level 1
             nrads = nrads.reindex(target.index,level=1)
-            # store them in the dataframe at target position
+            
+            # store them in the dataframe at the target position (which is a
+            # view(=reference))
             target = nrads
         
     def get_calib_blocks(self):
