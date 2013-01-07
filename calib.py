@@ -353,9 +353,20 @@ class ViewLengthError(DivCalibError):
         self.view = view
         self.value = value
     def __str__(self):
-        return "Length of {0} view not 15120. Instead: ".format(self.view) \
+        return "Length of {0}-view not 15120. Instead: ".format(self.view) \
                 + repr(self.value)
-            
+
+class NoOfViewsError(DivCalibError):
+    def __init__(self, view, wanted, value, where):
+        self.view = view
+        self.wanted = wanted
+        self.value = value
+        self.where = where
+    def __str__(self):
+        return "Number of {0} views not as expected in {3}. "\
+                "Wanted {1}, got {2}.".format(self.view, self.wanted, 
+                                              self.value, self.where)
+
 class CalibBlock(object):
     """The CalibBlock is purely defined by azimuth and elevation commands.
     
@@ -377,9 +388,10 @@ class CalibBlock(object):
         # get spaceviews
         self.spaceviews = get_blocks(df, 'sv')
         
-        # I'm expecting 2 spaceviews, left and right 
+        # I'm expecting 2 spaceviews, left and right, raise error if it's not
         if len(self.spaceviews) != 2:
-            raise Exception("Unexpected number of SV blocks in CalibBlock constructor.")
+            raise NoOfViewsError('space', 2, len(self.spaceviews),
+                                 "CalibBlock constructor")
         
         # get the 2 item list of spaceview labels and sort them
         self.sv_labels = sorted(self.spaceviews.keys())
@@ -391,9 +403,9 @@ class CalibBlock(object):
         
         
         if (len(self.left_sv) != 15120):
-            raise SpaceViewLengthException( len(self.left_sv) )
+            raise ViewLengthError('space', len(self.left_sv) )
         if (len(self.right_sv != 15120)):
-            raise SpaceViewLengthException( len(self.right_sv) )
+            raise ViewLengthError('space', len(self.right_sv) )
         self.alltimes = self.df.index.levels[2]
         # levels[2] to pick out the timestamp from hierarchical index
         self.start_time_moving = self.alltimes[0]
