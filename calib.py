@@ -200,6 +200,17 @@ def define_sdtype(df):
     df['sv_block_labels'] = nd.label(df.is_spaceview)[0]
     df['bb_block_labels'] = nd.label(df.is_bbview)[0]
     
+def get_blocks(df, blocktype):
+    "Allowed block-types: ['calib','sv','bb']."
+        
+    d = dict(list(df.groupby(blocktype + '_block_labels')))
+        
+    # throw away the always existing label id 0 that is not relevant for the 
+    # requested blocktype
+    # Note: I cannot do list[1:] because I cannot rely on things being in sequence
+    del d[0]
+    return d
+    
 class DivCalib(object):
     """docstring for DivCalib"""
     time_columns = ['year','month','date','hour','minute','second']
@@ -241,9 +252,26 @@ class DivCalib(object):
         # sort the first level of index (channels) for indexing efficiency
         self.df.sortlevel(0, inplace=True)
         
-        # get the calib blocks, i.e. 
-        self.calib_blocks = dict(list(self.df.groupby('calib_blocks')))
+        # get the calib blocks
+        self.calib_blocks = self.get_blocks('calib')
            
+    def get_blocks(self, blocktype):
+        "Allowed block-types: ['calib','sv','bb']."
+        
+        d = dict(list(self.df.groupby(blocktype + '_block_labels')))
+        
+        # throw away the always existing label id 0 that is not relevant for the 
+        # requested blocktype
+        # Note: I cannot do list[1:] because I cannot rely on things being in sequence
+        del d[0]
+        return d
+        
+    def process_calib_blocks(self):
+        # loop over calib blocks (id 0 is not calib_data, therefore exclude
+        # in the loop
+        for blockid, block in self.calib_blocks.items()[1:]:
+            cblock = CalibBlock(block)
+            
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
@@ -323,8 +351,13 @@ class DivCalib(object):
         
         
 
+
+
 class CalibBlock(object):
-    """docstring for CalibBlock
+    """The CalibBlock is purely defined by azimuth and elevation commands.
+    
+    Therefore it contains moving data that needs to be ignored. The advantage is
+    that the spaceviews and bb view form a glued unit that can be found easily.
     
     >>> cb = CalibBlock(df)
     >>> cb.start_time
@@ -338,6 +371,12 @@ class CalibBlock(object):
     """
     def __init__(self, df):
         self.df = df
+        # get spaceviews, throw away moving data that is labeled as id '0'
+        self.spaceviews = dict(list(df.groupby('sv_blocks'))).pop(0)
+        
+        # I'm expecting 2 spaceviews, left and right 
+        if len(self.spaceviews) != 2:
+            raise Exception("Unexpected number of SV blocks in CalibBlock constructor.")
         self.alltimes = self.df.index.levels[2]
         # levels[2] to pick out the timestamp from hierarchical index
         self.start_time_moving = self.alltimes[0]
