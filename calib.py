@@ -204,27 +204,45 @@ class DivCalib(object):
     """docstring for DivCalib"""
     time_columns = ['year','month','date','hour','minute','second']
     def __init__(self, df):
+        # only read required columns from big array
         self.dfsmall = df[self.time_columns + 
                           ['c','det','counts','bb_1_temp','bb_2_temp',
                            'el_cmd','az_cmd','qmi']]
                            # 'clat','clon','scalt']]
+                           
+        # generate time index from time-related columns
         index = div.generate_date_index(self.dfsmall)
+        
+        # change index from anonymous integers to ch,det,time and assign result
+        # to new dataframe
         self.df = self.dfsmall.set_index(['c','det',index])
+        
+        # give the index columns a name
         self.df.index.names = ['c','det','time']
+        
+        # having indexed by time i don't need the time data columns anymore
         self.df = self.df.drop(self.time_columns, axis=1)
+        
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
+        
+        # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
-        # get the normalized radiance
+        
+        # get the normalized radiance for the interpolated bb temps
         self.get_nrad()
+        
         # define science datatypes and boolean views
         define_sdtype(self.df)
+        
         # drop these columns as they are not required anymore (i think)
-        df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
+        self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
+        
         # sort the first level of index (channels) for indexing efficiency
-        df.sortlevel(0, inplace=True)
+        self.df.sortlevel(0, inplace=True)
+        
         # get the calib blocks, i.e. 
-        self.calib_blocks = dict(list(df.groupby('calib_blocks')))
+        self.calib_blocks = dict(list(self.df.groupby('calib_blocks')))
                 
     def interpolate_bb_temps(self):
         # just a shortcutting reference
