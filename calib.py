@@ -175,12 +175,17 @@ def define_sdtype(df):
     df.sdtype[sv_selector] = 1
     df.sdtype[bb_selector] = 2
     df.sdtype[st_selector] = 3
+    # has to be last to switch back previous cases that are moving
+    df.sdtype[is_moving(df)] = 4
     
 def add_view_booleans(df):
     """after the sdtypes have been defined, booleans for types are helpful"""
+    # because the last sdtype defined above was 'is_moving', no need to check
+    # for moving anymore for 1,2,3
     df['is_spaceview'] = (df.sdtype == 1)
     df['is_bbview']    = (df.sdtype == 2)
     df['is_stview']    = (df.sdtype == 3)
+    df['is_moving']    = (df.sdtype == 4)
     df['sv_blocks'] = nd.label(df.is_spaceview)[0]
     df['bb_blocks'] = nd.label(df.is_bbview)[0]
 
@@ -204,7 +209,6 @@ class DivCalib(object):
         # self.get_nrad()
         # bbv is created in get_nrad()
         self.get_calib_blocks()
-        self.df['is_moving'] = is_moving(self.df)
         define_sdtype(self.df)
         add_view_booleans(self.df)
                 
