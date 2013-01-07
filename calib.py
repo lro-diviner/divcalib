@@ -250,9 +250,10 @@ class DivCalib(object):
             #look up the radiances for this channel
             nrads = self.t2nrad.ix[bbtemps, ch]
             nrads.index = bbtemps.index
-            nrads = nrads.reindex(self.df.nrad.ix[ch].index,level=1)
-            # store them in the dataframe
-            self.df.nrad.ix[ch] = nrads
+            target = self.df.nrad.ix[ch]
+            nrads = nrads.reindex(target.index,level=1)
+            # store them in the dataframe at target position
+            target = nrads
         
     def get_calib_blocks(self):
         # first search for data that is within definiton of calib data, and still moving
