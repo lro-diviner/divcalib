@@ -182,7 +182,7 @@ def define_sdtype(df):
     # this still includes the moving areas, because i want the sv and bbv
     # attached to each other to deal with them later as a separate calibration
     # block
-    df['calib_blocks'] = nd.label( (df.sdtype==2) | (df.sdtype==1) )[0]
+    df['calib_block_labels'] = nd.label( (df.sdtype==2) | (df.sdtype==1) )[0]
     
     # this resets data from sdtypes >0 above that is still 'moving' to be 
     # sdtype=-1 (i.e. 'moving', defined by me)
@@ -197,8 +197,8 @@ def define_sdtype(df):
 
     # this does the same as above labeling, albeit here the blocks are numbered
     # individually. Not sure I will need it but might come in handy.
-    df['sv_blocks'] = nd.label(df.is_spaceview)[0]
-    df['bb_blocks'] = nd.label(df.is_bbview)[0]
+    df['sv_block_labels'] = nd.label(df.is_spaceview)[0]
+    df['bb_block_labels'] = nd.label(df.is_bbview)[0]
     
 class DivCalib(object):
     """docstring for DivCalib"""
@@ -243,7 +243,7 @@ class DivCalib(object):
         
         # get the calib blocks, i.e. 
         self.calib_blocks = dict(list(self.df.groupby('calib_blocks')))
-                
+           
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
@@ -321,13 +321,6 @@ class DivCalib(object):
             # view(=reference))
             target = nrads
         
-    def get_calib_blocks(self):
-        # first search for data that is within definiton of calib data, and still moving
-        # to find a continuous block of calibration measurements
-        calibdata = get_calib_data(self.df, moving=True)
-        calib_id = pd.Series(np.zeros(len(self.df.index)), index=self.df.index)
-        calib_id[calibdata.index] = 1
-        self.df['calib_data'] = nd.label(calib_id)[0]
         
 
 class CalibBlock(object):
