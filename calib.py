@@ -199,8 +199,7 @@ class DivCalib(object):
         self.df = self.df.drop(self.time_columns, axis=1)
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
-        # get interpolated bb temps
-        # self.add_bb_cols()
+        self.interpolate_bb_temps()
         # get the normalized radiance
         # self.get_nrad()
         # bbv is created in get_nrad()
@@ -209,21 +208,23 @@ class DivCalib(object):
         define_sdtype(self.df)
         add_view_booleans(self.df)
                 
-    def add_bb_cols(self):
-        # FIXME: does not work with c,det,time based multi-index. but it should
+    def interpolate_bb_temps(self):
         df = self.df
         # take temperature measurements of ch1/det1
-        # (only way to guarantee unique T-measurements)
-        bb1temps = df.ix[1].ix[1].bb_2_temp.dropna()
+        # all temps were copied for all channel/detector pairs
+        bb1temps = df.ix[1].ix[1].bb_1_temp.dropna()
         bb2temps = df.ix[1].ix[1].bb_2_temp.dropna()
-        all_times = df.index.unique()
+        # because this comes from a unique multi-index, these times are 
+        # already unique, so no unification required
+        all_times = df.index.levels[2]
         for bbtemp in [bb1temps,bb2temps]:
             # converting the time series to floats for interpolation
             ind = bbtemp.index.values.astype('float64')
             s = InterpSpline(ind, bbtemp, s=0.05, k=3)
             # adding interpolated data to the timed dataframe
-            df[bbtemp.name + '_interp'] = pd.Series(s(all_times.astype('float64')),
-                                                      index=all_times)
+            newseries = pd.Series(s(all_times.values.astype('float64')), index=all_times)
+            # reindex the time indexed series to have c,det,time multi-index
+            df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
                                      
     def get_nrad(self):
         bbv = get_bbviews(self.df)
