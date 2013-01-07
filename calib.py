@@ -342,6 +342,20 @@ class DivCalib(object):
 
 
 
+class DivCalibError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+    
+class ViewLengthError(DivCalibError):
+    """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
+    """
+    def __init__(self, view, value):
+        self.view = view
+        self.value = value
+    def __str__(self):
+        return "Length of {0} view not 15120. Instead: ".format(self.view) \
+                + repr(self.value)
+            
 class CalibBlock(object):
     """The CalibBlock is purely defined by azimuth and elevation commands.
     
@@ -360,12 +374,26 @@ class CalibBlock(object):
     """
     def __init__(self, df):
         self.df = df
-        # get spaceviews, throw away moving data that is labeled as id '0'
-        self.spaceviews = dict(list(df.groupby('sv_blocks'))).pop(0)
+        # get spaceviews
+        self.spaceviews = get_blocks(df, 'sv')
         
         # I'm expecting 2 spaceviews, left and right 
         if len(self.spaceviews) != 2:
             raise Exception("Unexpected number of SV blocks in CalibBlock constructor.")
+        
+        # get the 2 item list of spaceview labels and sort them
+        self.sv_labels = sorted(self.spaceviews.keys())
+        
+        # define the lower label id as the left spaceview
+        self.left_sv = self.spaceviews[self.sv_labels[0]]
+        # and the other as the right spaceview
+        self.right_sv = self.spaceviews[self.sv_labels[1]]
+        
+        
+        if (len(self.left_sv) != 15120):
+            raise SpaceViewLengthException( len(self.left_sv) )
+        if (len(self.right_sv != 15120)):
+            raise SpaceViewLengthException( len(self.right_sv) )
         self.alltimes = self.df.index.levels[2]
         # levels[2] to pick out the timestamp from hierarchical index
         self.start_time_moving = self.alltimes[0]
