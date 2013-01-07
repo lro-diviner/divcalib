@@ -253,19 +253,8 @@ class DivCalib(object):
         self.df.sortlevel(0, inplace=True)
         
         # get the calib blocks
-        self.calib_blocks = self.get_blocks('calib')
-           
-    def get_blocks(self, blocktype):
-        "Allowed block-types: ['calib','sv','bb']."
-        
-        d = dict(list(self.df.groupby(blocktype + '_block_labels')))
-        
-        # throw away the always existing label id 0 that is not relevant for the 
-        # requested blocktype
-        # Note: I cannot do list[1:] because I cannot rely on things being in sequence
-        del d[0]
-        return d
-        
+        self.calib_blocks = get_blocks(self.df, 'calib')
+                   
     def process_calib_blocks(self):
         # loop over calib blocks (id 0 is not calib_data, therefore exclude
         # in the loop
