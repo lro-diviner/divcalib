@@ -206,8 +206,7 @@ class DivCalib(object):
         self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
         self.interpolate_bb_temps()
         # get the normalized radiance
-        # self.get_nrad()
-        # bbv is created in get_nrad()
+        self.get_nrad()
         self.get_calib_blocks()
         define_sdtype(self.df)
         add_view_booleans(self.df)
@@ -231,19 +230,29 @@ class DivCalib(object):
             df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
                                      
     def get_nrad(self):
-        bbv = get_bbviews(self.df)
-        bbv['nrad'] = 0.0
-        # create dictionary to look up the right temperature for different channels
-        l = [(i,'bb_1_temp_interp') for i in range(3,7)]
-        l2 = [(i,'bb_2_temp_interp') for i in range(7,10)]
-        d = dict(l+l2)
+        self.df['nrad'] = 0.0
+        # create mapping to look up the right temperature for different channels
+        bb1temp = self.df.ix[1].ix[1].bb_1_temp_interp
+        bb2temp = self.df.ix[1].ix[1].bb_2_temp_interp
+        mapping = {3: bb1temp,
+                   4: bb1temp,
+                   5: bb1temp,
+                   6: bb1temp,
+                   7: bb2temp,
+                   8: bb2temp,
+                   9: bb2temp}
         for ch in range(3,10):
+            #link to the correct bb temps and cast them to int
+            bbtemps = mapping[ch]
             # rounding to 2 digits and * 100 to lookup the values that have been 
             # indexed by T*100 to enable float value table lookup
-            bbv.nrad[bbv.c==ch] = \
-                self.t2nrad.ix[bbv[d[ch]][bbv.c==ch].round(2)*100, 
-                               ch].astype('float')
-        self.bbv = bbv
+            bbtemps = (bbtemps.round(2)*100).astype('int')
+            #look up the radiances for this channel
+            nrads = self.t2nrad.ix[bbtemps, ch]
+            nrads.index = bbtemps.index
+            nrads = nrads.reindex(self.df.nrad.ix[ch].index,level=1)
+            # store them in the dataframe
+            self.df.nrad.ix[ch] = nrads
         
     def get_calib_blocks(self):
         # first search for data that is within definiton of calib data, and still moving
