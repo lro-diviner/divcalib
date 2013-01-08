@@ -244,7 +244,7 @@ class DivCalib(object):
         self.interpolate_bb_temps()
         
         # get the normalized radiance for the interpolated bb temps
-        self.get_nrad()
+        self.get_RBB()
         
         # define science datatypes and boolean views
         define_sdtype(self.df)
@@ -300,9 +300,9 @@ class DivCalib(object):
             # is already covered by the index of newseries
             df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
                                      
-    def get_nrad(self):
-        # add the nrad column to be filled in pieces later
-        self.df['nrad'] = 0.0
+    def get_RBB(self):
+        # add the RBB column to be filled in pieces later
+        self.df['RBB'] = 0.0
         
         # getting the interpolated bb temperatures. as before, they are all the same
         # for the other channel/detector pairs
@@ -323,27 +323,24 @@ class DivCalib(object):
             bbtemps = (bbtemps.round(2)*100).astype('int')
             
             #look up the radiances for this channel
-            nrads = self.t2nrad.ix[bbtemps, ch]
-            # nrads has still the T*100 as index, set them to the timestamps of 
+            RBBs = self.t2nrad.ix[bbtemps, ch]
+            # RBBs has still the T*100 as index, set them to the timestamps of 
             # the bb temperatures
-            nrads.index = bbtemps.index
+            RBBs.index = bbtemps.index
             
-            # pick the target area inside the nrad column for this channel
+            # pick the target area inside the RBB column for this channel
             # this provides a view (= reference) inside the dataframe
-            target = self.df.nrad.ix[ch]
+            target = self.df.RBB.ix[ch]
             
-            # reindex the nrads time index to include the detectors
+            # reindex the RBBs time index to include the detectors
             # the target index is ('det','time') therefore the level that is already
-            # covered by nrads is level 1
-            nrads = nrads.reindex(target.index,level=1)
+            # covered by RBBs is level 1
+            RBBs = RBBs.reindex(target.index,level=1)
             
             # store them in the dataframe at the target position (which is a
             # view(=reference))
-            target = nrads
+            self.df.RBB.ix[ch] = RBBs
         
-        
-
-
 
 class DivCalibError(Exception):
     """Base class for exceptions in this module."""
@@ -421,7 +418,7 @@ class CalibBlock(object):
         if len(bbview_group) != 1:
             raise NoOfViewsError('bb', 1, len(bbview_group), 'process_bbview')
         self.bbv_label = bbview_group.keys()
-        self.bbview = View(bbview_group[self.bbv_label[0]])
+        self.bbview = BBView(bbview_group[self.bbv_label[0]])
         
     def process_spaceviews(self):
         """Process the spaceviews inside this CalibBlock.
@@ -446,9 +443,9 @@ class CalibBlock(object):
         self.sv_labels = sorted(spaceviews.keys())
         
         # define the lower label id as the left spaceview
-        self.left_sv  = View(spaceviews[self.sv_labels[0]])
+        self.left_sv  = SpaceView(spaceviews[self.sv_labels[0]])
         # and the other as the right spaceview
-        self.right_sv = View(spaceviews[self.sv_labels[1]])
+        self.right_sv = SpaceView(spaceviews[self.sv_labels[1]])
 
     def check_spaceviews(self):
         # check for the right length of spaceview
@@ -483,6 +480,14 @@ class CalibBlock(object):
         else:
             raise UnknownMethodError(method, 'CalibBlock.get_offset')
         return offset
+        
+    def calc_gain(self):
+        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
+                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+                       # calc_CBB is just the mean of counts in BB view
+        denominator -= thermal_marker_node.calc_CBB(chan, det)
+        return numerator/denominator
 
 
 class View(object):
@@ -494,6 +499,7 @@ class View(object):
     """
     def __init__(self, df):
         self.counts = df.counts
+        self.df = df
         self.start_time = self.counts.index[0][2]
         self.end_time   = self.counts.index[-1][2]
         self.average = self.counts.groupby(level=['c','det']).mean()
@@ -505,6 +511,21 @@ class View(object):
     def __len__(self):
         "provide own answer to length for the safety checks in CalibBlock()"
         return len(self.counts)
+
+class SpaceView(View):
+    """docstring for SpaceView"""
+    def __init__(self, df):
+        super(SpaceView, self).__init__(df)
+    
+class BBView(View):
+    """docstring for BBView"""
+    def __init__(self, df):
+        super(BBView, self).__init__(df)
+        self.RBB = df.RBB
+        # meaningfull is only the grouping on level=['c'] but we need the c,det indexing
+        # anyway later so I might as well have the broadcasting here.
+        self.rbb_average = self.RBB.groupby(level=['c','det']).mean()
+        
 
 def thermal_alternative():
     """using the offset of visual channels???"""
@@ -529,11 +550,4 @@ def thermal_nearest(node, tmnearest):
     tb = rbbtable.TB(radiance, chan, det)
     radiance *= config.CalRadConstant(chan)
    
-def calc_gain(chan, det, thermal_marker_node):
-    numerator = -1 * thermal_marker_node.calcRBB(chan,det)
-    denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
-                   thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
-                   # calc_CBB is just the mean of counts in BB view
-    denominator -= thermal_marker_node.calc_CBB(chan, det)
-    return numerator/denominator
     
