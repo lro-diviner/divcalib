@@ -494,14 +494,23 @@ class CalibBlock(object):
         return offset
         
     def calc_gain(self):
-        # numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+        """Calc gain.
+        
+        This is how JPL did it:
+        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+        
+        Then a first step for the denominator:
+        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
+                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+        
+        Basically, that means: denominator = mean(loffset, roffset)
+        
+        For the second step of the denominator, they used calc_CBB, which is just 
+        the mean of counts in BB view:
+        denominator -= thermal_marker_node.calc_CBB(chan, det)
+        return numerator/denominator.
+        """
         numerator = -1 * self.bbview.rbb_average
-        # denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
-        #                thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
-        # basically denominator = mean(loffset, roffset)
-        # calc_CBB is just the mean of counts in BB view
-        # denominator -= thermal_marker_node.calc_CBB(chan, det)
-        # return numerator/denominator
         denominator = self.offset - self.bbview.average
         return numerator / denominator
                       
