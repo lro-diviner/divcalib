@@ -276,7 +276,7 @@ class DivCalib(object):
 
         # accessing the multi-index like this provides the unique index set
         # at that level, in this case the dataframe timestamps
-        all_times = df.index.levels[2]
+        all_times = pd.Index(df.index.get_level_values(2).unique())
 
         # loop over both temperature arrays, to adhere to DRY principle
         # the number of data points in bb1temps are much higher, but most
@@ -374,6 +374,13 @@ class NoOfViewsError(DivCalibError):
                 "Wanted {1}, got {2}.".format(self.view, self.wanted, 
                                               self.value, self.where)
 
+class UnknownMethodError(DivCalibError):
+    def __init__(self, method, location):
+        self.method
+        self.location
+    def __str__(self):
+        return "Method {0} not defined here. ({1})".format(self.method,
+                                                           self.location)
 
 class CalibBlock(object):
     """The CalibBlock is purely defined by azimuth and elevation commands.
@@ -393,14 +400,30 @@ class CalibBlock(object):
     """
     def __init__(self, df):
         self.df = df
+        
+        # Define and set spaceviews for object
         self.set_spaceviews()
         
+        # check for correct length of spaceviews
+        self.check_spaceviews()
+        
+        self.offset = self.get_offset()
+
         # levels[2] to pick out the timestamp from hierarchical index
-        self.alltimes = self.df.index.levels[2]
+        self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
         self.start_time_moving = self.alltimes[0]
         self.end_time_moving = self.alltimes[-1]
-        self.get_offset()
+        
     def set_spaceviews(self):
+        """Process the spaceviews inside this CalibBlock.
+        
+        Defining the spaceviews by creating:
+        --------
+        * self.spaceviews
+        * self.sv_labels
+        * self.left_sv
+        * self.right_sv
+        """
         # get spaceviews
         self.spaceviews = get_blocks(self.df, 'sv')
         
@@ -417,6 +440,7 @@ class CalibBlock(object):
         # and the other as the right spaceview
         self.right_sv = SpaceView(self.spaceviews[self.sv_labels[1]])
 
+    def check_spaceviews(self):
         # check for the right length of spaceview
         lenleft =  len(self.left_sv)
         lenright = len(self.right_sv)
@@ -433,9 +457,22 @@ class CalibBlock(object):
             spaceviews are being used for the offset calculation.
             
         Returns:
-            
+        --------
+        offset: pandas.Series
+            data column copied attached to self
         """
+        loffset = self.left_sv.average
+        roffset = self.right_sv.average
         
+        if method == 'both':
+            offset = (loffset + roffset) / 2.0
+        elif method == 'left':
+            offset = loffset
+        elif method == 'right':
+            offset = roffset
+        else:
+            raise UnknownMethodError(method, 'CalibBlock.get_offset')
+        return offset
 
 
 class SpaceView(object):
