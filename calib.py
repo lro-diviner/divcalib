@@ -247,7 +247,7 @@ class DivCalib(object):
         define_sdtype(self.df)
         
         # drop these columns as they are not required anymore (i think)
-        self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
+        self.df = self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
         
         # sort the first level of index (channels) for indexing efficiency
         self.df.sortlevel(0, inplace=True)
@@ -391,10 +391,6 @@ class CalibBlock(object):
         self.alltimes = self.df.index.levels[2]
         self.start_time_moving = self.alltimes[0]
         self.end_time_moving = self.alltimes[-1]
-        self.static_df = get_non_moving_data(df)
-        self.static_times = self.static_df.index.levels[2]
-        self.static_start = self.static_times[0]
-        self.static_end = self.static_times[-1]
         self.get_offset()
     def set_spaceviews(self):
         # get spaceviews
@@ -428,13 +424,18 @@ class CalibBlock(object):
 class SpaceView(object):
     """methods to deal with spaceviews"""
     def __init__(self, df):
-        self.df = df
-        self.start_time = self.df.index[0][2]
-        self.end_time   = self.df.index[-1][2]
+        self.counts = df.counts
+        self.start_time = self.counts.index[0][2]
+        self.end_time   = self.counts.index[-1][2]
+        self.simple_offset = self.counts.groupby(level=['c','det']).mean()
+        
     def get_counts_mean(offset_left=0,offset_right=0):
-        return df.counts
+        "Placeholder for getting counts in different ways."
+        pass
+
     def __len__(self):
-        return len(self.df)
+        "provide own answer to length for the safety checks in CalibBlock()"
+        return len(self.counts)
 
 def thermal_alternative():
     """using the offset of visual channels???"""
