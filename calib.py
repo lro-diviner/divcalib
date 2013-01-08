@@ -422,12 +422,17 @@ class CalibBlock(object):
 
 
 class SpaceView(object):
-    """methods to deal with spaceviews"""
+    """methods to deal with spaceviews.
+    
+    Each SpaceView object should offer a simple average and also a more intricate
+    way to determine the count values of itself. (Like cutting of samples on the left
+    or right side.)
+    """
     def __init__(self, df):
         self.counts = df.counts
         self.start_time = self.counts.index[0][2]
         self.end_time   = self.counts.index[-1][2]
-        self.simple_offset = self.counts.groupby(level=['c','det']).mean()
+        self.average = self.counts.groupby(level=['c','det']).mean()
         
     def get_counts_mean(offset_left=0,offset_right=0):
         "Placeholder for getting counts in different ways."
