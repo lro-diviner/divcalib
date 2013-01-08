@@ -385,8 +385,20 @@ class CalibBlock(object):
     """
     def __init__(self, df):
         self.df = df
+        self.get_spaceviews()
+        
+        # levels[2] to pick out the timestamp from hierarchical index
+        self.alltimes = self.df.index.levels[2]
+        self.start_time_moving = self.alltimes[0]
+        self.end_time_moving = self.alltimes[-1]
+        self.static_df = get_non_moving_data(df)
+        self.static_times = self.static_df.index.levels[2]
+        self.static_start = self.static_times[0]
+        self.static_end = self.static_times[-1]
+        self.get_offset()
+    def get_spaceviews(self):
         # get spaceviews
-        self.spaceviews = get_blocks(df, 'sv')
+        self.spaceviews = get_blocks(self.df, 'sv')
         
         # I'm expecting 2 spaceviews, left and right, raise error if it's not
         if len(self.spaceviews) != 2:
@@ -397,26 +409,18 @@ class CalibBlock(object):
         self.sv_labels = sorted(self.spaceviews.keys())
         
         # define the lower label id as the left spaceview
-        self.left_sv = self.spaceviews[self.sv_labels[0]]
+        self.left_sv  = self.spaceviews[self.sv_labels[0]]
         # and the other as the right spaceview
         self.right_sv = self.spaceviews[self.sv_labels[1]]
         
-        
-        if (len(self.left_sv) != 15120):
+        if (len(self.left_sv ) != 15120):
             raise ViewLengthError('space', len(self.left_sv) )
-        if (len(self.right_sv != 15120)):
+        if (len(self.right_sv) != 15120):
             raise ViewLengthError('space', len(self.right_sv) )
-        self.alltimes = self.df.index.levels[2]
-        # levels[2] to pick out the timestamp from hierarchical index
-        self.start_time_moving = self.alltimes[0]
-        self.end_time_moving = self.alltimes[-1]
-        self.static_df = get_non_moving_data(df)
-        self.static_times = self.static_df.index.levels[2]
-        self.static_start = self.static_times[0]
-        self.static_end = self.static_times[-1]
-        self.get_offset()
+        
     def get_offset(self):
         pass
+
 
 class SpaceView(object):
     """methods to deal with spaceviews"""
