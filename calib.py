@@ -258,12 +258,19 @@ class DivCalib(object):
         # get the calib blocks
         self.calib_blocks = get_blocks(self.df, 'calib')
                    
+        self.process_calib_blocks()
+        
     def process_calib_blocks(self):
-        # loop over calib blocks (id 0 is not calib_data, therefore exclude
-        # in the loop
-        for blockid, block in self.calib_blocks.items()[1:]:
-            cblock = CalibBlock(block)
-            
+        # loop over calib blocks
+        for blockid, block in self.calib_blocks.iteritems():
+            try:
+                cblock = CalibBlock(block)
+            except ViewLengthError:
+                # if it's the last key the data is most likely at the limit of
+                # the dataset.
+                # FIXME later.
+                if blockid == sorted(self.calib_blocks.keys())[-1]:
+                    pass
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
@@ -352,12 +359,14 @@ class ViewLengthError(DivCalibError):
     
     SV_LENGTH_TOTAL defined at top of this file.
     """
-    def __init__(self, view, value):
+    def __init__(self, view, value,value2):
         self.view = view
         self.value = value
+        self.value2 = value2
     def __str__(self):
         return "Length of {0}-view not {1}. Instead: ".format(self.view,
-                                        SV_LENGTH_TOTAL) + repr(self.value)
+                                        SV_LENGTH_TOTAL) + repr(self.value) +\
+                                        repr(self.value2)
 
 
 class NoOfViewsError(DivCalibError):
@@ -464,7 +473,7 @@ class CalibBlock(object):
         lenleft =  len(self.left_sv)
         lenright = len(self.right_sv)
         if any([lenleft!=SV_LENGTH_TOTAL, lenright!=SV_LENGTH_TOTAL]):
-            raise ViewLengthError('space', lenleft )
+            raise ViewLengthError('space', lenleft, lenright )
         
     def get_offset(self, method='both'):
         """calculate offset.
@@ -515,7 +524,6 @@ class CalibBlock(object):
         return numerator / denominator
                       
 
-
 class View(object):
     """methods to deal with spaceviews.
     
@@ -528,6 +536,7 @@ class View(object):
         self.df = df
         self.start_time = self.counts.index[0][2]
         self.end_time   = self.counts.index[-1][2]
+        self.mid_time =  self.start_time + (self.end_time-self.start_time)//2
         self.average = self.counts.groupby(level=['c','det']).mean()
         
     def get_counts_mean(offset_left=0,offset_right=0):
@@ -537,7 +546,14 @@ class View(object):
     def __len__(self):
         "provide own answer to length for the safety checks in CalibBlock()"
         return len(self.counts)
-
+    
+    def get_mid_time(self):
+        self.mid_time =  self.start_time+((self.end_time-self.start_time)/2)
+        # end = self.end_time
+        # half = (end - start)/2
+        # midtime = start+half
+        # self.mid_time = midtime
+        
 class SpaceView(View):
     """docstring for SpaceView"""
     def __init__(self, df):
