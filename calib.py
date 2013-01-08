@@ -261,6 +261,8 @@ class DivCalib(object):
         self.process_calib_blocks()
         
     def process_calib_blocks(self):
+        # create lists to save gains and offsets from the calib_blocks:
+        d = {}
         # loop over calib blocks
         for blockid, block in self.calib_blocks.iteritems():
             try:
@@ -270,7 +272,10 @@ class DivCalib(object):
                 # the dataset.
                 # FIXME later.
                 if blockid == sorted(self.calib_blocks.keys())[-1]:
-                    pass
+                    continue
+            d[blockid]=(cblock.bbview.mid_time, cblock.offset, cblock.gain)
+        self.calib_data = d
+        
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
