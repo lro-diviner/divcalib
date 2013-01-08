@@ -9,6 +9,9 @@ import diviner as div
 # define the default number of points that each view should have
 SV_LENGTH = STV_LENGTH = BBV_LENGTH = 80
 
+# integrated length of spaceview for all detectors (80*9*21):
+SV_LENGTH_TOTAL = 15120
+
 # define pointing boundaries for the spaceview (for offset calibration)
 SV_AZ_MIN = 150.0
 SV_AZ_MAX = 270.0
@@ -346,15 +349,19 @@ class DivCalibError(Exception):
     """Base class for exceptions in this module."""
     pass
     
+
 class ViewLengthError(DivCalibError):
     """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
+    
+    SV_LENGTH_TOTAL defined at top of this file.
     """
     def __init__(self, view, value):
         self.view = view
         self.value = value
     def __str__(self):
-        return "Length of {0}-view not 15120. Instead: ".format(self.view) \
-                + repr(self.value)
+        return "Length of {0}-view not {1}. Instead: ".format(self.view,
+                                        SV_LENGTH_TOTAL) + repr(self.value)
+
 
 class NoOfViewsError(DivCalibError):
     def __init__(self, view, wanted, value, where):
@@ -366,6 +373,7 @@ class NoOfViewsError(DivCalibError):
         return "Number of {0} views not as expected in {3}. "\
                 "Wanted {1}, got {2}.".format(self.view, self.wanted, 
                                               self.value, self.where)
+
 
 class CalibBlock(object):
     """The CalibBlock is purely defined by azimuth and elevation commands.
@@ -412,13 +420,22 @@ class CalibBlock(object):
         # check for the right length of spaceview
         lenleft =  len(self.left_sv)
         lenright = len(self.right_sv)
-        if lenleft  != 15120:
+        if any([lenleft!=SV_LENGTH_TOTAL, lenright!=SV_LENGTH_TOTAL]):
             raise ViewLengthError('space', lenleft )
-        if lenright != 15120:
-            raise ViewLengthError('space', lenright )
         
-    def get_offset(self):
-        pass
+    def get_offset(self, method='both'):
+        """calculate offset.
+        
+        Parameters
+        ----------
+        method: string
+            Values: ['both','left','right'] to determine which sides of the 
+            spaceviews are being used for the offset calculation.
+            
+        Returns:
+            
+        """
+        
 
 
 class SpaceView(object):
