@@ -407,13 +407,25 @@ class CalibBlock(object):
         self.offset = self.get_offset()
         
         self.process_bbview()
+        
+        self.gain = self.calc_gain()
 
-        # levels[2] to pick out the timestamp from hierarchical index
-        self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
-        self.start_time_moving = self.alltimes[0]
-        self.end_time_moving = self.alltimes[-1]
+        # # levels[2] to pick out the timestamp from hierarchical index
+        # self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
+        # self.start_time_moving = self.alltimes[0]
+        # self.end_time_moving = self.alltimes[-1]
         
     def process_bbview(self):
+        """Process the bbview inside this CalibBlock.
+        
+        Defines:
+        --------
+        * self.bbv_label
+        ** the ID of this BB view within this dataset
+        * self.bbview
+        ** the BBView object for this bb-view
+        
+        """
         bbview_group = get_blocks(self.df, 'bb')
         if len(bbview_group) != 1:
             raise NoOfViewsError('bb', 1, len(bbview_group), 'process_bbview')
@@ -482,12 +494,17 @@ class CalibBlock(object):
         return offset
         
     def calc_gain(self):
-        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
-        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
-                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
-                       # calc_CBB is just the mean of counts in BB view
-        denominator -= thermal_marker_node.calc_CBB(chan, det)
-        return numerator/denominator
+        # numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+        numerator = -1 * self.bbview.rbb_average
+        # denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
+        #                thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+        # basically denominator = mean(loffset, roffset)
+        # calc_CBB is just the mean of counts in BB view
+        # denominator -= thermal_marker_node.calc_CBB(chan, det)
+        # return numerator/denominator
+        denominator = self.offset - self.bbview.average
+        return numerator / denominator
+                      
 
 
 class View(object):
