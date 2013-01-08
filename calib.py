@@ -402,21 +402,31 @@ class CalibBlock(object):
         self.df = df
         
         # Define and set spaceviews for object
-        self.set_spaceviews()
+        self.process_spaceviews()
         
         # check for correct length of spaceviews
         self.check_spaceviews()
         
         self.offset = self.get_offset()
+        
+        self.process_bbview()
 
         # levels[2] to pick out the timestamp from hierarchical index
         self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
         self.start_time_moving = self.alltimes[0]
         self.end_time_moving = self.alltimes[-1]
         
-    def set_spaceviews(self):
+    def process_bbview(self):
+        bbview_group = get_blocks(self.df, 'bb')
+        if len(bbview_group) != 1:
+            raise NoOfViewsError('bb', 1, len(bbview_group), 'process_bbview')
+        self.bbv_label = bbview_group.keys()
+        self.bbview = View(bbview_group[self.bbv_label[0]])
+        
+    def process_spaceviews(self):
         """Process the spaceviews inside this CalibBlock.
         
+        As this defines the left and right sv, this relies on their existence.
         Defining the spaceviews by creating:
         --------
         * self.spaceviews
@@ -425,20 +435,20 @@ class CalibBlock(object):
         * self.right_sv
         """
         # get spaceviews
-        self.spaceviews = get_blocks(self.df, 'sv')
+        spaceviews = get_blocks(self.df, 'sv')
         
         # I'm expecting 2 spaceviews, left and right, raise error if it's not
-        if len(self.spaceviews) != 2:
-            raise NoOfViewsError('space', 2, len(self.spaceviews),
-                                 "CalibBlock constructor")
+        if len(spaceviews) != 2:
+            raise NoOfViewsError('space', 2, len(spaceviews),
+                                 "process_spaceviews")
         
         # get the 2 item list of spaceview labels and sort them
-        self.sv_labels = sorted(self.spaceviews.keys())
+        self.sv_labels = sorted(spaceviews.keys())
         
         # define the lower label id as the left spaceview
-        self.left_sv  = SpaceView(self.spaceviews[self.sv_labels[0]])
+        self.left_sv  = View(spaceviews[self.sv_labels[0]])
         # and the other as the right spaceview
-        self.right_sv = SpaceView(self.spaceviews[self.sv_labels[1]])
+        self.right_sv = View(spaceviews[self.sv_labels[1]])
 
     def check_spaceviews(self):
         # check for the right length of spaceview
@@ -475,10 +485,10 @@ class CalibBlock(object):
         return offset
 
 
-class SpaceView(object):
+class View(object):
     """methods to deal with spaceviews.
     
-    Each SpaceView object should offer a simple average and also a more intricate
+    Each View object should offer a simple average and also a more intricate
     way to determine the count values of itself. (Like cutting of samples on the left
     or right side.)
     """
