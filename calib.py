@@ -409,16 +409,16 @@ class CalibBlock(object):
         self.sv_labels = sorted(self.spaceviews.keys())
         
         # define the lower label id as the left spaceview
-        self.left_sv  = self.spaceviews[self.sv_labels[0]]
+        self.left_sv  = SpaceView(self.spaceviews[self.sv_labels[0]])
         # and the other as the right spaceview
-        self.right_sv = self.spaceviews[self.sv_labels[1]]
+        self.right_sv = SpaceView(self.spaceviews[self.sv_labels[1]])
 
         # check for the right length of spaceview
-        lenleft = len(self.left_sv)
+        lenleft =  len(self.left_sv)
         lenright = len(self.right_sv)
-        if lenleft != 15120):
+        if lenleft  != 15120:
             raise ViewLengthError('space', lenleft )
-        if lenright != 15120):
+        if lenright != 15120:
             raise ViewLengthError('space', lenright )
         
     def get_offset(self):
@@ -429,9 +429,12 @@ class SpaceView(object):
     """methods to deal with spaceviews"""
     def __init__(self, df):
         self.df = df
+        self.start_time = self.df.index[0][2]
+        self.end_time   = self.df.index[-1][2]
     def get_counts_mean(offset_left=0,offset_right=0):
         return df.counts
-        
+    def __len__(self):
+        return len(self.df)
 
 def thermal_alternative():
     """using the offset of visual channels???"""
