@@ -5,33 +5,7 @@ import numpy as np
 from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as InterpSpline
 import diviner as div
-
-# define the default number of points that each view should have
-SV_LENGTH = STV_LENGTH = BBV_LENGTH = 80
-
-# integrated length of spaceview for all detectors (80*9*21):
-SV_LENGTH_TOTAL = 15120
-
-# define pointing boundaries for the spaceview (for offset calibration)
-SV_AZ_MIN = 150.0
-SV_AZ_MAX = 270.0
-SV_EL_MIN = 45.0
-SV_EL_MAX = 100.0
-
-# define pointing boundaries for the blackbody view (for gain calibration)
-BB_AZ_MIN = BB_EL_MIN = 0.0
-BB_AZ_MAX = 270.0
-BB_EL_MAX = 3.0
-
-# define pointing boundaries for the solar target view (for visual channel calibration)
-ST_AZ_MIN = 10.0
-ST_AZ_MAX = 270.0
-ST_EL_MIN = 35.00
-ST_EL_MAX = 45.00
-
-SV_NUM_SKIP_SAMPLE = 16
-BBV_NUM_SKIP_SAMPLE = 16
-SOLV_NUM_SKIP_SAMPLE = 16
+from divconstants import *
 
 class Flag(object):
     """Helper class to deal with control words or flags.
@@ -237,6 +211,8 @@ class DivCalib(object):
         # having indexed by time i don't need the time data columns anymore
         self.df = self.df.drop(self.time_columns, axis=1)
         
+        self.all_times = pd.Index(df.index.get_level_values(2).unique())
+        
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
         
@@ -275,6 +251,12 @@ class DivCalib(object):
                     continue
             d[blockid]=(cblock.bbview.mid_time, cblock.offset, cblock.gain)
         self.calib_data = d
+        
+    def interpolate_calib_data(self):
+        data = self.calib_data.values()
+        times = [i[0] for i in data]
+        offsets = [i[1] for i in data]
+        gains = [i[2] for i in data]
         
     def interpolate_bb_temps(self):
         # just a shortcutting reference
