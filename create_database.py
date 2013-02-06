@@ -44,9 +44,8 @@ def define_sdtype(df):
     df['sv_block_labels'] = nd.label(df.is_spaceview)[0]
     df['bb_block_labels'] = nd.label(df.is_bbview)[0]
 
-def calculate_rec_dtype():
-    os.chdir('/Users/maye/data/diviner/div247/')
-    f = open('./div247.des')
+def parse_descriptor(fpath):
+    f = open(fpath)
     lines = f.readlines()
     f.close()
     s = pd.Series(lines)
@@ -63,6 +62,13 @@ def calculate_rec_dtype():
     rec_dtype = np.dtype([(key,'f8') for key in keys])
     return rec_dtype,keys
 
+def get_div247_dtypes():
+    if 'darwin' in sys.platform:
+        despath = '/Users/maye/data/diviner/div247/div247.des'
+    else:
+        despath = '/raid1/marks/bac/div247.des'
+    return parse_descriptor(despath)
+    
 def prepare_data(df_in):
     """Declare NaN value and pad nan data for some."""
     nan = np.nan
@@ -74,7 +80,7 @@ def prepare_data(df_in):
     return df
     
 def main(folder):
-    rec_dtype,keys = calculate_rec_dtype()
+    rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
     # opening store in overwrite-mode
     dirname = os.path.dirname(folder)
