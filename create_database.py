@@ -8,18 +8,23 @@ import diviner as div
 from divconstants import *
 from scipy import ndimage as nd
 
-def define_sdtype(df):
+def get_sv_selector(df):
+    return (df.last_az_cmd >= SV_AZ_MIN) & (df.last_az_cmd <= SV_AZ_MAX) & \
+           (df.last_el_cmd >= SV_EL_MIN) & (df.last_el_cmd <= SV_EL_MAX)
+
+def get_bb_selector(df):
+    return (df.last_az_cmd >= BB_AZ_MIN) & (df.last_az_cmd <= BB_AZ_MAX) & \
+           (df.last_el_cmd >= BB_EL_MIN) & (df.last_el_cmd <= BB_EL_MAX)
     
-    sv_selector = (df.last_az_cmd >= SV_AZ_MIN) & (df.last_az_cmd <= SV_AZ_MAX) & \
-                  (df.last_el_cmd >= SV_EL_MIN) & (df.last_el_cmd <= SV_EL_MAX)
-    bb_selector = (df.last_az_cmd >= BB_AZ_MIN) & (df.last_az_cmd <= BB_AZ_MAX) & \
-                  (df.last_el_cmd >= BB_EL_MIN) & (df.last_el_cmd <= BB_EL_MAX)
-    st_selector = (df.last_az_cmd >= ST_AZ_MIN) & (df.last_az_cmd <= ST_AZ_MAX) & \
-                  (df.last_el_cmd >= ST_EL_MIN) & (df.last_el_cmd <= ST_EL_MAX)
+def get_st_selector(df):
+    return (df.last_az_cmd >= ST_AZ_MIN) & (df.last_az_cmd <= ST_AZ_MAX) & \
+           (df.last_el_cmd >= ST_EL_MIN) & (df.last_el_cmd <= ST_EL_MAX)
+
+def define_sdtype(df):
     df['sdtype'] = 0
-    df.sdtype[sv_selector] = 1
-    df.sdtype[bb_selector] = 2
-    df.sdtype[st_selector] = 3
+    df.sdtype[get_sv_selector()] = 1
+    df.sdtype[get_bb_selector()] = 2
+    df.sdtype[get_st_selector()] = 3
     
     # the following defines the sequential list of calibration blocks inside
     # the dataframe. nd.label provides an ID for each sequential part where
