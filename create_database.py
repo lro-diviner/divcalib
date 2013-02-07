@@ -22,9 +22,9 @@ def get_st_selector(df):
 
 def define_sdtype(df):
     df['sdtype'] = 0
-    df.sdtype[get_sv_selector()] = 1
-    df.sdtype[get_bb_selector()] = 2
-    df.sdtype[get_st_selector()] = 3
+    df.sdtype[get_sv_selector(df)] = 1
+    df.sdtype[get_bb_selector(df)] = 2
+    df.sdtype[get_st_selector(df)] = 3
     
     # the following defines the sequential list of calibration blocks inside
     # the dataframe. nd.label provides an ID for each sequential part where
