@@ -66,7 +66,7 @@ def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
     else:
-        despath = '/raid1/marks/bac/div247.des'
+        despath = '/s3/marks/div247/div247.des'
     return parse_descriptor(despath)
     
 def prepare_data(df_in):
