@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from matplotlib import pyplot as plt
+from matplotlib.pylab import gcf
 import pandas
 import numpy as np
 from dateutil.parser import parse as dateparser
@@ -15,6 +16,9 @@ if sys.platform == 'darwin':
 else:
     datapath = '/luna1/maye'
 
+def save_to_www(fname, **kwargs):
+    gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
+    
 def parse_header_line(line):
     """Parse header lines.
     
