@@ -88,44 +88,54 @@ def prepare_data(df_in):
     df.moving.replace(nan,inplace=True)
     return df
 
-def folder_to_df(folder, top_end):
+def folder_to_df(folder, top_end=None, verbose=False):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
     fnames.sort()
+    if not top_end:
+        top_end = len(fnames)
     dfall = pd.DataFrame()
+    # storename = get_storename(folder)
+    # store = pd.HDFStore(storename,mode='w')
     for i,fname in enumerate(fnames[:top_end]):
-        print os.path.basename(fname)
-        print("{0:g} %".format(float(i)*100/top_end))
-        with open(fname) as f:
-            data = np.fromfile(f,dtype=rec_dtype)
-        df = pd.DataFrame(data,columns=keys)
-        df = prepare_data(df)
-        dfall = pd.concat([dfall,df])
-    define_sdtype(dfall)
-    to_store = dfall[dfall.calib_block_labels>0]
-    return to_store
-    
-def main(folder):
-    rec_dtype, keys = get_div247_dtypes()
-    fnames = glob.glob(folder+'/*.div247')
-    fnames.sort()
-    # opening store in overwrite-mode
-    dirname = os.path.dirname(folder)
-    basename = os.path.basename(folder)
-    storename = os.path.join(dirname,basename+'.h5')
-    print storename
-    store = pd.HDFStore(storename,mode='w')
-
-    for fname in fnames:
-        print("Working on {0}".format(os.path.basename(fname)))
+        if verbose:
+            if i*100/top_end % 10 ==0:
+                print("{0:g} %".format(float(i)*100/top_end))
         with open(fname) as f:
             data = np.fromfile(f,dtype=rec_dtype)
         df = pd.DataFrame(data,columns=keys)
         df = prepare_data(df)
         define_sdtype(df)
-        to_store = df[df.is_calib]
-        store.append('df',to_store )
+        dfall = pd.concat([dfall,df])
+    # define_sdtype(dfall)
+    to_store = dfall[dfall.calib_block_labels>0]
+    return to_store
     
+def get_storename(folder):
+    dirname = '/raid1/maye/data/div247'
+    basename = os.path.basename(folder)
+    storename = os.path.join(dirname,basename+'.h5')
+    return storename
+        
+def folder_to_store(folder):
+    rec_dtype, keys = get_div247_dtypes()
+    fnames = glob.glob(folder+'/*.div247')
+    fnames.sort()
+    # opening store in overwrite-mode
+    storename = get_storename(folder)
+    print storename
+    store = pd.HDFStore(storename,mode='w')
+    nfiles = len(fnames)
+    for i,fname in enumerate(fnames):
+        print round(float(i)*100/nfiles,1),'%'
+        with open(fname) as f:
+            data = np.fromfile(f,dtype=rec_dtype)
+        df = pd.DataFrame(data,columns=keys)
+        df = prepare_data(df)
+        define_sdtype(df)
+        to_store = df[df.calib_block_labels>0]
+        store.append('df',to_store )
+    print "Done."
     store.close()
 
 if __name__ == '__main__':
