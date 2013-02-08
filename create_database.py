@@ -32,7 +32,12 @@ def define_sdtype(df):
     # this still includes the moving areas, because i want the sv and bbv
     # attached to each other to deal with them later as a separate calibration
     # block
-    df['calib_block_labels'] = nd.label( (df.sdtype==2) | (df.sdtype==1) )[0]
+    # DECISION: block labels contain moving data as well
+    # below defined "is_xxx" do NOT contain moving data.
+    df['calib_block_labels'] = nd.label( (df.sdtype==2) | (df.sdtype==1) | (df.sdtype==3))[0]
+    df['sv_block_labels'] = nd.label( df.sdtype==1 )[0]
+    df['bb_block_labels'] = nd.label( df.sdtype==2 )[0]
+    df['st_block_labels'] = nd.label( df.sdtype==3 )[0]
     
     # this resets data from sdtypes >0 above that is still 'moving' to be 
     # sdtype=-1 (i.e. 'moving', defined by me)
@@ -47,8 +52,6 @@ def define_sdtype(df):
 
     # this does the same as above labeling, albeit here the blocks are numbered
     # individually. Not sure I will need it but might come in handy.
-    df['sv_block_labels'] = nd.label(df.is_spaceview)[0]
-    df['bb_block_labels'] = nd.label(df.is_bbview)[0]
 
 def parse_descriptor(fpath):
     f = open(fpath)
@@ -84,10 +87,28 @@ def prepare_data(df_in):
     df.last_az_cmd.replace(nan,inplace=True)
     df.moving.replace(nan,inplace=True)
     return df
+
+def folder_to_df(folder, top_end):
+    rec_dtype, keys = get_div247_dtypes()
+    fnames = glob.glob(folder+'/*.div247')
+    fnames.sort()
+    dfall = pd.DataFrame()
+    for i,fname in enumerate(fnames[:top_end]):
+        print os.path.basename(fname)
+        print("{0:g} %".format(float(i)*100/top_end))
+        with open(fname) as f:
+            data = np.fromfile(f,dtype=rec_dtype)
+        df = pd.DataFrame(data,columns=keys)
+        df = prepare_data(df)
+        dfall = pd.concat([dfall,df])
+    define_sdtype(dfall)
+    to_store = dfall[dfall.calib_block_labels>0]
+    return to_store
     
 def main(folder):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
+    fnames.sort()
     # opening store in overwrite-mode
     dirname = os.path.dirname(folder)
     basename = os.path.basename(folder)
