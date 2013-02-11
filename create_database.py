@@ -93,30 +93,6 @@ def prepare_data(df_in):
     df.moving.replace(nan,inplace=True)
     return df
 
-def fname_to_df(fname,rec_dtype,keys):
-    with open(fname) as f:
-        data = np.fromfile(f,dtype=rec_dtype)
-    df = pd.DataFrame(data,columns=keys)
-    return df
-    
-def folder_to_df(folder, top_end=None, verbose=False):
-    rec_dtype, keys = get_div247_dtypes()
-    fnames = glob.glob(folder+'/*.div247')
-    fnames.sort()
-    if not top_end:
-        top_end = len(fnames)
-    dfall = pd.DataFrame()
-    for i,fname in enumerate(fnames[:top_end]):
-        if verbose:
-            if i*100/top_end % 10 ==0:
-                print("{0:g} %".format(float(i)*100/top_end))
-        df = fname_to_df(fname)
-        df = prepare_data(df)
-        define_sdtype(df)
-        dfall = pd.concat([dfall,df])
-    to_store = dfall[dfall.calib_block_labels>0]
-    return to_store
-    
 def plot_calib_block(df,label,id,det='a6_11'):
     dfnow = df[df[label]==id]
     dfnow['moving']= dfnow[dfnow.is_moving][det]
@@ -150,6 +126,35 @@ def get_storename(folder):
     basename = os.path.basename(path)
     storename = os.path.join(dirname,basename+'.h5')
     return storename
+
+def fname_to_df(fname,rec_dtype,keys):
+    with open(fname) as f:
+        data = np.fromfile(f,dtype=rec_dtype)
+    df = pd.DataFrame(data,columns=keys)
+    return df
+    
+def folder_to_df(folder, top_end=None, verbose=False):
+    rec_dtype, keys = get_div247_dtypes()
+    fnames = glob.glob(folder+'/*.div247')
+    fnames.sort()
+    if not top_end:
+        top_end = len(fnames)
+    dfall = pd.DataFrame()
+    olddf = None
+    for i,fname in enumerate(fnames[:top_end]):
+        if verbose:
+            if i*100/top_end % 10 ==0:
+                print("{0:g} %".format(float(i)*100/top_end))
+        df = fname_to_df(fname, rec_dtype, keys)
+        df = prepare_data(df)
+        define_sdtype(df)
+        if olddf is not None:
+            for s in df.filter(regex='_labels'):
+                df[s] += olddf[s].max()
+        olddf = df
+        dfall = pd.concat([dfall,df])
+    to_store = dfall[dfall.calib_block_labels>0]
+    return to_store
         
 def folder_to_store(folder):
     rec_dtype, keys = get_div247_dtypes()
@@ -160,14 +165,17 @@ def folder_to_store(folder):
     print storename
     store = pd.HDFStore(storename,mode='w')
     nfiles = len(fnames)
+    olddf = None
     for i,fname in enumerate(fnames):
         print round(float(i)*100/nfiles,1),'%'
-        with open(fname) as f:
-            data = np.fromfile(f,dtype=rec_dtype)
-        df = pd.DataFrame(data,columns=keys)
+        df = fname_to_df(fname, rec_dtype, keys)
         df = prepare_data(df)
         define_sdtype(df)
         to_store = df[df.calib_block_labels>0]
+        if olddf is not None:
+            for s in to_store.filter(regex='_labels'):
+                to_store[s] += olddf[s].max()
+        olddf = to_store
         store.append('df',to_store )
     print "Done."
     store.close()
