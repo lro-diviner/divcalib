@@ -105,7 +105,6 @@ def get_non_moving_data(df):
     return df[-(is_moving(df))]
 
 def label_calibdata(df, calibdf, label):
-    """This needs the index to be integer, time indices are not supported by nd.label"""
     # get a series with the size and index of the incoming dataframe
     calib_id = pd.Series(np.zeros(len(df.index)), index=df.index)
     # set the value to 1 (or True) where the calibdf has an index
