@@ -199,11 +199,20 @@ def folder_to_store(folder):
         df = prepare_data(df)
         define_sdtype(df)
         to_store = df[df.calib_block_labels>0]
+        if len(to_store) == 0:
+            continue
         if olddf is not None:
             for s in to_store.filter(regex='_labels'):
                 to_store[s] += olddf[s].max()
-        olddf = to_store
-        store.append('df',to_store )
+        olddf = to_store.copy()
+        try:
+            store.append('df',to_store )
+        except Exception as e:
+            store.close()
+            print 'at',fname
+            print 'something went wrong at appending into store.'
+            print e
+            return
     print "Done."
     store.close()
 
