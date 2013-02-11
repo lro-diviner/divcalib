@@ -133,6 +133,30 @@ def fname_to_df(fname,rec_dtype,keys):
     df = pd.DataFrame(data,columns=keys)
     return df
     
+class DataPump(object):
+    rec_dtype, keys  = get_div247_dtypes()
+    def get_fnames(self):
+        dirname = os.path.dirname(self.fname)
+        fnames = glob.glob(dirname + '/*.div247')
+        fnames.sort()
+        self.fnames = fnames
+        self.index = self.fnames.index(self.fname)
+    def open_and_process(self):
+        df = fname_to_df(self.fname, self.rec_dtype, self.keys)
+        df = prepare_data(df)
+        define_sdtype(df)
+        self.df = df
+    def get_df(self,fname):
+        self.fname = fname
+        self.get_fnames()
+        self.open_and_process()
+        return self.df
+    def get_next(self):
+        self.fname = self.fnames[self.index+1]
+        self.index+=1
+        self.open_and_process()
+        return self.df
+
 def folder_to_df(folder, top_end=None, verbose=False):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
