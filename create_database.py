@@ -7,6 +7,7 @@ import glob
 import diviner as div
 from divconstants import *
 from scipy import ndimage as nd
+from matplotlib.pylab import title
 
 def get_sv_selector(df):
     return (df.last_az_cmd >= SV_AZ_MIN) & (df.last_az_cmd <= SV_AZ_MAX) & \
@@ -20,12 +21,15 @@ def get_st_selector(df):
     return (df.last_az_cmd >= ST_AZ_MIN) & (df.last_az_cmd <= ST_AZ_MAX) & \
            (df.last_el_cmd >= ST_EL_MIN) & (df.last_el_cmd <= ST_EL_MAX)
 
+def get_stowed_selector(df):
+    return (df.last_az_cmd == 0) & (df.last_el_cmd == 0)
+    
 def define_sdtype(df):
     df['sdtype'] = 0
     df.sdtype[get_sv_selector(df)] = 1
     df.sdtype[get_bb_selector(df)] = 2
     df.sdtype[get_st_selector(df)] = 3
-    
+    df.sdtype[get_stowed_selector(df)] = -2
     # the following defines the sequential list of calibration blocks inside
     # the dataframe. nd.label provides an ID for each sequential part where
     # the given condition is true.
@@ -34,7 +38,7 @@ def define_sdtype(df):
     # block
     # DECISION: block labels contain moving data as well
     # below defined "is_xxx" do NOT contain moving data.
-    df['calib_block_labels'] = nd.label( (df.sdtype==2) | (df.sdtype==1) | (df.sdtype==3))[0]
+    df['calib_block_labels'] = nd.label( (df.sdtype==1) | (df.sdtype==2) | (df.sdtype==3))[0]
     df['sv_block_labels'] = nd.label( df.sdtype==1 )[0]
     df['bb_block_labels'] = nd.label( df.sdtype==2 )[0]
     df['st_block_labels'] = nd.label( df.sdtype==3 )[0]
@@ -48,6 +52,7 @@ def define_sdtype(df):
     df['is_bbview']    = (df.sdtype == 2)
     df['is_stview']    = (df.sdtype == 3)
     df['is_moving']    = (df.sdtype == -1)
+    df['is_stowed']    = (df.sdtype == -2)
     df['is_calib'] = df.is_spaceview | df.is_bbview | df.is_stview
 
     # this does the same as above labeling, albeit here the blocks are numbered
@@ -88,6 +93,12 @@ def prepare_data(df_in):
     df.moving.replace(nan,inplace=True)
     return df
 
+def fname_to_df(fname,rec_dtype,keys):
+    with open(fname) as f:
+        data = np.fromfile(f,dtype=rec_dtype)
+    df = pd.DataFrame(data,columns=keys)
+    return df
+    
 def folder_to_df(folder, top_end=None, verbose=False):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
@@ -95,25 +106,48 @@ def folder_to_df(folder, top_end=None, verbose=False):
     if not top_end:
         top_end = len(fnames)
     dfall = pd.DataFrame()
-    # storename = get_storename(folder)
-    # store = pd.HDFStore(storename,mode='w')
     for i,fname in enumerate(fnames[:top_end]):
         if verbose:
             if i*100/top_end % 10 ==0:
                 print("{0:g} %".format(float(i)*100/top_end))
-        with open(fname) as f:
-            data = np.fromfile(f,dtype=rec_dtype)
-        df = pd.DataFrame(data,columns=keys)
+        df = fname_to_df(fname)
         df = prepare_data(df)
         define_sdtype(df)
         dfall = pd.concat([dfall,df])
-    # define_sdtype(dfall)
     to_store = dfall[dfall.calib_block_labels>0]
     return to_store
     
+def plot_calib_block(df,label,id,det='a6_11'):
+    dfnow = df[df[label]==id]
+    dfnow['moving']= dfnow[dfnow.is_moving][det]
+    dfnow['sv']=dfnow[dfnow.is_spaceview][det]
+    dfnow['bb']=dfnow[dfnow.is_bbview][det]
+    dfnow['st']=dfnow[dfnow.is_stview][det]
+    dfnow[['st','sv','bb','moving']].plot(style='.',linewidth=2)
+    title(det)
+
+def relabel(inputlist):
+    value = 1
+    newl = []
+    old = None
+    for i in inputlist:
+        if i == 0:
+            newl.append(0)
+        elif not old:
+            old = i
+            newl.append(1)
+        elif i == old:
+            newl.append(value)
+        else:
+            value += 1
+            old = i
+            newl.append(value)
+    return newl
+    
 def get_storename(folder):
+    path = os.path.realpath(folder)
     dirname = '/raid1/maye/data/div247'
-    basename = os.path.basename(folder)
+    basename = os.path.basename(path)
     storename = os.path.join(dirname,basename+'.h5')
     return storename
         
