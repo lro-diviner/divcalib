@@ -183,6 +183,9 @@ def folder_to_df(folder, top_end=None, verbose=False):
 def folder_to_store(folder):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
+    if not fnames:
+        print "Found no files."
+        return
     fnames.sort()
     # opening store in overwrite-mode
     storename = get_storename(folder)
