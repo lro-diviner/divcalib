@@ -94,12 +94,18 @@ def prepare_data(df_in):
     return df
 
 def plot_calib_block(df,label,id,det='a6_11'):
+    if not label.endswith('_block_labels'):
+        label = label + '_block_labels'
     dfnow = df[df[label]==id]
-    dfnow['moving']= dfnow[dfnow.is_moving][det]
-    dfnow['sv']=dfnow[dfnow.is_spaceview][det]
-    dfnow['bb']=dfnow[dfnow.is_bbview][det]
-    dfnow['st']=dfnow[dfnow.is_stview][det]
-    dfnow[['st','sv','bb','moving']].plot(style='.',linewidth=2)
+    l = ['is_moving','is_spaceview','is_bbview','is_stview']
+    lnew = []
+    for item in l:
+        dfnow2 = dfnow[dfnow[item]][det]
+        if len(dfnow2) > 0:
+            nitem = item.replace('is_','')
+            dfnow[nitem] = dfnow2
+            lnew.append(nitem)
+    dfnow[lnew].plot(style='.',linewidth=2)
     title(det)
 
 def relabel(inputlist):
