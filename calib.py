@@ -392,18 +392,19 @@ class CalibBlock(object):
     """
     def __init__(self, df):
         self.df = df
-        
+        self.sv_labels = None
         # Define and set spaceviews for object
         self.process_spaceviews()
         
         # check for correct length of spaceviews
-        self.check_spaceviews()
+        # self.check_spaceviews()
         
-        self.offset = self.get_offset()
+        if self.sv_labels:
+            self.offset = self.get_offset()
         
-        self.process_bbview()
+        # self.process_bbview()
         
-        self.gain = self.calc_gain()
+        # self.gain = self.calc_gain()
 
         # # levels[2] to pick out the timestamp from hierarchical index
         # self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
@@ -422,8 +423,8 @@ class CalibBlock(object):
         
         """
         bbview_group = get_blocks(self.df, 'bb')
-        if len(bbview_group) != 1:
-            raise NoOfViewsError('bb', 1, len(bbview_group), 'process_bbview')
+        if len(bbview_group) == 0:
+            raise NoOfViewsError('bb', '>0', 0, 'process_bbview')
         self.bbv_label = bbview_group.keys()
         self.bbview = BBView(bbview_group[self.bbv_label[0]])
         
@@ -441,10 +442,9 @@ class CalibBlock(object):
         # get spaceviews
         spaceviews = get_blocks(self.df, 'sv')
         
-        # I'm expecting 2 spaceviews, left and right, raise error if it's not
-        if len(spaceviews) != 2:
-            raise NoOfViewsError('space', 2, len(spaceviews),
-                                 "process_spaceviews")
+        if len(spaceviews) == 0:
+            raise NoOfViewsError('sv', '>0', 0, 'process_spaceviews, calib block '+
+                str(self.df.calib_block_labels.unique()))
         
         # get the 2 item list of spaceview labels and sort them
         self.sv_labels = sorted(spaceviews.keys())
