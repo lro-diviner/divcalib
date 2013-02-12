@@ -194,15 +194,14 @@ def folder_to_df(folder, top_end=None, verbose=False):
     olddf = None
     for i,fname in enumerate(fnames[:top_end]):
         if verbose:
-            if i*100/top_end % 10 ==0:
-                print("{0:g} %".format(float(i)*100/top_end))
+            print round(float(i)*100/top_end,1),'%'
         df = fname_to_df(fname, rec_dtype, keys)
         df = prepare_data(df)
         define_sdtype(df)
         if olddf is not None:
             for s in df.filter(regex='_labels'):
                 df[s] += olddf[s].max()
-        olddf = df
+        olddf = df.copy()
         dfall = pd.concat([dfall,df])
     to_store = dfall[dfall.calib_block_labels>0]
     return to_store
@@ -220,6 +219,9 @@ def folder_to_store(folder):
     store = pd.HDFStore(storename,mode='w')
     nfiles = len(fnames)
     olddf = None
+    cols = ['calib_block_labels','sv_block_labels','bb_block_labels',
+            'st_block_labels','is_spaceview', 'is_bbview', 'is_stview',
+            'is_moving', 'is_stowed', 'is_calib']
     for i,fname in enumerate(fnames):
         print round(float(i)*100/nfiles,1),'%'
         df = fname_to_df(fname, rec_dtype, keys)
@@ -233,7 +235,7 @@ def folder_to_store(folder):
                 to_store[s] += olddf[s].max()
         olddf = to_store.copy()
         try:
-            store.append('df',to_store )
+            store.append('df',to_store, data_columns=cols )
         except Exception as e:
             store.close()
             print 'at',fname
