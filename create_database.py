@@ -138,9 +138,22 @@ def fname_to_df(fname,rec_dtype,keys):
         data = np.fromfile(f,dtype=rec_dtype)
     df = pd.DataFrame(data,columns=keys)
     return df
+  
+def add_hdf_data_columns(fname):
+    print 'starting',fname
+    storeold = pd.HDFStore(fname)
+    df = storeold.select('df')
+    storeold.close()
+    storenew = pd.HDFStore(fname,'w')
+    cols1 = [col for col in df.filter(regex='_labels')]
+    cols2 = [col for col in df.filter(regex='is_')]
+    storenew.append('df',df,data_columns=cols1+cols2)
+    storenew.close()
+    print fname,'done.'
     
 class DataPump(object):
     rec_dtype, keys  = get_div247_dtypes()
+    datapath = '/luna1/maye/data/div247/'
     def get_fnames(self):
         dirname = os.path.dirname(self.fname)
         fnames = glob.glob(dirname + '/*.div247')
