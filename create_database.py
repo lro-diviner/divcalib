@@ -175,6 +175,14 @@ class DataPump(object):
         self.index+=1
         self.open_and_process()
         return self.df
+    def get_month_h5(self, month):
+        path = self.datapath + month + '.h5'
+        if os.path.exists(path):
+            print("Opening {0}".format(path))
+            return pd.HDFStore(self.datapath + month + '.h5')
+        else:
+            print("File does not exist: {0}".format(path))
+        
 
 def folder_to_df(folder, top_end=None, verbose=False):
     rec_dtype, keys = get_div247_dtypes()
