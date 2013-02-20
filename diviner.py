@@ -9,12 +9,13 @@ import csv
 import sys
 import os
 import glob
+import fnmatch
 from datetime import timedelta
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
 else:
-    datapath = '/luna1/maye'
+    datapath = '/luna1/maye/data'
 
 def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
@@ -182,11 +183,15 @@ class DataPump(object):
     def __repr__(self):
         return self.time.isoformat()
 
+def gen_fnames(pattern, top):
+    for path, dirlist, filelist in os.walk(top):
+        for name in fnmatch.filter(filelist, pattern):
+            yield os.path.join(path, name)
+    
 
-
-
-
-
+if __name__ == '__main__':
+    fnames = gen_fnames('2011*.div247',datapath)
+    print list(fnames)
 
 
 
