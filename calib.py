@@ -392,7 +392,13 @@ class CalibBlock(object):
     """
     def __init__(self, df):
         self.df = df
-        self.sv_labels = None
+        
+        # set times for this calib block
+        self.set_times()
+        # to be set in process_spaceviews later, but set here so than i can catch None
+        # later
+        self.sv_labels = None 
+        
         # Define and set spaceviews for object
         self.process_spaceviews()
         
@@ -400,7 +406,7 @@ class CalibBlock(object):
         # self.check_spaceviews()
         
         if self.sv_labels:
-            self.offset = self.get_offset()
+            self.get_offset()
         
         # self.process_bbview()
         
@@ -410,6 +416,11 @@ class CalibBlock(object):
         # self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
         # self.start_time_moving = self.alltimes[0]
         # self.end_time_moving = self.alltimes[-1]
+        
+    def set_times(self):
+        self.start_time = self.df.index[0]
+        self.end_time = self.df.index[-1]
+        self.mid_time = self.start_time + (self.end_time - self.start_time)//2
         
     def process_bbview(self):
         """Process the bbview inside this CalibBlock.
@@ -439,7 +450,7 @@ class CalibBlock(object):
         * self.left_sv
         * self.right_sv
         """
-        # get spaceviews
+        # get spaceviews, has keys and df in blocks
         spaceviews = get_blocks(self.df, 'sv')
         
         if len(spaceviews) == 0:
@@ -449,10 +460,9 @@ class CalibBlock(object):
         # get the 2 item list of spaceview labels and sort them
         self.sv_labels = sorted(spaceviews.keys())
         
-        # define the lower label id as the left spaceview
-        self.left_sv  = SpaceView(spaceviews[self.sv_labels[0]])
-        # and the other as the right spaceview
-        self.right_sv = SpaceView(spaceviews[self.sv_labels[1]])
+        self.spaceviews = {}
+        for label in self.sv_labels:
+            self.spaceviews[label] = SpaceView(spaceviews[label])
 
     def check_spaceviews(self):
         # check for the right length of spaceview
@@ -461,13 +471,15 @@ class CalibBlock(object):
         if any([lenleft!=SV_LENGTH_TOTAL, lenright!=SV_LENGTH_TOTAL]):
             raise ViewLengthError('space', lenleft, lenright )
         
-    def get_offset(self, method='both'):
+    def get_offset(self, method='all',det='a3_11'):
         """calculate offset.
+        
+        TODO: Deal with solar target containers differently?
         
         Parameters
         ----------
         method: string
-            Values: ['both','left','right'] to determine which sides of the 
+            Values: ['all','first','last'] to determine which sides of the 
             spaceviews are being used for the offset calculation.
             
         Returns:
@@ -475,17 +487,18 @@ class CalibBlock(object):
         offset: pandas.Series
             data column copied attached to self
         """
-        loffset = self.left_sv.average
-        roffset = self.right_sv.average
+        # get only the spaceviews now (excludes moving data, labels do not)
+        subdf = self.df[self.df.is_spaceview]
         
-        if method == 'both':
-            offset = (loffset + roffset) / 2.0
-        elif method == 'left':
-            offset = loffset
-        elif method == 'right':
-            offset = roffset
+        if method == 'all':
+            offset = subdf[det].mean()
+        elif method == 'first':
+            offset = subdf[subdf.sv_block_label==self.sv_labels[0]][det].mean()
+        elif method == 'last':
+            offset = subdf[subdf.sv_block_label==self.sv_labels[-1]][det].mean()
         else:
             raise UnknownMethodError(method, 'CalibBlock.get_offset')
+        self.offset = offset
         return offset
         
     def calc_gain(self):
@@ -518,12 +531,11 @@ class View(object):
     or right side.)
     """
     def __init__(self, df):
-        self.counts = df.counts
         self.df = df
-        self.start_time = self.counts.index[0][2]
-        self.end_time   = self.counts.index[-1][2]
+        self.start_time = self.df.index[0]
+        self.end_time   = self.df.index[-1]
         self.mid_time =  self.start_time + (self.end_time-self.start_time)//2
-        self.average = self.counts.groupby(level=['c','det']).mean()
+        # self.average = self.counts.groupby(level=['c','det']).mean()
         
     def get_counts_mean(offset_left=0,offset_right=0):
         "Placeholder for getting counts in different ways."
@@ -533,12 +545,6 @@ class View(object):
         "provide own answer to length for the safety checks in CalibBlock()"
         return len(self.counts)
     
-    def get_mid_time(self):
-        self.mid_time =  self.start_time+((self.end_time-self.start_time)/2)
-        # end = self.end_time
-        # half = (end - start)/2
-        # midtime = start+half
-        # self.mid_time = midtime
         
 class SpaceView(View):
     """docstring for SpaceView"""
