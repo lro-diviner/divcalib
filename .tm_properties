@@ -1,1 +1,1 @@
-excludeFiles="{*.wav,*.png,*.ipynb}"
+excludeFiles="{*.wav,*.png,*.ipynb, *.pdf}"
