@@ -41,11 +41,8 @@ def des2npy(fname):
         # splitext creates tuple with everything until extension and .extension
     
         # each colum is piped as a double, so 8 chars.
-        ncols = len(d.keys())
-
         rec_dtype = np.dtype([(key,'f8') for key in d.keys()])
         print('\nStarting the read of {0}'.format(fname))
-        t1 = time.time()
         data = np.fromfile(f, dtype = rec_dtype)
     return data
 

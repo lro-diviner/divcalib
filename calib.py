@@ -5,7 +5,18 @@ import numpy as np
 from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as InterpSpline
 import diviner as div
-from divconstants import *
+import divconstants as c
+from create_database import define_sdtype
+
+
+def get_channel_mean(df, col_str, channel):
+    "The dataframe has to contain c and jdate for this to work."
+    return df.groupby(['c',df.index])[col_str].mean()[channel]
+    
+def get_channel_std(df, col_str, channel):
+    "The dataframe has to contain c and jdate for this to work."
+    return df.groupby(['c',df.index])[col_str].std()[channel]
+
 
 class Flag(object):
     """Helper class to deal with control words or flags.
@@ -121,7 +132,7 @@ def add_offset_col(df, grouped):
     index = get_offset_use_limits
     data = grouped.coutns.mean()[[2,4,6,8]].values
     offsets = pd.Series(data, index=index)
-    df['offsets'] = offsets.reindex_like(cdet, method='bfill')
+    df['offsets'] = offsets.reindex_like(df, method='bfill')
 
 def get_bb_means(grouped_bb):
     return grouped_bb.counts.mean()[1:]
@@ -138,53 +149,22 @@ def is_moving(df):
     miscflags = MiscFlag()
     movingflag = miscflags.dic['moving']
     return df.qmi.astype(int) & movingflag !=0
-    
-def define_sdtype(df):
-    
-    sv_selector = (df.az_cmd >= SV_AZ_MIN) & (df.az_cmd <= SV_AZ_MAX) & \
-                  (df.el_cmd >= SV_EL_MIN) & (df.el_cmd <= SV_EL_MAX)
-    bb_selector = (df.az_cmd >= BB_AZ_MIN) & (df.az_cmd <= BB_AZ_MAX) & \
-                  (df.el_cmd >= BB_EL_MIN) & (df.el_cmd <= BB_EL_MAX)
-    st_selector = (df.az_cmd >= ST_AZ_MIN) & (df.az_cmd <= ST_AZ_MAX) & \
-                  (df.el_cmd >= ST_EL_MIN) & (df.el_cmd <= ST_EL_MAX)
-    df['sdtype'] = 0
-    df.sdtype[sv_selector] = 1
-    df.sdtype[bb_selector] = 2
-    df.sdtype[st_selector] = 3
-    
-    # the following defines the sequential list of calibration blocks inside
-    # the dataframe. nd.label provides an ID for each sequential part where
-    # the given condition is true.
-    # this still includes the moving areas, because i want the sv and bbv
-    # attached to each other to deal with them later as a separate calibration
-    # block
-    df['calib_block_labels'] = nd.label( (df.sdtype==2) | (df.sdtype==1) )[0]
-    
-    # this resets data from sdtypes >0 above that is still 'moving' to be 
-    # sdtype=-1 (i.e. 'moving', defined by me)
-    df.sdtype[is_moving(df)] = -1
-    
-    # now I don't need to check for moving anymore, the sdtypes are clean
-    df['is_spaceview'] = (df.sdtype == 1)
-    df['is_bbview']    = (df.sdtype == 2)
-    df['is_stview']    = (df.sdtype == 3)
-    df['is_moving']    = (df.sdtype == -1)
-    df['is_calib'] = df.is_spaceview | df.is_bbview | df.is_stview
-
-    # this does the same as above labeling, albeit here the blocks are numbered
-    # individually. Not sure I will need it but might come in handy.
-    df['sv_block_labels'] = nd.label(df.is_spaceview)[0]
-    df['bb_block_labels'] = nd.label(df.is_bbview)[0]
-    
+        
 def get_blocks(df, blocktype):
     "Allowed block-types: ['calib','sv','bb']."
         
-    d = dict(list(df.groupby(blocktype + '_block_labels')))
-        
+    try:
+        d = dict(list(df.groupby(blocktype + '_block_labels')))
+    except KeyError:
+        print("KeyError in get_blocks")
+        raise KeyError
     # throw away the always existing label id 0 that is not relevant for the 
     # requested blocktype
     # Note: I cannot do list[1:] because I cannot rely on things being in sequence
-    del d[0]
+    # try:
+    #     del d[0]
+    # except KeyError:
+    #     pass
     return d
     
 class DivCalib(object):
@@ -351,7 +331,7 @@ class ViewLengthError(DivCalibError):
         self.value2 = value2
     def __str__(self):
         return "Length of {0}-view not {1}. Instead: ".format(self.view,
-                                        SV_LENGTH_TOTAL) + repr(self.value) +\
+                                        c.SV_LENGTH_TOTAL) + repr(self.value) +\
                                         repr(self.value2)
 
 
@@ -468,7 +448,7 @@ class CalibBlock(object):
         # check for the right length of spaceview
         lenleft =  len(self.left_sv)
         lenright = len(self.right_sv)
-        if any([lenleft!=SV_LENGTH_TOTAL, lenright!=SV_LENGTH_TOTAL]):
+        if any([lenleft!=c.SV_LENGTH_TOTAL, lenright!=c.SV_LENGTH_TOTAL]):
             raise ViewLengthError('space', lenleft, lenright )
         
     def get_offset(self, method='all',det='a3_11'):
@@ -580,8 +560,8 @@ def thermal_nearest(node, tmnearest):
     offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
     gain = tmnearest.gain
     radiance = (counts - offset) * gain
-    radiance = rconverttable.convertR(radiance, chan, det)
-    tb = rbbtable.TB(radiance, chan, det)
-    radiance *= config.CalRadConstant(chan)
-   
+   # radiance = rconverttable.convertR(radiance, chan, det)
+   # tb = rbbtable.TB(radiance, chan, det)
+   # radiance *= config.CalRadConstant(chan)
+   #
     
