@@ -19,6 +19,12 @@ else:
 ####
 #### Tools for parsing text files of data
 ####
+
+def split_by_n(seq, n):
+    while seq:
+        yield seq[:n]
+        seq = seq[n:]
+
 def parse_header_line(line):
     """Parse header lines.
     
