@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from matplotlib.pylab import gcf
+from matplotlib.pylab import gcf,title
 
 def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
