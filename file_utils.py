@@ -14,7 +14,7 @@ import csv
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
 else:
-    datapath = '/raid1/maye/data'
+    datapath = '/raid1/maye/'
 
 ####
 #### Tools for parsing text files of data
@@ -147,7 +147,7 @@ def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
     else:
-        despath = '/s3/marks/div247/div247.des'
+        despath = 'div247.des'
     return parse_descriptor(despath)
 
 ###
@@ -368,16 +368,22 @@ class DataPump(object):
 
 class H5DataPump(object):
     datapath = os.path.join(datapath, 'h5_div247')
-    def set_pump_source(self, timestr, fnames_only=False):
-        self.fnames_only = fnames_only
+    def set_pump_source(self, timestr):
         self.timestr = timestr
         self.year = timestr[:4]
         self.fnames = glob.glob(os.path.join(self.datapath, self.year+'*'))
+        if len(self.fnames) == 0:
+            print("No files found.")
         self.fnames.sort()
 
-    def generator(self):
+    def store_generator(self):
         for fname in self.fnames:
-            if self.fnames_only:
-                yield fname
-            else:
-                yield get_df_from_h5(fname)                
+            yield pd.HDFStore(fname)
+    
+    def fname_generator(self):
+        for fname in self.fnames:
+            yield fname
+            
+    def df_generator(self):
+        for fname in self.fnames:
+            yield get_df_from_h5(fname)                
