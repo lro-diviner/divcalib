@@ -4,10 +4,10 @@ import pandas as pd
 import numpy as np
 from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as InterpSpline
-import diviner as div
 import divconstants as c
-from create_database import define_sdtype
-
+from file_utils import define_sdtype
+import plot_utils as pu
+import file_utils as fu
 
 def get_channel_mean(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
@@ -178,7 +178,7 @@ class DivCalib(object):
                            # 'clat','clon','scalt']]
                            
         # generate time index from time-related columns
-        index = div.generate_date_index(self.dfsmall)
+        index = fu.generate_date_index(self.dfsmall)
         
         # change index from anonymous integers to ch,det,time and assign result
         # to new dataframe
@@ -373,6 +373,9 @@ class CalibBlock(object):
     def __init__(self, df):
         self.df = df
         
+        # as the incoming df should only be exactly one calib block I can just 
+        # pick the first item in the calib_block_labels
+        self.id = df.calib_block_labels[0]
         # set times for this calib block
         self.set_times()
         # to be set in process_spaceviews later, but set here so than i can catch None
@@ -396,6 +399,9 @@ class CalibBlock(object):
         # self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
         # self.start_time_moving = self.alltimes[0]
         # self.end_time_moving = self.alltimes[-1]
+        
+    def plot(self, **kwargs):
+        pu.plot_calib_block(self.df,'calib',self.id, **kwargs)
         
     def set_times(self):
         self.start_time = self.df.index[0]
