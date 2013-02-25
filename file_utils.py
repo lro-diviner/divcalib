@@ -374,14 +374,16 @@ class DataPump(object):
 
 class H5DataPump(object):
     datapath = os.path.join(datapath, 'h5_div247')
-    def set_pump_source(self, timestr):
+    def __init__(self, timestr):
         self.timestr = timestr
-        self.year = timestr[:4]
-        self.fnames = glob.glob(os.path.join(self.datapath, self.year+'*'))
+        self.fnames = self.get_fnames()
         if len(self.fnames) == 0:
             print("No files found.")
         self.fnames.sort()
 
+    def get_fnames(self):
+        return glob.glob(os.path.join(self.datapath, self.timestr[:4]+'*'))
+        
     def store_generator(self):
         for fname in self.fnames:
             yield pd.HDFStore(fname)
@@ -389,7 +391,36 @@ class H5DataPump(object):
     def fname_generator(self):
         for fname in self.fnames:
             yield fname
-            
+        
     def df_generator(self):
         for fname in self.fnames:
-            yield get_df_from_h5(fname)                
+            yield self.get_df_from_h5(fname)                
+
+class Div247DataPump(object):
+    datapath = os.path.join(datapath, "div247")
+    rec_dtype, keys  = get_div247_dtypes()
+    def __init__(self, timestr):
+        self.timestr = timestr
+        self.fnames = self.get_fnames()
+        if len(self.fnames) == 0:
+            print("No files found.")
+        self.fnames.sort()
+
+    def get_fnames(self):
+        return glob.glob(os.path.join(self.datapath, self.timestr[:6], 
+                                      self.timestr+'*'))
+    
+    def fname_generator(self):
+        for fname in self.fnames:
+            yield fname
+
+    def get_df(self,fname):
+        df = fname_to_df(fname, self.rec_dtype, self.keys)
+        df = prepare_data(df)
+        define_sdtype(df)
+        return df
+
+    def df_generator(self):
+        for fname in self.fnames:
+            yield self.get_df(fname)
+        
