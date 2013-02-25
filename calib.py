@@ -167,10 +167,32 @@ def get_blocks(df, blocktype):
     #     pass
     return d
     
-class DivCalib(object):
+class Calibrator(object):
     """docstring for DivCalib"""
     time_columns = ['year','month','date','hour','minute','second']
     def __init__(self, df):
+        self.df = df
+        # loading conversion table indexed in T*100 (for resolution)
+        self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
+        
+        # interpolate the bb1 and bb2 temperatures for all times
+        self.interpolate_bb_temps()
+        
+        # get the normalized radiance for the interpolated bb temps
+        #self.get_RBB()
+        
+        ## drop these columns as they are not required anymore (i think)
+        #self.df = self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
+        
+        # sort the first level of index (channels) for indexing efficiency
+        #self.df.sortlevel(0, inplace=True)
+        
+        # get the calib blocks
+        #self.calib_blocks = get_blocks(self.df, 'calib')
+                   
+        #self.process_calib_blocks()
+        
+    def old_setup(self, df):
         # only read required columns from big array
         self.dfsmall = df[self.time_columns + 
                           ['c','det','counts','bb_1_temp','bb_2_temp',
@@ -192,29 +214,9 @@ class DivCalib(object):
         
         self.all_times = pd.Index(df.index.get_level_values(2).unique())
         
-        # loading conversion table indexed in T*100 (for resolution)
-        self.t2nrad = pd.load('Ttimes100_to_Radiance.df')
-        
-        # interpolate the bb1 and bb2 temperatures for all times
-        self.interpolate_bb_temps()
-        
-        # get the normalized radiance for the interpolated bb temps
-        self.get_RBB()
-        
         # define science datatypes and boolean views
         define_sdtype(self.df)
-        
-        # drop these columns as they are not required anymore (i think)
-        self.df = self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
-        
-        # sort the first level of index (channels) for indexing efficiency
-        self.df.sortlevel(0, inplace=True)
-        
-        # get the calib blocks
-        self.calib_blocks = get_blocks(self.df, 'calib')
-                   
-        self.process_calib_blocks()
-        
+
     def process_calib_blocks(self):
         # create lists to save gains and offsets from the calib_blocks:
         d = {}
@@ -231,11 +233,11 @@ class DivCalib(object):
             d[blockid]=(cblock.bbview.mid_time, cblock.offset, cblock.gain)
         self.calib_data = d
         
-    def interpolate_calib_data(self):
-        data = self.calib_data.values()
-        times = [i[0] for i in data]
-        offsets = [i[1] for i in data]
-        gains = [i[2] for i in data]
+    #def interpolate_calib_data(self):
+    #    data = self.calib_data.values()
+    #    times = [i[0] for i in data]
+    #    offsets = [i[1] for i in data]
+    #    gains = [i[2] for i in data]
         
     def interpolate_bb_temps(self):
         # just a shortcutting reference
@@ -244,8 +246,8 @@ class DivCalib(object):
         # take temperature measurements of ch1/det1
         # all temps were copied for all channel/detector pairs, so they are all
         # the same for all other channel-detector pairs
-        bb1temps = df.ix[1].ix[1].bb_1_temp.dropna()
-        bb2temps = df.ix[1].ix[1].bb_2_temp.dropna()
+        bb1temps = df.bb_1_temp.dropna()
+        bb2temps = df.bb_2_temp.dropna()
 
         # accessing the multi-index like this provides the unique index set
         # at that level, in this case the dataframe timestamps
@@ -260,7 +262,8 @@ class DivCalib(object):
             
             # I found the best parameters by trial and error, as to what looked
             # like a best compromise between smoothing and overfitting
-            s = InterpSpline(ind, bbtemp, s=0.05, k=3)
+            # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
+            s = InterpSpline(ind, bbtemp, s=0.0, k=1)
             
             # interpolate all_times to this function 
             newtemps = s(all_times.values.astype('float64'))
@@ -279,8 +282,8 @@ class DivCalib(object):
         
         # getting the interpolated bb temperatures. as before, they are all the same
         # for the other channel/detector pairs
-        bb1temp = self.df.ix[1].ix[1].bb_1_temp_interp
-        bb2temp = self.df.ix[1].ix[1].bb_2_temp_interp
+        bb1temp = self.df.bb_1_temp_interp
+        bb2temp = self.df.bb_2_temp_interp
         
         # create mapping to look up the right temperature for different channels
         mapping = {3: bb1temp, 4: bb1temp, 5: bb1temp, 6: bb1temp,
@@ -547,25 +550,25 @@ class BBView(View):
         self.rbb_average = self.RBB.groupby(level=['c','det']).mean()
         
 
-def thermal_alternative():
-    """using the offset of visual channels???"""
-    pass
-        
-def thermal_nearest(node, tmnearest):
-    """Calibrate for nearest node only.
-    
-    If only one calibration marker is available, no interpolation is done and 
-    the gain and offset will be determined only with one measurement.
-    
-    Input
-    =====
-    node: Datanode container
-    tmnearest: ThermalMarkerNode container
-    """
-    counts = node.counts
-    offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
-    gain = tmnearest.gain
-    radiance = (counts - offset) * gain
+#def thermal_alternative():
+#    """using the offset of visual channels???"""
+#    pass
+#        
+#def thermal_nearest(node, tmnearest):
+#    """Calibrate for nearest node only.
+#    
+#    If only one calibration marker is available, no interpolation is done and 
+#    the gain and offset will be determined only with one measurement.
+#    
+#    Input
+#    =====
+#    node: Datanode container
+#    tmnearest: ThermalMarkerNode container
+#    """
+#    counts = node.counts
+#    offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
+#    gain = tmnearest.gain
+#    radiance = (counts - offset) * gain
    # radiance = rconverttable.convertR(radiance, chan, det)
    # tb = rbbtable.TB(radiance, chan, det)
    # radiance *= config.CalRadConstant(chan)
