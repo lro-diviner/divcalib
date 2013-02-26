@@ -382,21 +382,13 @@ class CalibBlock(object):
         # as the incoming df should only be exactly one calib block I can just 
         # pick the first item in the calib_block_labels
         self.id = df.calib_block_labels[0]
+        
         # set times for this calib block
-        self.set_times()
-        # to be set in process_spaceviews later, but set here so than i can catch None
-        # later
-        self.sv_labels = None 
+        self.get_times()
         
-        # Define and set spaceviews for object
+        # Find and process spaceviews for object
         self.process_spaceviews()
-        
-        # check for correct length of spaceviews
-        # self.check_spaceviews()
-        
-        if self.sv_labels:
-            self.get_offset()
-        
+                
         # self.process_bbview()
         
         # self.gain = self.calc_gain()
@@ -409,7 +401,7 @@ class CalibBlock(object):
     def plot(self, **kwargs):
         pu.plot_calib_block(self.df,'calib',self.id, **kwargs)
         
-    def set_times(self):
+    def get_times(self):
         self.start_time = self.df.index[0]
         self.end_time = self.df.index[-1]
         self.mid_time = self.start_time + (self.end_time - self.start_time)//2
@@ -434,7 +426,6 @@ class CalibBlock(object):
     def process_spaceviews(self):
         """Process the spaceviews inside this CalibBlock.
         
-        As this defines the left and right sv, this relies on their existence.
         Defining the spaceviews by creating:
         --------
         * self.spaceviews
@@ -444,24 +435,17 @@ class CalibBlock(object):
         """
         # get spaceviews, has keys and df in blocks
         spaceviews = get_blocks(self.df, 'sv')
+                
+        if spaceviews:
+            # get the 2 item list of spaceview labels and sort them
+            self.sv_labels = sorted(spaceviews.keys())
+            
+            # store spaceviews in a dictionary            
+            self.spaceviews = {}
+            for label in self.sv_labels:
+                self.spaceviews[label] = SpaceView(spaceviews[label])
+            self.get_offset()
         
-        if len(spaceviews) == 0:
-            raise NoOfViewsError('sv', '>0', 0, 'process_spaceviews, calib block '+
-                str(self.df.calib_block_labels.unique()))
-        
-        # get the 2 item list of spaceview labels and sort them
-        self.sv_labels = sorted(spaceviews.keys())
-        
-        self.spaceviews = {}
-        for label in self.sv_labels:
-            self.spaceviews[label] = SpaceView(spaceviews[label])
-
-    def check_spaceviews(self):
-        # check for the right length of spaceview
-        lenleft =  len(self.left_sv)
-        lenright = len(self.right_sv)
-        if any([lenleft!=c.SV_LENGTH_TOTAL, lenright!=c.SV_LENGTH_TOTAL]):
-            raise ViewLengthError('space', lenleft, lenright )
         
     def get_offset(self, method='all',det='a3_11'):
         """calculate offset.
