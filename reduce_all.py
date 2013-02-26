@@ -5,7 +5,6 @@ import pandas as pd
 from matplotlib.pylab import show
 import sys
 # from multiprocessing import Pool, Lock
-from calib import CalibBlock
 
 datadir = '/luna1/maye/data/div247/'
 
