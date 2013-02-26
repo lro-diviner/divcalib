@@ -189,7 +189,7 @@ def is_moving(df):
     movingflag = miscflags.dic['moving']
     return df.qmi.astype(int) & movingflag !=0
         
-def get_blocks(df, blocktype):
+def get_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb']."
         
     try:
@@ -199,11 +199,11 @@ def get_blocks(df, blocktype):
         raise KeyError
     # throw away the always existing label id 0 that is not relevant for the 
     # requested blocktype
-    # Note: I cannot do list[1:] because I cannot rely on things being in sequence
-    # try:
-    #     del d[0]
-    # except KeyError:
-    #     pass
+    if del_zero:
+        try:
+            del d[0]
+        except KeyError:
+            pass
     return d
     
 class Calibrator(object):
