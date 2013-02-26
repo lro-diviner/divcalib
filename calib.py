@@ -9,6 +9,45 @@ from file_utils import define_sdtype
 import plot_utils as pu
 import file_utils as fu
 
+class DivCalibError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+    
+
+class ViewLengthError(DivCalibError):
+    """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
+    
+    SV_LENGTH_TOTAL defined at top of this file.
+    """
+    def __init__(self, view, value,value2):
+        self.view = view
+        self.value = value
+        self.value2 = value2
+    def __str__(self):
+        return "Length of {0}-view not {1}. Instead: ".format(self.view,
+                                        c.SV_LENGTH_TOTAL) + repr(self.value) +\
+                                        repr(self.value2)
+
+
+class NoOfViewsError(DivCalibError):
+    def __init__(self, view, wanted, value, where):
+        self.view = view
+        self.wanted = wanted
+        self.value = value
+        self.where = where
+    def __str__(self):
+        return "Number of {0} views not as expected in {3}. "\
+                "Wanted {1}, got {2}.".format(self.view, self.wanted, 
+                                              self.value, self.where)
+
+class UnknownMethodError(DivCalibError):
+    def __init__(self, method, location):
+        self.method
+        self.location
+    def __str__(self):
+        return "Method {0} not defined here. ({1})".format(self.method,
+                                                           self.location)
+
 def get_channel_mean(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
     return df.groupby(['c',df.index])[col_str].mean()[channel]
@@ -318,44 +357,6 @@ class Calibrator(object):
             self.df.RBB.ix[ch] = RBBs
         
 
-class DivCalibError(Exception):
-    """Base class for exceptions in this module."""
-    pass
-    
-
-class ViewLengthError(DivCalibError):
-    """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
-    
-    SV_LENGTH_TOTAL defined at top of this file.
-    """
-    def __init__(self, view, value,value2):
-        self.view = view
-        self.value = value
-        self.value2 = value2
-    def __str__(self):
-        return "Length of {0}-view not {1}. Instead: ".format(self.view,
-                                        c.SV_LENGTH_TOTAL) + repr(self.value) +\
-                                        repr(self.value2)
-
-
-class NoOfViewsError(DivCalibError):
-    def __init__(self, view, wanted, value, where):
-        self.view = view
-        self.wanted = wanted
-        self.value = value
-        self.where = where
-    def __str__(self):
-        return "Number of {0} views not as expected in {3}. "\
-                "Wanted {1}, got {2}.".format(self.view, self.wanted, 
-                                              self.value, self.where)
-
-class UnknownMethodError(DivCalibError):
-    def __init__(self, method, location):
-        self.method
-        self.location
-    def __str__(self):
-        return "Method {0} not defined here. ({1})".format(self.method,
-                                                           self.location)
 
 class CalibBlock(object):
     """The CalibBlock is purely defined by azimuth and elevation commands.
