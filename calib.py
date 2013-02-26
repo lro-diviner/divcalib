@@ -359,11 +359,13 @@ class Calibrator(object):
 
 
 class CalibBlock(object):
-    """The CalibBlock is purely defined by azimuth and elevation commands.
+    """Deal with a block of calibration data as defined by define_sdtypes.
     
-    Therefore it contains moving data that needs to be ignored. The advantage is
-    that the spaceviews and bb view form a glued unit that can be found easily.
-    
+    Because it's just defined by pointing commands, this data block contains 
+    moving data that needs to be ignored. The advantage of not throwing moving
+    data away earlier, that successive calibration activities can be recognized
+    as such.
+        
     >>> cb = CalibBlock(df)
     >>> cb.start_time
     <timestamp>
