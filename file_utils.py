@@ -372,6 +372,7 @@ class DataPump(object):
         self.open_and_process()
         return self.df
 
+
 class H5DataPump(object):
     datapath = os.path.join(datapath, 'h5_div247')
     def __init__(self, timestr):
@@ -396,31 +397,48 @@ class H5DataPump(object):
         for fname in self.fnames:
             yield self.get_df_from_h5(fname)                
 
+
 class Div247DataPump(object):
+    "Class to stream div247 data."
+    
     datapath = os.path.join(datapath, "div247")
     rec_dtype, keys  = get_div247_dtypes()
     def __init__(self, timestr):
         self.timestr = timestr
-        self.fnames = self.get_fnames()
+        self.fnames = self.find_fnames()
         if len(self.fnames) == 0:
             print("No files found.")
         self.fnames.sort()
 
-    def get_fnames(self):
+    def find_fnames(self):
         return glob.glob(os.path.join(self.datapath, self.timestr[:6], 
                                       self.timestr+'*'))
     
-    def fname_generator(self):
+    def gen_fnames(self):
         for fname in self.fnames:
             yield fname
 
-    def get_df(self,fname):
-        df = fname_to_df(fname, self.rec_dtype, self.keys)
+    def gen_open(self):
+        for fname in self.fnames:
+            yield open(fname)
+            
+    def gen_dataframes(self, n=None):
+        if n==None:
+            n = len(self.fnames)
+        openfiles = self.gen_open()
+        i = 0
+        while i < n:
+            data = np.fromfile(openfiles.next(), dtype=self.rec_dtype)
+            df = pd.DataFrame(data, columns=self.keys)
+            yield df
+            i += 1
+            
+    def clean_final_df(self, df):
+        "need to wait until final df before defining sdtypes."
         df = prepare_data(df)
         define_sdtype(df)
         return df
-
-    def df_generator(self):
-        for fname in self.fnames:
-            yield self.get_df(fname)
         
+    def get_n_hours(self, n):
+        df = pd.concat(self.gen_dataframes(n))
+        return self.clean_final_df(df)
