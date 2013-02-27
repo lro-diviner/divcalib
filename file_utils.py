@@ -10,6 +10,7 @@ import divconstants as c
 import os
 from datetime import timedelta
 import csv
+from plot_utils import ProgressBar
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
@@ -425,11 +426,13 @@ class Div247DataPump(object):
     def gen_dataframes(self, n=None):
         if n==None:
             n = len(self.fnames)
+        pbar = ProgressBar(n)
         openfiles = self.gen_open()
         i = 0
         while i < n:
             data = np.fromfile(openfiles.next(), dtype=self.rec_dtype)
             df = pd.DataFrame(data, columns=self.keys)
+            pbar.animate(i+1)
             yield df
             i += 1
             
