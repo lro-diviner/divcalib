@@ -233,7 +233,7 @@ def get_data_columns(df):
 def interpolate_data_column(col):
     all_times = col.index
     x = offsets.index.values.astype('float64')
-    s = Spline(x, self.offsets)
+    s = Spline(x, )
     
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
@@ -266,8 +266,6 @@ class Calibrator(object):
     def get_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
-        # only use data channels:
-        spaceviews = get_data_columns(spaceviews)
         # group by the calibration block labels
         grouped = spaceviews.groupby(spaceviews.calib_block_labels)
         # get the mean times for each calib block
@@ -278,10 +276,15 @@ class Calibrator(object):
         offsets = grouped.mean()
         # set the times as index for this dataframe of offsets
         offsets.index = times
-        self.offsets = offsets
+        self.offsets = get_data_columns(offsets)
         
     def interpolate_offsets(self):
-        
+        all_times = self.df.index
+        x = offsets.index.values.astype('float64')
+        for col in self.offsets:
+            # change k for the kind of fit you want
+            s = Spline(x, col, s=0.0, k=1)
+            
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
