@@ -3,7 +3,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 from scipy import ndimage as nd
-from scipy.interpolate import UnivariateSpline as InterpSpline
+from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
 from file_utils import define_sdtype
 import plot_utils as pu
@@ -181,7 +181,7 @@ def get_bb2_col(df):
     bb2temps = df.bb_2_temp.dropna()
     #create interpolater function by interpolating over bb2temps.index (needs
     # to be integer!) and its values
-    s = InterpSpline(bb2temps.index.values, bb2temps.values, k=1)
+    s = Spline(bb2temps.index.values, bb2temps.values, k=1)
     return pd.Series(s(df.index), index=df.index)
 
 def is_moving(df):
@@ -212,6 +212,29 @@ def get_mean_time(df):
     t = t1 + (t2 - t1) // 2
     return t
 
+def get_offsets_at_all_times(data, offsets):
+    real_time = np.array(data.index.values.view("i8") / 1000, dtype="datetime64[us]")
+    cali_time = np.array(offsets.index.values.view("i8") / 1000, dtype="datetime64[us]")
+    
+    right_index = cali_time.searchsorted(real_time, side="left")
+    left_index = np.clip(right_index - 1, 0, len(offsets)-1)
+    right_index = np.clip(right_index, 0, len(offsets)-1)
+    left_time = cali_time[left_index]
+    right_time = cali_time[right_index]
+    left_diff = np.abs(left_time - real_time)
+    right_diff = np.abs(right_time - real_time)
+    caldata2 = offsets.ix[np.where(left_diff < right_diff, left_time, right_time)]
+    return caldata2
+
+def get_data_columns(df):
+    "Filtering for the div247 channel names"
+    return df.filter(regex='[ab][0-9]_[0-2][0-9]')
+    
+def interpolate_data_column(col):
+    all_times = col.index
+    x = offsets.index.values.astype('float64')
+    s = Spline(x, self.offsets)
+    
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
     
@@ -242,9 +265,11 @@ class Calibrator(object):
         
     def get_offsets(self):
         # get spaceviews here to kick out moving data
-        df = self.df[self.df.is_spaceview]
+        spaceviews = self.df[self.df.is_spaceview]
+        # only use data channels:
+        spaceviews = get_data_columns(spaceviews)
         # group by the calibration block labels
-        grouped = df.groupby(df.calib_block_labels)
+        grouped = spaceviews.groupby(spaceviews.calib_block_labels)
         # get the mean times for each calib block
         times = grouped.a3_11.apply(get_mean_time)
         ###
@@ -253,15 +278,15 @@ class Calibrator(object):
         offsets = grouped.mean()
         # set the times as index for this dataframe of offsets
         offsets.index = times
-        return offsets
+        self.offsets = offsets
+        
+    def interpolate_offsets(self):
         
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
         
-        # take temperature measurements of ch1/det1
-        # all temps were copied for all channel/detector pairs, so they are all
-        # the same for all other channel-detector pairs
+        # bb_1_temp is much more often sampled than bb_2_temp
         bb1temps = df.bb_1_temp.dropna()
         bb2temps = df.bb_2_temp.dropna()
 
@@ -279,7 +304,7 @@ class Calibrator(object):
             # I found the best parameters by trial and error, as to what looked
             # like a best compromise between smoothing and overfitting
             # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
-            s = InterpSpline(ind, bbtemp, s=0.0, k=1)
+            s = Spline(ind, bbtemp, s=0.0, k=1)
             
             # interpolate all_times to this function 
             newtemps = s(all_times.values.astype('float64'))
