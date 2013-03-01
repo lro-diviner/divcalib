@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from matplotlib.pylab import gcf,title
+from matplotlib.pylab import gcf,title, subplots
 import sys
 
 def save_to_www(fname, **kwargs):
@@ -21,6 +21,26 @@ def plot_calib_block(df,label,id,det='a6_11'):
     dfnow[lnew].plot(style='.',linewidth=2)
     title(det)
 
+def plot_all_channels(df, det_list, **kwargs):
+    """plot the data for each det in det_list for all channels.
+    
+    Parameters:
+        df          pandas DataFrame
+        det_list    list of detector numbers between 1..21
+        **kwargs    keyword arguments for subplots call
+    """
+    fig, axes = subplots(3,3, **kwargs)
+    for ch in range(1,7):
+        axis = axes.flatten()[ch-1]
+        cols = ['a'+str(ch)+'_'+str(i).zfill(2) for i in det_list]
+        df[cols].plot(ax=axis)
+        axis.set_title('Channel {0}'.format(ch))
+    for ch in range(1,4):
+        axis = axes.flatten()[ch-1+6]
+        cols = ['b'+str(ch)+'_'+str(i).zfill(2) for i in det_list]
+        df[cols].plot(ax=axes.flatten()[ch-1+6])
+        axis.set_title('Channel {0}'.format(ch+6))
+    
 class ProgressBar:
     def __init__(self, iterations):
         self.iterations = iterations
