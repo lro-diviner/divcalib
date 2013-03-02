@@ -252,7 +252,7 @@ class Calibrator(object):
         self.interpolate_bb_temps()
         
         # get the normalized radiance for the interpolated bb temps
-        #self.get_RBB()
+        self.get_RBB()
         
         ## drop these columns as they are not required anymore (i think)
         #self.df = self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
@@ -315,7 +315,6 @@ class Calibrator(object):
 
         # accessing the multi-index like this provides the unique index set
         # at that level, in this case the dataframe timestamps
-        #all_times = pd.Index(df.index.get_level_values(2).unique())
         all_times = df.index.values.astype('float64')
         
         # loop over both temperature arrays [DRY !]
@@ -332,110 +331,63 @@ class Calibrator(object):
             # k=2 quadratic, k=3 cubic, k=4 is maximum possible (but no sense)
 
             # create interpolator function
-            s = Spline(ind, bbtemp, s=0.0, k=1)
+            temp_interpolator = Spline(ind, bbtemp, s=0.0, k=1)
             
             # get new temperatures at all_times  
-            newtemps = s(all_times)
-            
-            ## create a new pd.Series to be incorporated into the dataframe
-            #newseries = pd.Series(newtemps, index=all_times)
-            
-            # reindex the time indexed series to have c,det,time multi-index
-            # the level index is the number of the index in the multi-index that
-            # is already covered by the index of newseries
-            #df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
-            df[bbtemp.name + '_interp'] = newtemps
+            df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
                                                 
     def get_RBB(self):
-        # add the RBB column to be filled in pieces later
-        self.df['RBB'] = 0.0
-        
-        # getting the interpolated bb temperatures. as before, they are all the same
-        # for the other channel/detector pairs
-        bb1temp = self.df.bb_1_temp_interp
-        bb2temp = self.df.bb_2_temp_interp
+
+        # getting the interpolated bb temperatures.
+        #rounding to 2 digits and * 100 to lookup the values that have been 
+        # indexed by T*100 (to enable float value table lookup)
+        bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
+        bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
         
         # create mapping to look up the right temperature for different channels
-        mapping = {3: bb1temp, 4: bb1temp, 5: bb1temp, 6: bb1temp,
-                   7: bb2temp, 8: bb2temp, 9: bb2temp}
+        mapping = {'a': bb1temp, 'b': bb2temp}
+        
+        # map between div247 channel names and diviner channel ids
+        mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
+                           'a4': 4, 'a5': 5, 'a6': 6, 
+                           'b1': 7, 'b2': 8, 'b3': 9}
         
         # loop over thermal channels 3..9           
-        for ch in range(3,10):
-            #link to the correct bb temps
-            bbtemps = mapping[ch]
-            
-            # rounding to 2 digits and * 100 to lookup the values that have been 
-            # indexed by T*100 (to enable float value table lookup)
-            bbtemps = (bbtemps.round(2)*100).astype('int')
+        for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
             
             #look up the radiances for this channel
-            RBBs = self.t2nrad.ix[bbtemps, ch]
+            RBBs = self.t2nrad.ix[bbtemps, mcs_div_mapping[channel]]
             # RBBs has still the T*100 as index, set them to the timestamps of 
             # the bb temperatures
-            RBBs.index = bbtemps.index
-            
-            # pick the target area inside the RBB column for this channel
-            # this provides a view (= reference) inside the dataframe
-            target = self.df.RBB.ix[ch]
-            
-            # reindex the RBBs time index to include the detectors
-            # the target index is ('det','time') therefore the level that is already
-            # covered by RBBs is level 1
-            RBBs = RBBs.reindex(target.index,level=1)
-            
-            # store them in the dataframe at the target position (which is a
-            # view(=reference))
-            self.df.RBB.ix[ch] = RBBs
+            print RBBs.head()
+            self.df['RBB_'+channel] = pd.Series(RBBs,index = bbtemps.index)
+        return self.RBB
         
 
 
         
-    #def plot(self, **kwargs):
-    #    pu.plot_calib_block(self.df,'calib',self.id, **kwargs)
-    #    
-    #def get_times(self):
-    #    self.start_time = self.df.index[0]
-    #    self.end_time = self.df.index[-1]
-    #    self.mid_time = self.start_time + (self.end_time - self.start_time)//2
-    #    
-    #def process_bbview(self):
-    #    """Process the bbview inside this CalibBlock.
-    #    
-    #    Defines:
-    #    --------
-    #    * self.bbv_label
-    #    ** the ID of this BB view within this dataset
-    #    * self.bbview
-    #    ** the BBView object for this bb-view
-    #    
-    #    """
-    #    bbview_group = get_blocks(self.df, 'bb')
-    #    if len(bbview_group) == 0:
-    #        raise NoOfViewsError('bb', '>0', 0, 'process_bbview')
-    #    self.bbv_label = bbview_group.keys()
-    #    self.bbview = BBView(bbview_group[self.bbv_label[0]])
-    #    
-    #            
-    #def calc_gain(self):
-    #    """Calc gain.
-    #    
-    #    This is how JPL did it:
-    #    numerator = -1 * thermal_marker_node.calcRBB(chan,det)
-    #    
-    #    Then a first step for the denominator:
-    #    denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
-    #                   thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
-    #    
-    #    Basically, that means: denominator = mean(loffset, roffset)
-    #    
-    #    For the second step of the denominator, they used calc_CBB, which is just 
-    #    the mean of counts in BB view:
-    #    denominator -= thermal_marker_node.calc_CBB(chan, det)
-    #    return numerator/denominator.
-    #    """
-    #    numerator = -1 * self.bbview.rbb_average
-    #    denominator = self.offset - self.bbview.average
-    #    return numerator / denominator
+    def calc_gain(self):
+        """Calc gain.
+        
+        This is how JPL did it:
+        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+        
+        Then a first step for the denominator:
+        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
+                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+        
+        Basically, that means: denominator = mean(loffset, roffset)
+        
+        For the second step of the denominator, they used calc_CBB, which is just 
+        the mean of counts in BB view:
+        denominator -= thermal_marker_node.calc_CBB(chan, det)
+        return numerator/denominator.
+        """
+        numerator = -1 * self.bbview.rbb_average
+        denominator = self.offset - self.bbview.average
+        return numerator / denominator
                       
 
     
