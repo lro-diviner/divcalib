@@ -241,9 +241,9 @@ class Calibrator(object):
     def __init__(self, df):
         self.df = df
         
-        self.get_offsets()
-        self.interpolate_offsets()
-        self.apply_offsets()
+        #self.get_offsets()
+        #self.interpolate_offsets()
+        #self.apply_offsets()
         
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
@@ -315,11 +315,12 @@ class Calibrator(object):
 
         # accessing the multi-index like this provides the unique index set
         # at that level, in this case the dataframe timestamps
-        all_times = pd.Index(df.index.get_level_values(2).unique())
-
-        # loop over both temperature arrays, to adhere to DRY principle
-        # the number of data points in bb1temps are much higher, but most
-        # consistently we should interpolate both the same way.
+        #all_times = pd.Index(df.index.get_level_values(2).unique())
+        all_times = df.index.values.astype('float64')
+        
+        # loop over both temperature arrays [DRY !]
+        # the number of data points in bb1temps are much higher, but for
+        # consistency we should interpolate both the same way.
         for bbtemp in [bb1temps,bb2temps]:
             # converting the time series to floats for interpolation
             ind = bbtemp.index.values.astype('float64')
@@ -327,19 +328,24 @@ class Calibrator(object):
             # I found the best parameters by trial and error, as to what looked
             # like a best compromise between smoothing and overfitting
             # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
+            # k=1 basically is a linear interpolation between 2 points
+            # k=2 quadratic, k=3 cubic, k=4 is maximum possible (but no sense)
+
+            # create interpolator function
             s = Spline(ind, bbtemp, s=0.0, k=1)
             
-            # interpolate all_times to this function 
-            newtemps = s(all_times.values.astype('float64'))
+            # get new temperatures at all_times  
+            newtemps = s(all_times)
             
-            # create a new pd.Series to be incorporated into the dataframe
-            newseries = pd.Series(newtemps, index=all_times)
+            ## create a new pd.Series to be incorporated into the dataframe
+            #newseries = pd.Series(newtemps, index=all_times)
             
             # reindex the time indexed series to have c,det,time multi-index
             # the level index is the number of the index in the multi-index that
             # is already covered by the index of newseries
-            df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
-                                     
+            #df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
+            df[bbtemp.name + '_interp'] = newtemps
+                                                
     def get_RBB(self):
         # add the RBB column to be filled in pieces later
         self.df['RBB'] = 0.0
