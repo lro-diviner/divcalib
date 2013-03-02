@@ -242,6 +242,11 @@ class Calibrator(object):
     """
     def __init__(self, df):
         self.df = df
+        
+        self.get_offsets()
+        self.interpolate_offsets()
+        self.apply_offsets()
+        
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
         
@@ -277,14 +282,28 @@ class Calibrator(object):
         # set the times as index for this dataframe of offsets
         offsets.index = times
         self.offsets = get_data_columns(offsets)
+        return self.offsets
         
     def interpolate_offsets(self):
-        all_times = self.df.index
-        x = offsets.index.values.astype('float64')
+        sdata = self.df[self.df.sdtype == 0]
+        sdata = get_data_columns(sdata)
+        all_times = sdata.index.values.astype('float64')
+        x = self.offsets.index.values.astype('float64')
+        
+        offsets_interpolated = pd.DataFrame(index=sdata.index)
         for col in self.offsets:
             # change k for the kind of fit you want
-            s = Spline(x, col, s=0.0, k=1)
-            
+            s = Spline(x, self.offsets[col], s=0.0, k=1)
+            col_offset = s(all_times)
+            offsets_interpolated[col] = col_offset
+        self.sdata = sdata
+        self.offsets_interpolated = offsets_interpolated
+        return offsets_interpolated
+        
+    def apply_offsets(self):
+        self.sdata = self.sdata - self.offsets_interpolated
+        return self.sdata
+        
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
