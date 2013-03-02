@@ -5,9 +5,7 @@ import numpy as np
 from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
-from file_utils import define_sdtype
-import plot_utils as pu
-import file_utils as fu
+from plot_utils import ProgressBar
 
 class DivCalibError(Exception):
     """Base class for exceptions in this module."""
@@ -230,10 +228,10 @@ def get_data_columns(df):
     "Filtering for the div247 channel names"
     return df.filter(regex='[ab][0-9]_[0-2][0-9]')
     
-def interpolate_data_column(col):
-    all_times = col.index
-    x = offsets.index.values.astype('float64')
-    s = Spline(x, )
+#def interpolate_data_column(col):
+#    all_times = col.index
+#    x = offsets.index.values.astype('float64')
+#    s = Spline(x, )
     
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
@@ -291,7 +289,10 @@ class Calibrator(object):
         x = self.offsets.index.values.astype('float64')
         
         offsets_interpolated = pd.DataFrame(index=sdata.index)
-        for col in self.offsets:
+        
+        progressbar = ProgressBar(len(self.offsets.columns))
+        for i,col in enumerate(self.offsets):
+            progressbar.animate(i+1)
             # change k for the kind of fit you want
             s = Spline(x, self.offsets[col], s=0.0, k=1)
             col_offset = s(all_times)
