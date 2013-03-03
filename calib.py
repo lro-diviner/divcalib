@@ -238,6 +238,11 @@ class Calibrator(object):
     
     Meaning, all detectors have their own column.
     """
+    # map between div247 channel names and diviner channel ids
+    mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
+                           'a4': 4, 'a5': 5, 'a6': 6, 
+                           'b1': 7, 'b2': 8, 'b3': 9}
+        
     def __init__(self, df):
         self.df = df
         
@@ -343,14 +348,8 @@ class Calibrator(object):
         # indexed by T*100 (to enable float value table lookup)
         bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
         bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
-        
         # create mapping to look up the right temperature for different channels
         mapping = {'a': bb1temp, 'b': bb2temp}
-        
-        # map between div247 channel names and diviner channel ids
-        mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
-                           'a4': 4, 'a5': 5, 'a6': 6, 
-                           'b1': 7, 'b2': 8, 'b3': 9}
         
         # loop over thermal channels 3..9           
         for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
@@ -358,15 +357,11 @@ class Calibrator(object):
             bbtemps = mapping[channel[0]]
             
             #look up the radiances for this channel
-            RBBs = self.t2nrad.ix[bbtemps, mcs_div_mapping[channel]]
+            RBBs = self.t2nrad.ix[bbtemps, self.mcs_div_mapping[channel]]
             # RBBs has still the T*100 as index, set them to the timestamps of 
             # the bb temperatures
-            print RBBs.head()
-            self.df['RBB_'+channel] = pd.Series(RBBs,index = bbtemps.index)
-        return self.RBB
-        
-
-
+            RBBs.index = bbtemps.index
+            self.df['RBB_'+channel] = RBBs
         
     def calc_gain(self):
         """Calc gain.
