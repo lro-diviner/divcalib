@@ -287,6 +287,23 @@ class Calibrator(object):
         self.offsets = get_data_columns(offsets)
         return self.offsets
         
+    def get_bbcounts(self):
+        # kick out moving data and get only bbviews
+        bbviews = self.df[self.df.is_bbview]
+        # group by calibration block label
+        # does bbview ever happen more than once in one calib
+        # block?
+        grouped = bbviews.groupby(bbviews.calib_block_labels)
+        # get the mean times for each calib block
+        times = grouped.a3_11.apply(get_mean_time)
+        bbcounts = grouped.mean()
+        # set the times as index for this dataframe of bbcounts
+        bbcounts.index = times
+        self.bbcounts = get_data_columns(bbcounts)
+        
+    def interpolate_bbcounts(self):
+        pass
+        
     def interpolate_offsets(self):
         sdata = self.df[self.df.sdtype == 0]
         sdata = get_data_columns(sdata)
@@ -361,7 +378,8 @@ class Calibrator(object):
             # RBBs has still the T*100 as index, set them to the timestamps of 
             # the bb temperatures
             RBBs.index = bbtemps.index
-            self.df['RBB_'+channel] = RBBs
+            for i in range(1,22):
+                self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
         
     def calc_gain(self):
         """Calc gain.
