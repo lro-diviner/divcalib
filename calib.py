@@ -224,26 +224,32 @@ def get_offsets_at_all_times(data, offsets):
     caldata2 = offsets.ix[np.where(left_diff < right_diff, left_time, right_time)]
     return caldata2
 
-def get_data_columns(df):
+def get_data_columns(df,strict=True):
     "Filtering for the div247 channel names"
-    return df.filter(regex='[ab][0-9]_[0-2][0-9]')
+    if strict:
+        pattern = '^[ab][0-9]_[0-2][0-9]'
+    else:
+        pattern = '[ab][0-9]_[0-2][0-9]'
+    return df.filter(regex=pattern)
     
-#def interpolate_data_column(col):
-#    all_times = col.index
-#    x = offsets.index.values.astype('float64')
-#    s = Spline(x, )
+def get_thermal_channels(df):
+    t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
+    t2 = df.filter(regex='b[1-3]_[0-2][0-9]')
+    return pd.concat([t1,t2],axis=1)
+    
     
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
     
     Meaning, all detectors have their own column.
     """
+    # map between div247 channel names and diviner channel ids
+    mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
+                           'a4': 4, 'a5': 5, 'a6': 6, 
+                           'b1': 7, 'b2': 8, 'b3': 9}
+        
     def __init__(self, df):
         self.df = df
-        
-        #self.get_offsets()
-        #self.interpolate_offsets()
-        #self.apply_offsets()
         
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
@@ -251,61 +257,142 @@ class Calibrator(object):
         # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
         
-        # get the normalized radiance for the interpolated bb temps
+        # get the normalized radiance for the interpolated bb temps (so all over df)
         self.get_RBB()
+                
+        # determine calibration block mean time stamps
+        self.calc_calib_mean_times()
         
-        ## drop these columns as they are not required anymore (i think)
-        #self.df = self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
+        # determine the offsets per calib_block
+        self.get_offsets()
         
-        # sort the first level of index (channels) for indexing efficiency
-        #self.df.sortlevel(0, inplace=True)
+        # determine bb counts (=calcCBB) per calib_block
+        self.get_bbcounts()
         
-        # get the calib blocks
-        #self.calib_blocks = get_blocks(self.df, 'calib')
-                   
-        #self.process_calib_blocks()
+        self.calc_gain()
         
+        # interpolate offsets (and gains?) over the big dataframe block
+        self.interpolate_caldata()
+        
+        # Apply the interpolated values to create science data (T_b, radiances)
+        self.calc_radiance()
         
     def get_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
+        spaceviews = get_data_columns(spaceviews, strict=True)
+        
         # group by the calibration block labels
-        grouped = spaceviews.groupby(spaceviews.calib_block_labels)
-        # get the mean times for each calib block
-        times = grouped.a3_11.apply(get_mean_time)
+        grouped = spaceviews.groupby(self.df.calib_block_labels)
+        
         ###
         # change here for method of means!!
         ###
         offsets = grouped.mean()
+        
         # set the times as index for this dataframe of offsets
-        offsets.index = times
+        offsets.index = self.calib_times
+        
         self.offsets = get_data_columns(offsets)
         return self.offsets
         
-    def interpolate_offsets(self):
+    def get_bbcounts(self):
+        # kick out moving data and get only bbviews
+        bbviews = self.df[self.df.is_bbview]
+        # strict=False enables RBB columns to be averaged as well.
+        bbvievs = get_data_columns(bbviews, strict=False)
+        # group by calibration block label
+        # does bbview ever happen more than once in one calib
+        # block?
+        grouped = bbviews.groupby(self.df.calib_block_labels)
+        
+        bbcounts = grouped.mean()
+        
+        # set the times as index for this dataframe of bbcounts
+        bbcounts.index = self.calib_times
+        
+        self.bbcounts = get_data_columns(bbcounts)
+        
+        # this array only starts from channel 3 because RBBs only exist for thermal
+        # channels
+        self.RBB = bbcounts.filter(regex='RBB_')
+        # rename RBB columns co channel names by cutting off initial 'RBB_'
+        self.RBB.rename(columns = lambda x: x[4:],inplace=True)
+        
+    def calc_calib_mean_times(self):
+        calibdata = self.df[self.df.is_calib]
+        
+        grouped = calibdata.groupby('calib_block_labels')
+        
+        times = grouped.apply(get_mean_time)
+        self.calib_times = times
+        
+    def calc_gain(self):
+        """Calc gain.
+        
+        This is how JPL did it:
+        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
+        
+        Then a first step for the denominator:
+        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
+                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
+        
+        Basically, that means: denominator = mean(loffset, roffset)
+        
+        For the second step of the denominator, they used calc_CBB, which is just 
+        the mean of counts in BB view:
+        denominator -= thermal_marker_node.calc_CBB(chan, det)
+        return numerator/denominator.
+        """
+        numerator = -1 * self.RBB
+        denominator = get_thermal_channels(self.offsets) - \
+                        get_thermal_channels(self.bbcounts)
+        gains = numerator / denominator
+        self.gains = gains
+        return gains
+
+    def interpolate_caldata(self):
+        """Interpolated the offsets and gains all over the dataframe.
+        
+        This is needed AFTER the gain calculation, when applying the offsets and 
+        gains to all data. Maybe combine this with the gain interpolation!!
+        """
         sdata = self.df[self.df.sdtype == 0]
-        sdata = get_data_columns(sdata)
+        sdata = get_data_columns(sdata, strict=True)
+
         all_times = sdata.index.values.astype('float64')
-        x = self.offsets.index.values.astype('float64')
+        cal_times = self.calib_times.values.astype('float64')
+
+        offsets_interp = pd.DataFrame(index=sdata.index)
+        gains_interp   = pd.DataFrame(index=sdata.index)
         
-        offsets_interpolated = pd.DataFrame(index=sdata.index)
+        columns = get_thermal_channels(self.offsets).columns
         
-        progressbar = ProgressBar(len(self.offsets.columns))
-        for i,col in enumerate(self.offsets):
+        progressbar = ProgressBar(len(columns))
+        for i,col in enumerate(columns):
             progressbar.animate(i+1)
             # change k for the kind of fit you want
-            s = Spline(x, self.offsets[col], s=0.0, k=1)
-            col_offset = s(all_times)
-            offsets_interpolated[col] = col_offset
+            s_offset = Spline(cal_times, self.offsets[col], s=0.0, k=1)
+            s_gain   = Spline(cal_times, self.gains[col], s=0.0, k=1)
+            col_offset = s_offset(all_times)
+            col_gain   = s_gain(all_times)
+            offsets_interp[col] = col_offset
+            gains_interp[col]   = col_gain
         self.sdata = sdata
-        self.offsets_interpolated = offsets_interpolated
-        return offsets_interpolated
+        self.offsets_interp = offsets_interp
+        self.gains_interp = gains_interp
         
-    def apply_offsets(self):
-        self.sdata = self.sdata - self.offsets_interpolated
-        return self.sdata
+    def calc_radiance(self):
+        self.radiance = (self.sdata - self.offsets_interp) * self.gains_interp
+        return self.radiance
         
     def interpolate_bb_temps(self):
+        """Interpolating the BB H/K temperatures all over the dataframe.
+        
+        This is necessary, as the frequency of the measurements is too low to have 
+        meaningful mean values during the BB-views. Also, bb_2_temps are measured so 
+        rarely that there might not be at all a measurement during a bb-view.
+        """
         # just a shortcutting reference
         df = self.df
         
@@ -337,20 +424,18 @@ class Calibrator(object):
             df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
                                                 
     def get_RBB(self):
-
+        """Strictly speaking only required for the calib_block gain calculation.
+        
+        But because this is using all interpolated BB temperatures, this effectively
+        creates RBBs for the whole dataframe.
+        """
         # getting the interpolated bb temperatures.
         #rounding to 2 digits and * 100 to lookup the values that have been 
         # indexed by T*100 (to enable float value table lookup)
         bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
         bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
-        
         # create mapping to look up the right temperature for different channels
         mapping = {'a': bb1temp, 'b': bb2temp}
-        
-        # map between div247 channel names and diviner channel ids
-        mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
-                           'a4': 4, 'a5': 5, 'a6': 6, 
-                           'b1': 7, 'b2': 8, 'b3': 9}
         
         # loop over thermal channels 3..9           
         for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
@@ -358,43 +443,14 @@ class Calibrator(object):
             bbtemps = mapping[channel[0]]
             
             #look up the radiances for this channel
-            RBBs = self.t2nrad.ix[bbtemps, mcs_div_mapping[channel]]
+            RBBs = self.t2nrad.ix[bbtemps, self.mcs_div_mapping[channel]]
             # RBBs has still the T*100 as index, set them to the timestamps of 
             # the bb temperatures
-            print RBBs.head()
-            self.df['RBB_'+channel] = pd.Series(RBBs,index = bbtemps.index)
-        return self.RBB
+            RBBs.index = bbtemps.index
+            for i in range(1,22):
+                self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
         
-
-
-        
-    def calc_gain(self):
-        """Calc gain.
-        
-        This is how JPL did it:
-        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
-        
-        Then a first step for the denominator:
-        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
-                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
-        
-        Basically, that means: denominator = mean(loffset, roffset)
-        
-        For the second step of the denominator, they used calc_CBB, which is just 
-        the mean of counts in BB view:
-        denominator -= thermal_marker_node.calc_CBB(chan, det)
-        return numerator/denominator.
-        """
-        numerator = -1 * self.bbview.rbb_average
-        denominator = self.offset - self.bbview.average
-        return numerator / denominator
-                      
-
-    
-        # meaningfull is only the grouping on level=['c'] but we need the c,det indexing
-        # anyway later so I might as well have the broadcasting here.
-        #self.rbb_average = self.RBB.groupby(level=['c','det']).mean()
-        
+            
 
 #def thermal_alternative():
 #    """using the offset of visual channels???"""
