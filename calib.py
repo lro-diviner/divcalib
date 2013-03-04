@@ -226,12 +226,13 @@ def get_offsets_at_all_times(data, offsets):
 
 def get_data_columns(df):
     "Filtering for the div247 channel names"
-    return df.filter(regex='[ab][0-9]_[0-2][0-9]')
+    return df.filter(regex='^[ab][0-9]_[0-2][0-9]')
     
-#def interpolate_data_column(col):
-#    all_times = col.index
-#    x = offsets.index.values.astype('float64')
-#    s = Spline(x, )
+def get_thermal_channels(df):
+    t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
+    t2 = df.filter(regex='b[1-3]_[0-2][0-9]')
+    return pd.concat([t1,t2],axis=1)
+    
     
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
@@ -300,6 +301,7 @@ class Calibrator(object):
         # set the times as index for this dataframe of bbcounts
         bbcounts.index = times
         self.bbcounts = get_data_columns(bbcounts)
+        self.RBB = bbcounts.filter(regex='RBB_')
         
     def interpolate_bbcounts(self):
         pass
@@ -401,8 +403,6 @@ class Calibrator(object):
         numerator = -1 * self.bbview.rbb_average
         denominator = self.offset - self.bbview.average
         return numerator / denominator
-                      
-
     
         # meaningfull is only the grouping on level=['c'] but we need the c,det indexing
         # anyway later so I might as well have the broadcasting here.
