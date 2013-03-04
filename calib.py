@@ -264,16 +264,18 @@ class Calibrator(object):
         self.calc_calib_mean_times()
         
         # determine the offsets per calib_block
-        #self.get_offsets()
+        self.get_offsets()
         
         # determine bb counts (=calcCBB) per calib_block
-        #self.get_bbcounts()
+        self.get_bbcounts()
+        
+        self.calc_gain()
         
         # interpolate offsets (and gains?) over the big dataframe block
-        #self.interpolate_offsets()
+        self.interpolate_caldata()
         
         # Apply the interpolated values to create science data (T_b, radiances)
-        #self.apply_offsets()
+        self.calc_radiance()
         
     def get_offsets(self):
         # get spaceviews here to kick out moving data
@@ -349,33 +351,40 @@ class Calibrator(object):
         self.gains = gains
         return gains
 
-    def interpolate_offsets(self):
-        """Interpolated the offsets all over the dataframe.
+    def interpolate_caldata(self):
+        """Interpolated the offsets and gains all over the dataframe.
         
         This is needed AFTER the gain calculation, when applying the offsets and 
         gains to all data. Maybe combine this with the gain interpolation!!
         """
         sdata = self.df[self.df.sdtype == 0]
-        sdata = get_data_columns(sdata)
+        sdata = get_data_columns(sdata, strict=True)
+
         all_times = sdata.index.values.astype('float64')
-        x = self.offsets.index.values.astype('float64')
+        cal_times = self.calib_times.values.astype('float64')
+
+        offsets_interp = pd.DataFrame(index=sdata.index)
+        gains_interp   = pd.DataFrame(index=sdata.index)
         
-        offsets_interpolated = pd.DataFrame(index=sdata.index)
+        columns = get_thermal_channels(self.offsets).columns
         
-        progressbar = ProgressBar(len(self.offsets.columns))
-        for i,col in enumerate(self.offsets):
+        progressbar = ProgressBar(len(columns))
+        for i,col in enumerate(columns):
             progressbar.animate(i+1)
             # change k for the kind of fit you want
-            s = Spline(x, self.offsets[col], s=0.0, k=1)
-            col_offset = s(all_times)
-            offsets_interpolated[col] = col_offset
+            s_offset = Spline(cal_times, self.offsets[col], s=0.0, k=1)
+            s_gain   = Spline(cal_times, self.gains[col], s=0.0, k=1)
+            col_offset = s_offset(all_times)
+            col_gain   = s_gain(all_times)
+            offsets_interp[col] = col_offset
+            gains_interp[col]   = col_gain
         self.sdata = sdata
-        self.offsets_interpolated = offsets_interpolated
-        return offsets_interpolated
+        self.offsets_interp = offsets_interp
+        self.gains_interp = gains_interp
         
-    def apply_offsets(self):
-        self.sdata = self.sdata - self.offsets_interpolated
-        return self.sdata
+    def calc_radiance(self):
+        self.radiance = (self.sdata - self.offsets_interp) * self.gains_interp
+        return self.radiance
         
     def interpolate_bb_temps(self):
         """Interpolating the BB H/K temperatures all over the dataframe.
