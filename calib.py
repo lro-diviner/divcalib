@@ -259,6 +259,9 @@ class Calibrator(object):
         # determine the offsets per calib_block
         #self.get_offsets()
         
+        # determine bb counts (=calcCBB) per calib_block
+        #self.get_bbcounts()
+        
         # interpolate offsets (and gains?) over the big dataframe block
         #self.interpolate_offsets()
         
@@ -268,14 +271,18 @@ class Calibrator(object):
     def get_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
+        
         # group by the calibration block labels
         grouped = spaceviews.groupby(spaceviews.calib_block_labels)
+        
         # get the mean times for each calib block
         times = grouped.a3_11.apply(get_mean_time)
+        
         ###
         # change here for method of means!!
         ###
         offsets = grouped.mean()
+        
         # set the times as index for this dataframe of offsets
         offsets.index = times
         self.offsets = get_data_columns(offsets)
@@ -284,16 +291,22 @@ class Calibrator(object):
     def get_bbcounts(self):
         # kick out moving data and get only bbviews
         bbviews = self.df[self.df.is_bbview]
+        
         # group by calibration block label
         # does bbview ever happen more than once in one calib
         # block?
         grouped = bbviews.groupby(bbviews.calib_block_labels)
+        
         # get the mean times for each calib block
         times = grouped.a3_11.apply(get_mean_time)
         bbcounts = grouped.mean()
+        
         # set the times as index for this dataframe of bbcounts
         bbcounts.index = times
         self.bbcounts = get_data_columns(bbcounts)
+        
+        # this array only starts from channel 3 because RBBs only exist for thermal
+        # channels
         self.RBB = bbcounts.filter(regex='RBB_')
         
     def calc_gain(self):
