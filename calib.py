@@ -256,6 +256,9 @@ class Calibrator(object):
         # get the normalized radiance for the interpolated bb temps (so all over df)
         self.get_RBB()
                 
+        # determine calibration block mean time stamps
+        self.calc_calib_mean_times()
+        
         # determine the offsets per calib_block
         #self.get_offsets()
         
@@ -275,16 +278,14 @@ class Calibrator(object):
         # group by the calibration block labels
         grouped = spaceviews.groupby(spaceviews.calib_block_labels)
         
-        # get the mean times for each calib block
-        times = grouped.a3_11.apply(get_mean_time)
-        
         ###
         # change here for method of means!!
         ###
         offsets = grouped.mean()
         
         # set the times as index for this dataframe of offsets
-        offsets.index = times
+        offsets.index = self.calib_times
+        
         self.offsets = get_data_columns(offsets)
         return self.offsets
         
@@ -297,17 +298,24 @@ class Calibrator(object):
         # block?
         grouped = bbviews.groupby(bbviews.calib_block_labels)
         
-        # get the mean times for each calib block
-        times = grouped.a3_11.apply(get_mean_time)
         bbcounts = grouped.mean()
         
         # set the times as index for this dataframe of bbcounts
-        bbcounts.index = times
+        bbcounts.index = self.calib_times
+        
         self.bbcounts = get_data_columns(bbcounts)
         
         # this array only starts from channel 3 because RBBs only exist for thermal
         # channels
         self.RBB = bbcounts.filter(regex='RBB_')
+        
+    def calc_calib_mean_times(self):
+        calibdata = self.df[self.df.is_calib]
+        
+        grouped = calibdata.groupby('calib_block_labels')
+        
+        times = grouped.apply(get_mean_time)
+        self.calib_times = times
         
     def calc_gain(self):
         """Calc gain.
