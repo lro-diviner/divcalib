@@ -3,11 +3,48 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 from scipy import ndimage as nd
-from scipy.interpolate import UnivariateSpline as InterpSpline
+from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
-from file_utils import define_sdtype
-import plot_utils as pu
-import file_utils as fu
+from plot_utils import ProgressBar
+
+class DivCalibError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+    
+
+class ViewLengthError(DivCalibError):
+    """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
+    
+    SV_LENGTH_TOTAL defined at top of this file.
+    """
+    def __init__(self, view, value,value2):
+        self.view = view
+        self.value = value
+        self.value2 = value2
+    def __str__(self):
+        return "Length of {0}-view not {1}. Instead: ".format(self.view,
+                                        c.SV_LENGTH_TOTAL) + repr(self.value) +\
+                                        repr(self.value2)
+
+
+class NoOfViewsError(DivCalibError):
+    def __init__(self, view, wanted, value, where):
+        self.view = view
+        self.wanted = wanted
+        self.value = value
+        self.where = where
+    def __str__(self):
+        return "Number of {0} views not as expected in {3}. "\
+                "Wanted {1}, got {2}.".format(self.view, self.wanted, 
+                                              self.value, self.where)
+
+class UnknownMethodError(DivCalibError):
+    def __init__(self, method, location):
+        self.method
+        self.location
+    def __str__(self):
+        return "Method {0} not defined here. ({1})".format(self.method,
+                                                           self.location)
 
 def get_channel_mean(df, col_str, channel):
     "The dataframe has to contain c and jdate for this to work."
@@ -142,7 +179,7 @@ def get_bb2_col(df):
     bb2temps = df.bb_2_temp.dropna()
     #create interpolater function by interpolating over bb2temps.index (needs
     # to be integer!) and its values
-    s = InterpSpline(bb2temps.index.values, bb2temps.values, k=1)
+    s = Spline(bb2temps.index.values, bb2temps.values, k=1)
     return pd.Series(s(df.index), index=df.index)
 
 def is_moving(df):
@@ -150,7 +187,7 @@ def is_moving(df):
     movingflag = miscflags.dic['moving']
     return df.qmi.astype(int) & movingflag !=0
         
-def get_blocks(df, blocktype):
+def get_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb']."
         
     try:
@@ -160,18 +197,60 @@ def get_blocks(df, blocktype):
         raise KeyError
     # throw away the always existing label id 0 that is not relevant for the 
     # requested blocktype
-    # Note: I cannot do list[1:] because I cannot rely on things being in sequence
-    # try:
-    #     del d[0]
-    # except KeyError:
-    #     pass
+    if del_zero:
+        try:
+            del d[0]
+        except KeyError:
+            pass
     return d
     
+def get_mean_time(df):
+    t1 = df.index[0]
+    t2 = df.index[-1]
+    t = t1 + (t2 - t1) // 2
+    return t
+
+def get_offsets_at_all_times(data, offsets):
+    real_time = np.array(data.index.values.view("i8") / 1000, dtype="datetime64[us]")
+    cali_time = np.array(offsets.index.values.view("i8") / 1000, dtype="datetime64[us]")
+    
+    right_index = cali_time.searchsorted(real_time, side="left")
+    left_index = np.clip(right_index - 1, 0, len(offsets)-1)
+    right_index = np.clip(right_index, 0, len(offsets)-1)
+    left_time = cali_time[left_index]
+    right_time = cali_time[right_index]
+    left_diff = np.abs(left_time - real_time)
+    right_diff = np.abs(right_time - real_time)
+    caldata2 = offsets.ix[np.where(left_diff < right_diff, left_time, right_time)]
+    return caldata2
+
+def get_data_columns(df):
+    "Filtering for the div247 channel names"
+    return df.filter(regex='^[ab][0-9]_[0-2][0-9]')
+    
+def get_thermal_channels(df):
+    t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
+    t2 = df.filter(regex='b[1-3]_[0-2][0-9]')
+    return pd.concat([t1,t2],axis=1)
+    
+    
 class Calibrator(object):
-    """docstring for DivCalib"""
-    time_columns = ['year','month','date','hour','minute','second']
+    """currently set up to work with a 'wide' dataframe.
+    
+    Meaning, all detectors have their own column.
+    """
+    # map between div247 channel names and diviner channel ids
+    mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
+                           'a4': 4, 'a5': 5, 'a6': 6, 
+                           'b1': 7, 'b2': 8, 'b3': 9}
+        
     def __init__(self, df):
         self.df = df
+        
+        #self.get_offsets()
+        #self.interpolate_offsets()
+        #self.apply_offsets()
+        
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
         
@@ -179,7 +258,7 @@ class Calibrator(object):
         self.interpolate_bb_temps()
         
         # get the normalized radiance for the interpolated bb temps
-        #self.get_RBB()
+        self.get_RBB()
         
         ## drop these columns as they are not required anymore (i think)
         #self.df = self.df.drop(['bb_1_temp','bb_2_temp','el_cmd','az_cmd','qmi'],axis=1)
@@ -192,70 +271,79 @@ class Calibrator(object):
                    
         #self.process_calib_blocks()
         
-    def old_setup(self, df):
-        # only read required columns from big array
-        self.dfsmall = df[self.time_columns + 
-                          ['c','det','counts','bb_1_temp','bb_2_temp',
-                           'el_cmd','az_cmd','qmi']]
-                           # 'clat','clon','scalt']]
-                           
-        # generate time index from time-related columns
-        index = fu.generate_date_index(self.dfsmall)
         
-        # change index from anonymous integers to ch,det,time and assign result
-        # to new dataframe
-        self.df = self.dfsmall.set_index(['c','det',index])
+    def get_offsets(self):
+        # get spaceviews here to kick out moving data
+        spaceviews = self.df[self.df.is_spaceview]
+        # group by the calibration block labels
+        grouped = spaceviews.groupby(spaceviews.calib_block_labels)
+        # get the mean times for each calib block
+        times = grouped.a3_11.apply(get_mean_time)
+        ###
+        # change here for method of means!!
+        ###
+        offsets = grouped.mean()
+        # set the times as index for this dataframe of offsets
+        offsets.index = times
+        self.offsets = get_data_columns(offsets)
+        return self.offsets
         
-        # give the index columns a name
-        self.df.index.names = ['c','det','time']
+    def get_bbcounts(self):
+        # kick out moving data and get only bbviews
+        bbviews = self.df[self.df.is_bbview]
+        # group by calibration block label
+        # does bbview ever happen more than once in one calib
+        # block?
+        grouped = bbviews.groupby(bbviews.calib_block_labels)
+        # get the mean times for each calib block
+        times = grouped.a3_11.apply(get_mean_time)
+        bbcounts = grouped.mean()
+        # set the times as index for this dataframe of bbcounts
+        bbcounts.index = times
+        self.bbcounts = get_data_columns(bbcounts)
+        self.RBB = bbcounts.filter(regex='RBB_')
         
-        # having indexed by time i don't need the time data columns anymore
-        self.df = self.df.drop(self.time_columns, axis=1)
+    def interpolate_bbcounts(self):
+        pass
         
-        self.all_times = pd.Index(df.index.get_level_values(2).unique())
+    def interpolate_offsets(self):
+        sdata = self.df[self.df.sdtype == 0]
+        sdata = get_data_columns(sdata)
+        all_times = sdata.index.values.astype('float64')
+        x = self.offsets.index.values.astype('float64')
         
-        # define science datatypes and boolean views
-        define_sdtype(self.df)
-
-    def process_calib_blocks(self):
-        # create lists to save gains and offsets from the calib_blocks:
-        d = {}
-        # loop over calib blocks
-        for blockid, block in self.calib_blocks.iteritems():
-            try:
-                cblock = CalibBlock(block)
-            except ViewLengthError:
-                # if it's the last key the data is most likely at the limit of
-                # the dataset.
-                # FIXME later.
-                if blockid == sorted(self.calib_blocks.keys())[-1]:
-                    continue
-            d[blockid]=(cblock.bbview.mid_time, cblock.offset, cblock.gain)
-        self.calib_data = d
+        offsets_interpolated = pd.DataFrame(index=sdata.index)
         
-    #def interpolate_calib_data(self):
-    #    data = self.calib_data.values()
-    #    times = [i[0] for i in data]
-    #    offsets = [i[1] for i in data]
-    #    gains = [i[2] for i in data]
+        progressbar = ProgressBar(len(self.offsets.columns))
+        for i,col in enumerate(self.offsets):
+            progressbar.animate(i+1)
+            # change k for the kind of fit you want
+            s = Spline(x, self.offsets[col], s=0.0, k=1)
+            col_offset = s(all_times)
+            offsets_interpolated[col] = col_offset
+        self.sdata = sdata
+        self.offsets_interpolated = offsets_interpolated
+        return offsets_interpolated
+        
+    def apply_offsets(self):
+        self.sdata = self.sdata - self.offsets_interpolated
+        return self.sdata
         
     def interpolate_bb_temps(self):
         # just a shortcutting reference
         df = self.df
         
-        # take temperature measurements of ch1/det1
-        # all temps were copied for all channel/detector pairs, so they are all
-        # the same for all other channel-detector pairs
+        # bb_1_temp is much more often sampled than bb_2_temp
         bb1temps = df.bb_1_temp.dropna()
         bb2temps = df.bb_2_temp.dropna()
 
         # accessing the multi-index like this provides the unique index set
         # at that level, in this case the dataframe timestamps
-        all_times = pd.Index(df.index.get_level_values(2).unique())
-
-        # loop over both temperature arrays, to adhere to DRY principle
-        # the number of data points in bb1temps are much higher, but most
-        # consistently we should interpolate both the same way.
+        all_times = df.index.values.astype('float64')
+        
+        # loop over both temperature arrays [DRY !]
+        # the number of data points in bb1temps are much higher, but for
+        # consistency we should interpolate both the same way.
         for bbtemp in [bb1temps,bb2temps]:
             # converting the time series to floats for interpolation
             ind = bbtemp.index.values.astype('float64')
@@ -263,232 +351,37 @@ class Calibrator(object):
             # I found the best parameters by trial and error, as to what looked
             # like a best compromise between smoothing and overfitting
             # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
-            s = InterpSpline(ind, bbtemp, s=0.0, k=1)
+            # k=1 basically is a linear interpolation between 2 points
+            # k=2 quadratic, k=3 cubic, k=4 is maximum possible (but no sense)
+
+            # create interpolator function
+            temp_interpolator = Spline(ind, bbtemp, s=0.0, k=1)
             
-            # interpolate all_times to this function 
-            newtemps = s(all_times.values.astype('float64'))
-            
-            # create a new pd.Series to be incorporated into the dataframe
-            newseries = pd.Series(newtemps, index=all_times)
-            
-            # reindex the time indexed series to have c,det,time multi-index
-            # the level index is the number of the index in the multi-index that
-            # is already covered by the index of newseries
-            df[bbtemp.name + '_interp'] = newseries.reindex(df.index, level=2)
-                                     
+            # get new temperatures at all_times  
+            df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
+                                                
     def get_RBB(self):
-        # add the RBB column to be filled in pieces later
-        self.df['RBB'] = 0.0
-        
-        # getting the interpolated bb temperatures. as before, they are all the same
-        # for the other channel/detector pairs
-        bb1temp = self.df.bb_1_temp_interp
-        bb2temp = self.df.bb_2_temp_interp
-        
+
+        # getting the interpolated bb temperatures.
+        #rounding to 2 digits and * 100 to lookup the values that have been 
+        # indexed by T*100 (to enable float value table lookup)
+        bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
+        bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
         # create mapping to look up the right temperature for different channels
-        mapping = {3: bb1temp, 4: bb1temp, 5: bb1temp, 6: bb1temp,
-                   7: bb2temp, 8: bb2temp, 9: bb2temp}
+        mapping = {'a': bb1temp, 'b': bb2temp}
         
         # loop over thermal channels 3..9           
-        for ch in range(3,10):
-            #link to the correct bb temps
-            bbtemps = mapping[ch]
-            
-            # rounding to 2 digits and * 100 to lookup the values that have been 
-            # indexed by T*100 (to enable float value table lookup)
-            bbtemps = (bbtemps.round(2)*100).astype('int')
+        for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
             
             #look up the radiances for this channel
-            RBBs = self.t2nrad.ix[bbtemps, ch]
+            RBBs = self.t2nrad.ix[bbtemps, self.mcs_div_mapping[channel]]
             # RBBs has still the T*100 as index, set them to the timestamps of 
             # the bb temperatures
             RBBs.index = bbtemps.index
-            
-            # pick the target area inside the RBB column for this channel
-            # this provides a view (= reference) inside the dataframe
-            target = self.df.RBB.ix[ch]
-            
-            # reindex the RBBs time index to include the detectors
-            # the target index is ('det','time') therefore the level that is already
-            # covered by RBBs is level 1
-            RBBs = RBBs.reindex(target.index,level=1)
-            
-            # store them in the dataframe at the target position (which is a
-            # view(=reference))
-            self.df.RBB.ix[ch] = RBBs
-        
-
-class DivCalibError(Exception):
-    """Base class for exceptions in this module."""
-    pass
-    
-
-class ViewLengthError(DivCalibError):
-    """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
-    
-    SV_LENGTH_TOTAL defined at top of this file.
-    """
-    def __init__(self, view, value,value2):
-        self.view = view
-        self.value = value
-        self.value2 = value2
-    def __str__(self):
-        return "Length of {0}-view not {1}. Instead: ".format(self.view,
-                                        c.SV_LENGTH_TOTAL) + repr(self.value) +\
-                                        repr(self.value2)
-
-
-class NoOfViewsError(DivCalibError):
-    def __init__(self, view, wanted, value, where):
-        self.view = view
-        self.wanted = wanted
-        self.value = value
-        self.where = where
-    def __str__(self):
-        return "Number of {0} views not as expected in {3}. "\
-                "Wanted {1}, got {2}.".format(self.view, self.wanted, 
-                                              self.value, self.where)
-
-class UnknownMethodError(DivCalibError):
-    def __init__(self, method, location):
-        self.method
-        self.location
-    def __str__(self):
-        return "Method {0} not defined here. ({1})".format(self.method,
-                                                           self.location)
-
-class CalibBlock(object):
-    """The CalibBlock is purely defined by azimuth and elevation commands.
-    
-    Therefore it contains moving data that needs to be ignored. The advantage is
-    that the spaceviews and bb view form a glued unit that can be found easily.
-    
-    >>> cb = CalibBlock(df)
-    >>> cb.start_time
-    <timestamp>
-    >>> cb.end_time
-    <timestamp>
-    >>> cb.mean_time
-    <timestamp>
-    >>> cb.offset
-    <value>
-    """
-    def __init__(self, df):
-        self.df = df
-        
-        # as the incoming df should only be exactly one calib block I can just 
-        # pick the first item in the calib_block_labels
-        self.id = df.calib_block_labels[0]
-        # set times for this calib block
-        self.set_times()
-        # to be set in process_spaceviews later, but set here so than i can catch None
-        # later
-        self.sv_labels = None 
-        
-        # Define and set spaceviews for object
-        self.process_spaceviews()
-        
-        # check for correct length of spaceviews
-        # self.check_spaceviews()
-        
-        if self.sv_labels:
-            self.get_offset()
-        
-        # self.process_bbview()
-        
-        # self.gain = self.calc_gain()
-
-        # # levels[2] to pick out the timestamp from hierarchical index
-        # self.alltimes = pd.Index(self.df.index.get_level_values(2).unique())
-        # self.start_time_moving = self.alltimes[0]
-        # self.end_time_moving = self.alltimes[-1]
-        
-    def plot(self, **kwargs):
-        pu.plot_calib_block(self.df,'calib',self.id, **kwargs)
-        
-    def set_times(self):
-        self.start_time = self.df.index[0]
-        self.end_time = self.df.index[-1]
-        self.mid_time = self.start_time + (self.end_time - self.start_time)//2
-        
-    def process_bbview(self):
-        """Process the bbview inside this CalibBlock.
-        
-        Defines:
-        --------
-        * self.bbv_label
-        ** the ID of this BB view within this dataset
-        * self.bbview
-        ** the BBView object for this bb-view
-        
-        """
-        bbview_group = get_blocks(self.df, 'bb')
-        if len(bbview_group) == 0:
-            raise NoOfViewsError('bb', '>0', 0, 'process_bbview')
-        self.bbv_label = bbview_group.keys()
-        self.bbview = BBView(bbview_group[self.bbv_label[0]])
-        
-    def process_spaceviews(self):
-        """Process the spaceviews inside this CalibBlock.
-        
-        As this defines the left and right sv, this relies on their existence.
-        Defining the spaceviews by creating:
-        --------
-        * self.spaceviews
-        * self.sv_labels
-        * self.left_sv
-        * self.right_sv
-        """
-        # get spaceviews, has keys and df in blocks
-        spaceviews = get_blocks(self.df, 'sv')
-        
-        if len(spaceviews) == 0:
-            raise NoOfViewsError('sv', '>0', 0, 'process_spaceviews, calib block '+
-                str(self.df.calib_block_labels.unique()))
-        
-        # get the 2 item list of spaceview labels and sort them
-        self.sv_labels = sorted(spaceviews.keys())
-        
-        self.spaceviews = {}
-        for label in self.sv_labels:
-            self.spaceviews[label] = SpaceView(spaceviews[label])
-
-    def check_spaceviews(self):
-        # check for the right length of spaceview
-        lenleft =  len(self.left_sv)
-        lenright = len(self.right_sv)
-        if any([lenleft!=c.SV_LENGTH_TOTAL, lenright!=c.SV_LENGTH_TOTAL]):
-            raise ViewLengthError('space', lenleft, lenright )
-        
-    def get_offset(self, method='all',det='a3_11'):
-        """calculate offset.
-        
-        TODO: Deal with solar target containers differently?
-        
-        Parameters
-        ----------
-        method: string
-            Values: ['all','first','last'] to determine which sides of the 
-            spaceviews are being used for the offset calculation.
-            
-        Returns:
-        --------
-        offset: pandas.Series
-            data column copied attached to self
-        """
-        # get only the spaceviews now (excludes moving data, labels do not)
-        subdf = self.df[self.df.is_spaceview]
-        
-        if method == 'all':
-            offset = subdf[det].mean()
-        elif method == 'first':
-            offset = subdf[subdf.sv_block_label==self.sv_labels[0]][det].mean()
-        elif method == 'last':
-            offset = subdf[subdf.sv_block_label==self.sv_labels[-1]][det].mean()
-        else:
-            raise UnknownMethodError(method, 'CalibBlock.get_offset')
-        self.offset = offset
-        return offset
+            for i in range(1,22):
+                self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
         
     def calc_gain(self):
         """Calc gain.
@@ -510,44 +403,10 @@ class CalibBlock(object):
         numerator = -1 * self.bbview.rbb_average
         denominator = self.offset - self.bbview.average
         return numerator / denominator
-                      
-
-class View(object):
-    """methods to deal with spaceviews.
     
-    Each View object should offer a simple average and also a more intricate
-    way to determine the count values of itself. (Like cutting of samples on the left
-    or right side.)
-    """
-    def __init__(self, df):
-        self.df = df
-        self.start_time = self.df.index[0]
-        self.end_time   = self.df.index[-1]
-        self.mid_time =  self.start_time + (self.end_time-self.start_time)//2
-        # self.average = self.counts.groupby(level=['c','det']).mean()
-        
-    def get_counts_mean(offset_left=0,offset_right=0):
-        "Placeholder for getting counts in different ways."
-        pass
-
-    def __len__(self):
-        "provide own answer to length for the safety checks in CalibBlock()"
-        return len(self.counts)
-    
-        
-class SpaceView(View):
-    """docstring for SpaceView"""
-    def __init__(self, df):
-        super(SpaceView, self).__init__(df)
-    
-class BBView(View):
-    """docstring for BBView"""
-    def __init__(self, df):
-        super(BBView, self).__init__(df)
-        self.RBB = df.RBB
         # meaningfull is only the grouping on level=['c'] but we need the c,det indexing
         # anyway later so I might as well have the broadcasting here.
-        self.rbb_average = self.RBB.groupby(level=['c','det']).mean()
+        #self.rbb_average = self.RBB.groupby(level=['c','det']).mean()
         
 
 #def thermal_alternative():
