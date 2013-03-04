@@ -224,9 +224,13 @@ def get_offsets_at_all_times(data, offsets):
     caldata2 = offsets.ix[np.where(left_diff < right_diff, left_time, right_time)]
     return caldata2
 
-def get_data_columns(df):
+def get_data_columns(df,strict=True):
     "Filtering for the div247 channel names"
-    return df.filter(regex='^[ab][0-9]_[0-2][0-9]')
+    if strict:
+        pattern = '^[ab][0-9]_[0-2][0-9]'
+    else:
+        pattern = '[ab][0-9]_[0-2][0-9]'
+    return df.filter(regex=pattern)
     
 def get_thermal_channels(df):
     t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
@@ -274,9 +278,10 @@ class Calibrator(object):
     def get_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
+        spaceviews = get_data_columns(spaceviews, strict=True)
         
         # group by the calibration block labels
-        grouped = spaceviews.groupby(spaceviews.calib_block_labels)
+        grouped = spaceviews.groupby(self.df.calib_block_labels)
         
         ###
         # change here for method of means!!
@@ -292,11 +297,12 @@ class Calibrator(object):
     def get_bbcounts(self):
         # kick out moving data and get only bbviews
         bbviews = self.df[self.df.is_bbview]
-        
+        # strict=False enables RBB columns to be averaged as well.
+        bbvievs = get_data_columns(bbviews, strict=False)
         # group by calibration block label
         # does bbview ever happen more than once in one calib
         # block?
-        grouped = bbviews.groupby(bbviews.calib_block_labels)
+        grouped = bbviews.groupby(self.df.calib_block_labels)
         
         bbcounts = grouped.mean()
         
@@ -308,6 +314,8 @@ class Calibrator(object):
         # this array only starts from channel 3 because RBBs only exist for thermal
         # channels
         self.RBB = bbcounts.filter(regex='RBB_')
+        # rename RBB columns co channel names by cutting off initial 'RBB_'
+        self.RBB.rename(columns = lambda x: x[4:],inplace=True)
         
     def calc_calib_mean_times(self):
         calibdata = self.df[self.df.is_calib]
@@ -334,9 +342,12 @@ class Calibrator(object):
         denominator -= thermal_marker_node.calc_CBB(chan, det)
         return numerator/denominator.
         """
-        numerator = -1 * self.bbview.rbb_average
-        denominator = self.offset - self.bbview.average
-        return numerator / denominator
+        numerator = -1 * self.RBB
+        denominator = get_thermal_channels(self.offsets) - \
+                        get_thermal_channels(self.bbcounts)
+        gains = numerator / denominator
+        self.gains = gains
+        return gains
 
     def interpolate_offsets(self):
         """Interpolated the offsets all over the dataframe.
