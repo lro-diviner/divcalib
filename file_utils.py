@@ -189,16 +189,24 @@ def generate_date_index(dataframe):
     Out: DatetimeIndex
     """
     d = dataframe
-    di = pd.io.date_converters.parse_all_fields(
-        d.year, d.month, d.date, d.hour, d.minute, d.second)
+    try:
+        di = pd.io.date_converters.parse_all_fields(
+            d.year, d.month, d.date, d.hour, d.minute, d.second)
+    except AttributeError:
+        di = pd.io.date_converters.parse_all_fields(
+            d.yyyy, d.mm, d.dd, d.hh, d.mn, d.ss)
     return di
 
 def index_by_time(df, drop_dates=True):
     "must return a new df because the use of drop"
     newdf = df.set_index(generate_date_index(df))
     if drop_dates:
-        cols_to_drop = ['year','month','date','hour','minute','second']
-        newdf = newdf.drop(cols_to_drop, axis=1)
+        try:
+            cols_to_drop = ['year','month','date','hour','minute','second']
+            newdf = newdf.drop(cols_to_drop, axis=1)
+        except ValueError:
+            cols_to_drop = ['yyyy','mm','dd','hh','mn','ss']
+            newdf = newdf.drop(cols_to_drop, axis=1)
     return newdf
 
 def prepare_data(df_in):
