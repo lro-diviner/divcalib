@@ -414,11 +414,9 @@ class H5DataPump(object):
             yield self.get_df_from_h5(fname)                
 
 
-class Div247DataPump(object):
-    "Class to stream div247 data."
+class DivXDataPump(object):
+    "Class to stream div38 or div247 data."
     
-    datapath = os.path.join(datapath, "div247")
-    rec_dtype, keys  = get_div247_dtypes()
     def __init__(self, timestr):
         self.timestr = timestr
         self.fnames = self.find_fnames()
@@ -439,13 +437,14 @@ class Div247DataPump(object):
             yield open(fname)
             
     def gen_dataframes(self, n=None):
+        # caller actually doesn't allow n=None anyways. FIX?
         if n==None:
             n = len(self.fnames)
         pbar = ProgressBar(n)
         openfiles = self.gen_open()
         i = 0
         while i < n:
-            data = np.fromfile(openfiles.next(), dtype=self.rec_dtype)
+            data = np.fromfile(openfiles.next(), dtype = self.rec_dtype)
             df = pd.DataFrame(data, columns=self.keys)
             pbar.animate(i+1)
             yield df
@@ -460,3 +459,16 @@ class Div247DataPump(object):
     def get_n_hours(self, n):
         df = pd.concat(self.gen_dataframes(n))
         return self.clean_final_df(df)
+        
+class Div247DataPump(DivXDataPump):
+    "Class to stream div247 data."
+    datapath = os.path.join(datapath, "div247")
+    rec_dtype, keys  = get_div247_dtypes()
+
+            
+class Div38DataPump(DivXDataPump):
+    datapath = os.path.join(datapath, 'div38')
+    rec_dtype, keys = get_div38_dtypes()
+
+    def find_fnames(self):
+        return glob.glob(os.path.join(self.datapath, self.timestr+'*'))
