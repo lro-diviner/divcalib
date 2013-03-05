@@ -157,6 +157,13 @@ def get_div247_dtypes():
         despath = 'div247.des'
     return parse_descriptor(despath)
 
+def get_div38_dtypes():
+    if 'darwin' in sys.platform:
+        despath = '/Users/maye/data/diviner/div38/div38.des'
+    else:
+        despath = '/u/paige/maye/raid/div38/div38.des'
+    return parse_descriptor(despath)
+    
 ###
 ### rdrplus tools
 ###
