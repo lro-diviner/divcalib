@@ -259,7 +259,7 @@ class Calibrator(object):
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.load('data/Normalized_to_Absolute_Radiance.df')
         # rename column names to match channel names here
-        self.norm_to_abs_converter.columns = channels[2:]
+        self.norm_to_abs_converter.columns = self.channels[2:]
         
         # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
@@ -390,11 +390,13 @@ class Calibrator(object):
         self.gains_interp = gains_interp
         
     def calc_radiances(self):
-        self.norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
-        self.abs_radiance = self.norm_radiance.copy()
-        for channel in channels:
-            self.abs_radiance.filter(regex='^'+channel+'_') *= \
-                self.norm_to_abs_converter.
+        norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
+        abs_radiance = norm_radiance.copy()
+        for channel in self.channels[2:]: # start at thermal channels
+            abs_radiance[abs_radiance.filter(regex=channel+'_').columns] *= \
+                self.norm_to_abs_converter.get_value(2,channel)
+        self.norm_radiance = norm_radiance
+        self.abs_radiance = abs_radiance
             
     def interpolate_bb_temps(self):
         """Interpolating the BB H/K temperatures all over the dataframe.
