@@ -1,9 +1,10 @@
 import pandas as pd
 import file_utils as fu
 import calib as c
-from matplotlib.pyplot import show
+import matplotlib.pyplot as plt
 
-divrad_fname = '/raid1/maye/divdata/20110416_00-01_c3d11.txt'
+print pd.__version__
+divrad_fname = '/Users/maye/data/diviner/20110416_00-01_c3d11.txt'
 
 columns = ['year','month','date','hour','minute','second','radiance']
 
@@ -11,10 +12,10 @@ columns = ['year','month','date','hour','minute','second','radiance']
 divdata = pd.io.parsers.read_table(divrad_fname, sep='\s+',names=columns)
 
 # create time index for data
-divc3d11rad = fu.index_by_time(divdata)
+divdata = fu.index_by_time(divdata)
 
 # sort it
-divc3d11rad.sort_index()
+divdata = divdata.sort_index()
 
 # now get div247 file and calibrate
 
@@ -22,17 +23,24 @@ divc3d11rad.sort_index()
 pump = fu.Div247DataPump("20110416")
 
 # get first hour for that day
-df = pump.get_n_hours(1)
+df = pump.get_n_hours(2)
 
 #calibrate
 calib = c.Calibrator(df)
 
 myrad = calib.radiance.a3_11
 
-# myrad.plot()
+# get converter factors
+converter = pd.load('data/Normalized_to_Absolute_Radiance.df')
 
-divc3d11rad.plot(style='r.',label='old')
-myrad.plot(style='g.',label='new')
-legend(loc='best')
-show()
+# get factor for channel 3
+factor = converter.get_value(2,'Channel 3 (A3)')
+
+# apply factor
+myrad = myrad * factor
+
+divdata.radiance.plot()
+# myrad.plot(style='g.',label='new')
+# plt.legend(loc='best')
+plt.show()
 

@@ -247,12 +247,19 @@ class Calibrator(object):
     mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
                            'a4': 4, 'a5': 5, 'a6': 6, 
                            'b1': 7, 'b2': 8, 'b3': 9}
+                           
+    channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
         
     def __init__(self, df):
         self.df = df
         
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
+        
+        # loading converter factors norm-to-abs-radiances
+        self.norm_to_abs_converter = pd.load('data/Normalized_to_Absolute_Radiance.df')
+        # rename column names to match channel names here
+        self.norm_to_abs_converter.columns = channels[2:]
         
         # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
@@ -275,7 +282,7 @@ class Calibrator(object):
         self.interpolate_caldata()
         
         # Apply the interpolated values to create science data (T_b, radiances)
-        self.calc_radiance()
+        self.calc_radiances()
         
     def get_offsets(self):
         # get spaceviews here to kick out moving data
@@ -382,10 +389,13 @@ class Calibrator(object):
         self.offsets_interp = offsets_interp
         self.gains_interp = gains_interp
         
-    def calc_radiance(self):
-        self.radiance = (self.sdata - self.offsets_interp) * self.gains_interp
-        return self.radiance
-        
+    def calc_radiances(self):
+        self.norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
+        self.abs_radiance = self.norm_radiance.copy()
+        for channel in channels:
+            self.abs_radiance.filter(regex='^'+channel+'_') *= \
+                self.norm_to_abs_converter.
+            
     def interpolate_bb_temps(self):
         """Interpolating the BB H/K temperatures all over the dataframe.
         
