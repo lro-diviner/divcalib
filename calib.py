@@ -451,22 +451,6 @@ class Calibrator(object):
                 self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
         
             
-
-#def thermal_alternative():
-#    """using the offset of visual channels???"""
-#    pass
-#        
-#def thermal_nearest(node, tmnearest):
-#    """Calibrate for nearest node only.
-#    
-#    If only one calibration marker is available, no interpolation is done and 
-#    the gain and offset will be determined only with one measurement.
-#    
-#    Input
-#    =====
-#    node: Datanode container
-#    tmnearest: ThermalMarkerNode container
-#    """
 #    counts = node.counts
 #    offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
 #    gain = tmnearest.gain
