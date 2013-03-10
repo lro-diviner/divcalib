@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import pandas as pd
 import file_utils as fu
 import calib as c
@@ -28,19 +29,11 @@ df = pump.get_n_hours(2)
 #calibrate
 calib = c.Calibrator(df)
 
-myrad = calib.radiance.a3_11
+myrad = calib.abs_radiance.a3_11
 
-# get converter factors
-converter = pd.load('data/Normalized_to_Absolute_Radiance.df')
 
-# get factor for channel 3
-factor = converter.get_value(2,'Channel 3 (A3)')
-
-# apply factor
-myrad = myrad * factor
-
-divdata.radiance.plot()
-# myrad.plot(style='g.',label='new')
+divdata.radiance.plot(style='r.',label='new')
+myrad.plot(style='g.',label='new')
 # plt.legend(loc='best')
 plt.show()
 
