@@ -11,6 +11,7 @@ import os
 from datetime import timedelta
 import csv
 from plot_utils import ProgressBar
+import zipfile
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
@@ -191,12 +192,11 @@ def generate_date_index(dataframe):
     d = dataframe
     # need to round to 3 ms precision here, to compare with divdata results
     try:
-        # d.second = pd.Series((np.round(d.second*1000)/1000)*1e9,dtype='timedelta64[ns]')
         d.second = np.round(d.second * 1000) / 1000
         di = pd.io.date_converters.parse_all_fields(
             d.year, d.month, d.date, d.hour, d.minute, d.second)
     except AttributeError:
-        d.ss = np.round(d.ss.round * 1000) / 1000
+        d.ss = np.round(d.ss * 1000) / 1000
         di = pd.io.date_converters.parse_all_fields(
             d.yyyy, d.mm, d.dd, d.hh, d.mn, d.ss)
     return di
@@ -440,6 +440,10 @@ class DivXDataPump(object):
         for fname in self.fnames:
             yield open(fname)
             
+    def process_one_file(self, f):
+        data = np.fromfile(f, dtype = self.rec_dtype)
+        return pd.DataFrame(data, columns=self.keys)
+        
     def gen_dataframes(self, n=None):
         # caller actually doesn't allow n=None anyways. FIX?
         if n==None:
@@ -448,8 +452,7 @@ class DivXDataPump(object):
         openfiles = self.gen_open()
         i = 0
         while i < n:
-            data = np.fromfile(openfiles.next(), dtype = self.rec_dtype)
-            df = pd.DataFrame(data, columns=self.keys)
+            df = self.process_one_file(openfiles.next())
             pbar.animate(i+1)
             yield df
             i += 1
@@ -464,6 +467,24 @@ class DivXDataPump(object):
         df = pd.concat(self.gen_dataframes(n))
         return self.clean_final_df(df)
         
+class RDRDataPump(DivXDataPump):
+    datapath = os.path.join(datapath,'rdr_data')
+    
+    def find_fnames(self):
+        return glob.glob(os.path.join(self.datapath, self.timestr+'*_RDR.TAB'))
+
+    def gen_open(self):
+        for fname in self.fnames:
+            zfile = zipfile.ZipFile(fname)
+            yield zfile.open(zfile.namelist()[0])
+            
+    def process_one_file(self, f):
+        columns = get_headers_pprint(f.name)
+        return pd.io.parsers.read_csv(f, skipinitialspace=True, skiprows=1,
+                                      names=columns, na_values=['-9999.0'], 
+                                      parse_dates=[[0,1]], index_col=0)
+        
+
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
     datapath = os.path.join(datapath, "div247")
