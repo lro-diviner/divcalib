@@ -10,7 +10,7 @@ print pd.__version__
 # first get divdata file
 #
 
-divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c6d11.divdata'
+divrad_fname = '/Users/maye/data/diviner/rdr_data/2011041600_c3d11.divdata'
 
 columns = ['year','month','date','hour','minute','second','radiance']
 
