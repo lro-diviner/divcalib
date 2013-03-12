@@ -182,6 +182,13 @@ def read_rdrplus(fpath,nrows):
 ### general tools for data preparation
 ###
 
+def format_time(intime):
+    t = intime.to_datetime()
+    s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
+    tail = s[-7:]
+    f = round(float(tail), 3)
+    return pd.Timestamp(s[:-7]+str(f)[1:])
+    
 def generate_date_index(dataframe):
     """Parse date fields/columns with pandas date converter parsers.
 
@@ -192,11 +199,9 @@ def generate_date_index(dataframe):
     d = dataframe
     # need to round to 3 ms precision here, to compare with divdata results
     try:
-        d.second = np.round(d.second * 1000) / 1000
         di = pd.io.date_converters.parse_all_fields(
             d.year, d.month, d.date, d.hour, d.minute, d.second)
     except AttributeError:
-        d.ss = np.round(d.ss * 1000) / 1000
         di = pd.io.date_converters.parse_all_fields(
             d.yyyy, d.mm, d.dd, d.hh, d.mn, d.ss)
     return di
@@ -204,6 +209,8 @@ def generate_date_index(dataframe):
 def index_by_time(df, drop_dates=True):
     "must return a new df because the use of drop"
     newdf = df.set_index(generate_date_index(df))
+    # force 3-digit precision on time stamp
+    # newdf.index = (pd.Series(newdf.index)).map(format_time)
     if drop_dates:
         try:
             cols_to_drop = ['year','month','date','hour','minute','second']
@@ -254,6 +261,7 @@ def define_sdtype(df):
     # attached to each other to deal with them later as a separate calibration
     # block
     # DECISION: block labels contain moving data as well
+    # WARNING: But not all! As the end of calib block has pointing commands set to obs!
     # below defined "is_xxx" do NOT contain moving data.
     df['calib_block_labels'] = nd.label( (df.sdtype==1) | (df.sdtype==2) | (df.sdtype==3))[0]
     df['sv_block_labels'] = nd.label( df.sdtype==1 )[0]
