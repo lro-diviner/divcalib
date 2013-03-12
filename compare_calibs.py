@@ -11,7 +11,7 @@ print pd.__version__
 warnings.filterwarnings('ignore',category=FutureWarning)
     
 #
-# first get divdata file
+# get divdata file
 #
 
 divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c3d11.divdata'
