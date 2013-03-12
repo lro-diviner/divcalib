@@ -197,14 +197,15 @@ def generate_date_index(dataframe):
     Out: DatetimeIndex
     """
     d = dataframe
+    d.second = np.round(d.second*1000) / 1000
     # need to round to 3 ms precision here, to compare with divdata results
     try:
-        di = pd.io.date_converters.parse_all_fields(
+        date_index = pd.io.date_converters.parse_all_fields(
             d.year, d.month, d.date, d.hour, d.minute, d.second)
     except AttributeError:
-        di = pd.io.date_converters.parse_all_fields(
+        date_index = pd.io.date_converters.parse_all_fields(
             d.yyyy, d.mm, d.dd, d.hh, d.mn, d.ss)
-    return di
+    return date_index
 
 def index_by_time(df, drop_dates=True):
     "must return a new df because the use of drop"
