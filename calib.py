@@ -204,6 +204,10 @@ def get_blocks(df, blocktype, del_zero=True):
             pass
     return d
     
+def get_mean_bbview_time(df):
+    bbview = df[df.is_bbview]
+    return get_mean_time(bbview)
+
 def get_mean_time(df):
     t1 = df.index[0]
     t2 = df.index[-1]
@@ -261,6 +265,8 @@ class Calibrator(object):
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = self.channels[2:]
         
+        
+    def calibrate(self, bbtime=True):
         # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
         
@@ -326,12 +332,17 @@ class Calibrator(object):
         # rename RBB columns co channel names by cutting off initial 'RBB_'
         self.RBB.rename(columns = lambda x: x[4:],inplace=True)
         
-    def calc_calib_mean_times(self):
+    def calc_calib_mean_times(self, bbtimes=True):
+        if bbtimes:
+            mean_function = get_mean_bbview_time
+        else:
+            mean_function = get_mean_time
+            
         calibdata = self.df[self.df.is_calib]
         
         grouped = calibdata.groupby('calib_block_labels')
         
-        times = grouped.apply(get_mean_time)
+        times = grouped.apply(mean_function)
         self.calib_times = times
         
     def calc_gain(self):
@@ -362,7 +373,7 @@ class Calibrator(object):
         """Interpolated the offsets and gains all over the dataframe.
         
         This is needed AFTER the gain calculation, when applying the offsets and 
-        gains to all data. Maybe combine this with the gain interpolation!!
+        gains to all data.
         """
         sdata = self.df[self.df.sdtype == 0]
         sdata = get_data_columns(sdata, strict=True)
