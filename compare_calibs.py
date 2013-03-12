@@ -7,6 +7,7 @@ import warnings
 
 print pd.__version__
 
+#filter for current (<0.11) pandas warnings
 warnings.filterwarnings('ignore',category=FutureWarning)
     
 #
