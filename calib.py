@@ -236,7 +236,7 @@ def get_data_columns(df,strict=True):
         pattern = '[ab][0-9]_[0-2][0-9]'
     return df.filter(regex=pattern)
     
-def get_thermal_channels(df):
+def get_thermal_detectors(df):
     t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
     t2 = df.filter(regex='b[1-3]_[0-2][0-9]')
     return pd.concat([t1,t2],axis=1)
@@ -253,7 +253,8 @@ class Calibrator(object):
                            'b1': 7, 'b2': 8, 'b3': 9}
                            
     channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
-        
+    thermal_channels = channels[2:]
+    
     def __init__(self, df):
         self.df = df
         
@@ -370,6 +371,8 @@ class Calibrator(object):
     def get_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
+        
+        # only work with the real data, filter out meta-data
         spaceviews = get_data_columns(spaceviews, strict=True)
         
         # group by the calibration block labels
@@ -377,6 +380,7 @@ class Calibrator(object):
         
         ###
         # change here for method of means!!
+        # the current method aggregates just 1 value for the whole calibration block
         ###
         offsets = grouped.mean()
         
@@ -389,13 +393,18 @@ class Calibrator(object):
     def get_bbcounts(self):
         # kick out moving data and get only bbviews
         bbviews = self.df[self.df.is_bbview]
+
         # strict=False enables RBB columns to be averaged as well.
-        bbvievs = get_data_columns(bbviews, strict=False)
+        bbviews = get_data_columns(bbviews, strict=False)
+
         # group by calibration block label
         # does bbview ever happen more than once in one calib
         # block?
         grouped = bbviews.groupby(self.df.calib_block_labels)
         
+        ###
+        # change here for the aggregation method
+        ###
         bbcounts = grouped.mean()
         
         # set the times as index for this dataframe of bbcounts
@@ -406,16 +415,18 @@ class Calibrator(object):
         # this array only starts from channel 3 because RBBs only exist for thermal
         # channels
         self.RBB = bbcounts.filter(regex='RBB_')
-        # rename RBB columns co channel names by cutting off initial 'RBB_'
+        
+        # rename RBB columns channel names by cutting off initial 'RBB_'
         self.RBB.rename(columns = lambda x: x[4:],inplace=True)
         
     def calc_gain(self):
         """Calc gain.
         
+        Basically, gain = -rbbs / (calib_offsets - calib_bbcounts)
+
         This is how JPL did it:
         numerator = -1 * thermal_marker_node.calcRBB(chan,det)
         
-        Then a first step for the denominator:
         denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) + 
                        thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
         
@@ -427,8 +438,10 @@ class Calibrator(object):
         return numerator/denominator.
         """
         numerator = -1 * self.RBB
-        denominator = get_thermal_channels(self.offsets) - \
-                        get_thermal_channels(self.bbcounts)
+        
+        # note how we are calculating only for thermal channels !!
+        denominator = get_thermal_detectors(self.offsets) - \
+                        get_thermal_detectors(self.bbcounts)
         gains = numerator / denominator
         self.gains = gains
         return gains
@@ -440,35 +453,51 @@ class Calibrator(object):
         gains to all data.
         """
 
+        ### create filter here for the kind of data to calibrate !!
+        sdata = self.df[self.df.sdtype==0]
         
+        # only work with real data, filter out meta-data
         sdata = get_data_columns(sdata, strict=True)
 
+        # times are converted to float64 for the interpolation routine
+
+        # the target where we want to interpolate for
         all_times = sdata.index.values.astype('float64')
+        
+        # these are the times as defined by above calc_calib_mean_times
         cal_times = self.calib_times.values.astype('float64')
 
+        # create 2 new pd.DataFrames to hold the interpolated gains and offsets
         offsets_interp = pd.DataFrame(index=sdata.index)
         gains_interp   = pd.DataFrame(index=sdata.index)
         
-        columns = get_thermal_channels(self.offsets).columns
+        # get a list of columns for the thermal detectors only
+        detectors = get_thermal_detectors(self.offsets).columns
         
-        progressbar = ProgressBar(len(columns))
-        for i,col in enumerate(columns):
+        # just for printing out progress
+        progressbar = ProgressBar(len(detectors))
+        
+        for i,det in enumerate(detectors):
             progressbar.animate(i+1)
             # change k for the kind of fit you want
-            s_offset = Spline(cal_times, self.offsets[col], s=0.0, k=1)
-            s_gain   = Spline(cal_times, self.gains[col], s=0.0, k=1)
+            s_offset = Spline(cal_times, self.offsets[det], s=0.0, k=1)
+            s_gain   = Spline(cal_times, self.gains[det], s=0.0, k=1)
             col_offset = s_offset(all_times)
             col_gain   = s_gain(all_times)
-            offsets_interp[col] = col_offset
-            gains_interp[col]   = col_gain
+            offsets_interp[det] = col_offset
+            gains_interp[det]   = col_gain
+
         self.sdata = sdata
         self.offsets_interp = offsets_interp
         self.gains_interp = gains_interp
         
-    def calc_radiances(self):
+    def calc_radiances(self,prefix = ''):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
         abs_radiance = norm_radiance.copy()
-        for channel in self.channels[2:]: # start at thermal channels
+        # as the conversion factor is only given per channel we only need
+        # to loop over channels here, not single detectors
+        for channel in self.thermal_channels:
+            # this filter catches all detectors for the current channel
             abs_radiance[abs_radiance.filter(regex=channel+'_').columns] *= \
                 self.norm_to_abs_converter.get_value(2,channel)
         self.norm_radiance = norm_radiance
