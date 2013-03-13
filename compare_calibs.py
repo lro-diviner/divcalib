@@ -4,6 +4,7 @@ import file_utils as fu
 import calib as c
 import matplotlib.pyplot as plt
 import warnings
+import os
 
 print pd.__version__
 
@@ -43,7 +44,19 @@ df = pump.get_n_hours(2)
 calib = c.Calibrator(df)
 calib.calibrate()
 
-myrad = pd.DataFrame(calib.abs_radiance.a6_11)
+# find out the channel that was used by divdata
+b = os.path.basename(divrad_fname)
+cdet = b.split('.')[0].split('_')[-1]
+c = cdet[1:2]
+det = cdet[3:]
+if int(c) < 7:
+    c = 'a'+c
+else:
+    c = 'b'+c
+cdet = c+'_'+det
+
+# get a view to the right channel
+myrad = pd.DataFrame(calib.abs_radiance[cdet])
 
 compare = myrad.merge(divdata, left_index=True, right_index=True)
 compare.columns = ['new','old']
