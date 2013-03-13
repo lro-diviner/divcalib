@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import pandas as pd
 import file_utils as fu
-import calib as c
+import calib
 import matplotlib.pyplot as plt
 import warnings
 import os
@@ -15,7 +15,7 @@ warnings.filterwarnings('ignore',category=FutureWarning)
 # get divdata file
 #
 
-divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c3d11.divdata'
+divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-05_c3d11.divdata'
 
 columns = ['year','month','date','hour','minute','second','qmi','radiance']
 
@@ -38,11 +38,11 @@ divdata = divdata.drop('qmi',axis=1)
 pump = fu.Div247DataPump("20110416")
 
 # get first hour for that day
-df = pump.get_n_hours(2)
+df = pump.get_n_hours(6)
 
 #calibrate
-calib = c.Calibrator(df)
-calib.calibrate()
+calibrated = calib.Calibrator(df)
+calibrated.calibrate()
 
 # find out the channel that was used by divdata
 b = os.path.basename(divrad_fname)
@@ -56,18 +56,17 @@ else:
 cdet = c+'_'+det
 
 # get a view to the right channel
-myrad = pd.DataFrame(calib.abs_radiance[cdet])
+myrad = pd.DataFrame(calibrated.abs_radiance[cdet])
 
 compare = myrad.merge(divdata, left_index=True, right_index=True)
 compare.columns = ['new','old']
-compare.rel_error = (1 - compare.new / compare.old) * 100
-compare.rel_error.plot()
+compare['rel_error'] = (1 - compare.old / compare.new) * 100
+# compare['rel_error'].plot()
 # compare.old.plot(secondary_y=True)
 # divdata.radiance.plot(style='r.',label='old')
 # myrad.plot(style='g.',label='new')
 # plt.legend(loc='best')
-plt.savefig(divrad_fname+'.png',dpi=100)
+# plt.savefig(divrad_fname+'.png',dpi=100)
 # plt.show()
 print
-
 
