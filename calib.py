@@ -290,6 +290,83 @@ class Calibrator(object):
         # Apply the interpolated values to create science data (T_b, radiances)
         self.calc_radiances()
         
+    def interpolate_bb_temps(self):
+        """Interpolating the BB H/K temperatures all over the dataframe.
+        
+        This is necessary, as the frequency of the measurements is too low to have 
+        meaningful mean values during the BB-views. Also, bb_2_temps are measured so 
+        rarely that there might not be at all a measurement during a bb-view.
+        """
+        # just a shortcutting reference
+        df = self.df
+        
+        # bb_1_temp is much more often sampled than bb_2_temp
+        bb1temps = df.bb_1_temp.dropna()
+        bb2temps = df.bb_2_temp.dropna()
+
+        # accessing the multi-index like this provides the unique index set
+        # at that level, in this case the dataframe timestamps
+        all_times = df.index.values.astype('float64')
+        
+        # loop over both temperature arrays [DRY !]
+        # the number of data points in bb1temps are much higher, but for
+        # consistency we should interpolate both the same way.
+        for bbtemp in [bb1temps,bb2temps]:
+            # converting the time series to floats for interpolation
+            ind = bbtemp.index.values.astype('float64')
+            
+            # I found the best parameters by trial and error, as to what looked
+            # like a best compromise between smoothing and overfitting
+            # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
+            # k=1 basically is a linear interpolation between 2 points
+            # k=2 quadratic, k=3 cubic, k=4 is maximum possible (but no sense)
+
+            # create interpolator function
+            temp_interpolator = Spline(ind, bbtemp, s=0.0, k=1)
+            
+            # get new temperatures at all_times  
+            df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
+
+    def get_RBB(self):
+        """Strictly speaking only required for the calib_block gain calculation.
+        
+        But because this is using all interpolated BB temperatures, this effectively
+        creates RBBs for the whole dataframe.
+        """
+        # getting the interpolated bb temperatures.
+        #rounding to 2 digits and * 100 to lookup the values that have been 
+        # indexed by T*100 (to enable float value table lookup)
+        bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
+        bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
+        # create mapping to look up the right temperature for different channels
+        mapping = {'a': bb1temp, 'b': bb2temp}
+        
+        # loop over thermal channels 3..9           
+        for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
+            
+            #look up the radiances for this channel
+            RBBs = self.t2nrad.ix[bbtemps, self.mcs_div_mapping[channel]]
+            # RBBs has still the T*100 as index, set them to the timestamps of 
+            # the bb temperatures
+            RBBs.index = bbtemps.index
+            for i in range(1,22):
+                self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
+        
+    def calc_calib_mean_times(self, bbtimes=True):
+        if bbtimes:
+            mean_function = get_mean_bbview_time
+        else:
+            mean_function = get_mean_time
+            
+        calibdata = self.df[self.df.is_calib]
+        
+        grouped = calibdata.groupby('calib_block_labels')
+        
+        times = grouped.apply(mean_function)
+        self.calib_times = times
+        
     def get_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
@@ -332,19 +409,6 @@ class Calibrator(object):
         # rename RBB columns co channel names by cutting off initial 'RBB_'
         self.RBB.rename(columns = lambda x: x[4:],inplace=True)
         
-    def calc_calib_mean_times(self, bbtimes=True):
-        if bbtimes:
-            mean_function = get_mean_bbview_time
-        else:
-            mean_function = get_mean_time
-            
-        calibdata = self.df[self.df.is_calib]
-        
-        grouped = calibdata.groupby('calib_block_labels')
-        
-        times = grouped.apply(mean_function)
-        self.calib_times = times
-        
     def calc_gain(self):
         """Calc gain.
         
@@ -375,7 +439,8 @@ class Calibrator(object):
         This is needed AFTER the gain calculation, when applying the offsets and 
         gains to all data.
         """
-        sdata = self.df[self.df.sdtype == 0]
+
+        
         sdata = get_data_columns(sdata, strict=True)
 
         all_times = sdata.index.values.astype('float64')
@@ -409,70 +474,7 @@ class Calibrator(object):
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
             
-    def interpolate_bb_temps(self):
-        """Interpolating the BB H/K temperatures all over the dataframe.
-        
-        This is necessary, as the frequency of the measurements is too low to have 
-        meaningful mean values during the BB-views. Also, bb_2_temps are measured so 
-        rarely that there might not be at all a measurement during a bb-view.
-        """
-        # just a shortcutting reference
-        df = self.df
-        
-        # bb_1_temp is much more often sampled than bb_2_temp
-        bb1temps = df.bb_1_temp.dropna()
-        bb2temps = df.bb_2_temp.dropna()
-
-        # accessing the multi-index like this provides the unique index set
-        # at that level, in this case the dataframe timestamps
-        all_times = df.index.values.astype('float64')
-        
-        # loop over both temperature arrays [DRY !]
-        # the number of data points in bb1temps are much higher, but for
-        # consistency we should interpolate both the same way.
-        for bbtemp in [bb1temps,bb2temps]:
-            # converting the time series to floats for interpolation
-            ind = bbtemp.index.values.astype('float64')
-            
-            # I found the best parameters by trial and error, as to what looked
-            # like a best compromise between smoothing and overfitting
-            # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
-            # k=1 basically is a linear interpolation between 2 points
-            # k=2 quadratic, k=3 cubic, k=4 is maximum possible (but no sense)
-
-            # create interpolator function
-            temp_interpolator = Spline(ind, bbtemp, s=0.0, k=1)
-            
-            # get new temperatures at all_times  
-            df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
                                                 
-    def get_RBB(self):
-        """Strictly speaking only required for the calib_block gain calculation.
-        
-        But because this is using all interpolated BB temperatures, this effectively
-        creates RBBs for the whole dataframe.
-        """
-        # getting the interpolated bb temperatures.
-        #rounding to 2 digits and * 100 to lookup the values that have been 
-        # indexed by T*100 (to enable float value table lookup)
-        bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
-        bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
-        # create mapping to look up the right temperature for different channels
-        mapping = {'a': bb1temp, 'b': bb2temp}
-        
-        # loop over thermal channels 3..9           
-        for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
-            #link to the correct bb temps by checking first letter of channel
-            bbtemps = mapping[channel[0]]
-            
-            #look up the radiances for this channel
-            RBBs = self.t2nrad.ix[bbtemps, self.mcs_div_mapping[channel]]
-            # RBBs has still the T*100 as index, set them to the timestamps of 
-            # the bb temperatures
-            RBBs.index = bbtemps.index
-            for i in range(1,22):
-                self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
-        
             
 #    counts = node.counts
 #    offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
