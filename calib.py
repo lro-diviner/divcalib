@@ -255,8 +255,9 @@ class Calibrator(object):
     channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
     thermal_channels = channels[2:]
     
-    def __init__(self, df):
+    def __init__(self, df, bbtimes=True):
         self.df = df
+        self.bbtimes = bbtimes
         
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
@@ -267,7 +268,7 @@ class Calibrator(object):
         self.norm_to_abs_converter.columns = self.channels[2:]
         
         
-    def calibrate(self, bbtimes=True):
+    def calibrate(self):
         # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
         
@@ -275,7 +276,7 @@ class Calibrator(object):
         self.get_RBB()
                 
         # determine calibration block mean time stamps
-        self.calc_calib_mean_times(bbtimes=bbtimes)
+        self.calc_calib_mean_times()
         
         # determine the offsets per calib_block
         self.get_offsets()
@@ -355,8 +356,8 @@ class Calibrator(object):
             for i in range(1,22):
                 self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
         
-    def calc_calib_mean_times(self, bbtimes=True):
-        if bbtimes:
+    def calc_calib_mean_times(self):
+        if self.bbtimes:
             mean_function = get_mean_bbview_time
         else:
             mean_function = get_mean_time
@@ -491,7 +492,7 @@ class Calibrator(object):
         self.offsets_interp = offsets_interp
         self.gains_interp = gains_interp
         
-    def calc_radiances(self,prefix = ''):
+    def calc_radiances(self):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
         abs_radiance = norm_radiance.copy()
         # as the conversion factor is only given per channel we only need
