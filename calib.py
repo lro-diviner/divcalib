@@ -266,7 +266,7 @@ class Calibrator(object):
         self.norm_to_abs_converter.columns = self.channels[2:]
         
         
-    def calibrate(self, bbtime=True):
+    def calibrate(self, bbtimes=True):
         # interpolate the bb1 and bb2 temperatures for all times
         self.interpolate_bb_temps()
         
@@ -274,7 +274,7 @@ class Calibrator(object):
         self.get_RBB()
                 
         # determine calibration block mean time stamps
-        self.calc_calib_mean_times()
+        self.calc_calib_mean_times(bbtimes=bbtimes)
         
         # determine the offsets per calib_block
         self.get_offsets()
