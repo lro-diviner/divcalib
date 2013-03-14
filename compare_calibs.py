@@ -53,10 +53,10 @@ pump = fu.Div247DataPump("20110416")
 df = pump.get_n_hours(2)
 
 #calibrate
-calib_bb = calib.Calibrator(df)
+calib_bb = calib.Calibrator(df, pad_bbtimes=True)
 calib_bb.calibrate()
 
-calib_cb = calib.Calibrator(df, bbtimes=False)
+calib_cb = calib.Calibrator(df)
 calib_cb.calibrate()
 
 # find out the channel that was used by divdata
@@ -67,8 +67,8 @@ myrad_bb = pd.DataFrame(calib_bb.abs_radiance[cdet])
 myrad_cb = pd.DataFrame(calib_cb.abs_radiance[cdet])
 
 compare = myrad_bb.merge(divdata, left_index=True, right_index=True)
-compare.columns = ['new_bb','old']
-compare['new_cb'] = myrad_cb
+compare.columns = ['new_bbtemps_padded','old']
+compare['new_bbtemps_interp'] = myrad_cb
 
 # compare['bb_error'] = (1 - compare.old / compare.new_bb) * 100
 # compare['cb_error'] = (1 - compare.old / compare.new_cb) * 100

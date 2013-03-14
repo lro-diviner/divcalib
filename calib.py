@@ -255,9 +255,10 @@ class Calibrator(object):
     channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
     thermal_channels = channels[2:]
     
-    def __init__(self, df, bbtimes=True):
+    def __init__(self, df, bbtimes=True, pad_bbtimes=False):
         self.df = df
         self.bbtimes = bbtimes
+        self.pad_bbtimes = pad_bbtimes
         
         # loading conversion table indexed in T*100 (for resolution)
         self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
@@ -269,8 +270,13 @@ class Calibrator(object):
         
         
     def calibrate(self):
+        
         # interpolate the bb1 and bb2 temperatures for all times
-        self.interpolate_bb_temps()
+        # or pad if to recreate JPL calibration
+        if self.pad_bbtimes:
+            self.pad_bb_temps()
+        else:
+            self.interpolate_bb_temps()
         
         # get the normalized radiance for the interpolated bb temps (so all over df)
         self.get_RBB()
@@ -291,6 +297,22 @@ class Calibrator(object):
         
         # Apply the interpolated values to create science data (T_b, radiances)
         self.calc_radiances()
+        
+    def pad_bb_temps(self):
+        """ Forward pad bb temps to recreate JPL's calibration. """
+        df = self.df
+        bbtemps = ['bb_1_temp','bb_2_temp']
+        
+        # first i forward pad from first filled value.
+        for bbtemp in bbtemps:
+            df[bbtemp+'_interp'] = df[bbtemp].replace(np.nan)
+        
+        # now find which is the first filled value and cut off dataframe, to be
+        # exactly doing what JPL is doing
+        iBB1 = df[df['bb_1_temp'].notnull()].index[0]
+        iBB2 = df[df['bb_2_temp'].notnull()].index[0]
+        cutoff = max(iBB1, iBB2)
+        self.df = self.df.ix[cutoff:]
         
     def interpolate_bb_temps(self):
         """Interpolating the BB H/K temperatures all over the dataframe.
