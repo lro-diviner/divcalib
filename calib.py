@@ -93,6 +93,7 @@ class Flag(object):
     def __call__(self):
         print(self.__str__())
 
+        
 class CalibFlag(Flag):
     flag_data=(
         #  Bit 0: Interpolation but one or more marker out of bounds
@@ -171,9 +172,6 @@ def add_offset_col(df, grouped):
     offsets = pd.Series(data, index=index)
     df['offsets'] = offsets.reindex_like(df, method='bfill')
 
-def get_bb_means(grouped_bb):
-    return grouped_bb.counts.mean()[1:]
-
 def get_bb2_col(df):
     # get the bb2 temps without the nans
     bb2temps = df.bb_2_temp.dropna()
@@ -204,8 +202,10 @@ def get_blocks(df, blocktype, del_zero=True):
             pass
     return d
     
-def get_mean_bbview_time(df):
+def get_mean_bbview_time(df, skipsamples=True):
     bbview = df[df.is_bbview]
+    if skipsamples:
+        bbview = bbview.ix[bbview.index[c.BBV_NUM_SKIP_SAMPLE:]]
     return get_mean_time(bbview)
 
 def get_mean_time(df):
@@ -214,7 +214,7 @@ def get_mean_time(df):
     t = t1 + (t2 - t1) // 2
     return t
 
-def get_offsets_at_all_times(data, offsets):
+def calc_offsets_at_all_times(data, offsets):
     real_time = np.array(data.index.values.view("i8") / 1000, dtype="datetime64[us]")
     cali_time = np.array(offsets.index.values.view("i8") / 1000, dtype="datetime64[us]")
     
@@ -240,8 +240,26 @@ def get_thermal_detectors(df):
     t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
     t2 = df.filter(regex='b[1-3]_[0-2][0-9]')
     return pd.concat([t1,t2],axis=1)
-    
-    
+  
+class RBBTable(object):
+    """Table class to convert between temperatures and radiances."""
+    def __init__(self):
+        super(RBBTable, self).__init__()
+        self.df = pd.load('data/T_to_Normalized_Radiance.df')
+        self.table_temps = self.df.index.values.astype('float')
+        self.t2rad = {}
+        self.rad2t = {}
+        for ch in range(3,10):
+            self.t2rad[ch] = Spline(self.table_temps, self.df[ch],
+                                    s=0.0, k=1)
+            self.rad2t[ch] = Spline(self.df[ch],self.table_temps,
+                                    s=0.0, k=1)
+            
+    def get_radiance(self, temps, ch):
+        return self.t2rad[ch](temps)
+    def get_tb(self, rads, ch):
+        return self.rad2t[ch](rads)
+
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
     
@@ -249,46 +267,58 @@ class Calibrator(object):
     """
     # map between div247 channel names and diviner channel ids
     mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3, 
-                           'a4': 4, 'a5': 5, 'a6': 6, 
-                           'b1': 7, 'b2': 8, 'b3': 9}
+                       'a4': 4, 'a5': 5, 'a6': 6, 
+                       'b1': 7, 'b2': 8, 'b3': 9}
                            
     channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
     thermal_channels = channels[2:]
     
-    def __init__(self, df, bbtimes=True, pad_bbtimes=False):
+    def __init__(self, df, bbtimes=True, pad_bbtemps=False, 
+                           single_rbb=True, skipsamples=True):
         self.df = df
+        # to control if mean bbview times or mean calib_block_times determine the
+        # time of a calibration point
         self.bbtimes = bbtimes
-        self.pad_bbtimes = pad_bbtimes
+        # to control if bbtemps are interpolated or just forward-filled (=padded)
+        self.pad_bbtemps = pad_bbtemps
+        # to control if RBB are just determined for 1 mean bb temp or for all bbtemps
+        # of a bbview
+        self.single_rbb = single_rbb
+        # to control if some of the first samples of views are being skipped
+        self.skipsamples = skipsamples
         
-        # loading conversion table indexed in T*100 (for resolution)
-        self.t2nrad = pd.load('data/Ttimes100_to_Radiance.df')
+        # temperature - radiance converter table       
+        self.rbbtable = RBBTable()
         
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.load('data/Normalized_to_Absolute_Radiance.df')
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = self.channels[2:]
         
-        
     def calibrate(self):
         
         # interpolate the bb1 and bb2 temperatures for all times
         # or pad if to recreate JPL calibration
-        if self.pad_bbtimes:
+        if self.pad_bbtemps:
             self.pad_bb_temps()
         else:
             self.interpolate_bb_temps()
-        
-        # get the normalized radiance for the interpolated bb temps (so all over df)
-        self.get_RBB()
-                
+
         # determine calibration block mean time stamps
         self.calc_calib_mean_times()
         
+        if self.single_rbb:
+            self.calc_one_RBB()
+        else:
+            # get the normalized radiance for the interpolated bb temps (so all over df)
+            self.get_RBB()
+            self.calc_many_RBB()
+                
         # determine the offsets per calib_block
-        self.get_offsets()
+        self.calc_offsets()
         
         # determine bb counts (=calcCBB) per calib_block
-        self.get_bbcounts()
+        self.calc_CBB()
         
         self.calc_gain()
         
@@ -309,8 +339,8 @@ class Calibrator(object):
         
         # now find which is the first filled value and cut off dataframe, to be
         # exactly doing what JPL is doing
-        iBB1 = df[df['bb_1_temp'].notnull()].index[0]
-        iBB2 = df[df['bb_2_temp'].notnull()].index[0]
+        iBB1 = df[df['bb_1_temp_interp'].notnull()].index[0]
+        iBB2 = df[df['bb_2_temp_interp'].notnull()].index[0]
         cutoff = max(iBB1, iBB2)
         self.df = self.df.ix[cutoff:]
         
@@ -351,47 +381,21 @@ class Calibrator(object):
             # get new temperatures at all_times  
             df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
 
-    def get_RBB(self):
-        """Strictly speaking only required for the calib_block gain calculation.
-        
-        But because this is using all interpolated BB temperatures, this effectively
-        creates RBBs for the whole dataframe.
-        """
-        # getting the interpolated bb temperatures.
-        #rounding to 2 digits and * 100 to lookup the values that have been 
-        # indexed by T*100 (to enable float value table lookup)
-        bb1temp = (self.df.bb_1_temp_interp.round(2)*100).astype('int')
-        bb2temp = (self.df.bb_2_temp_interp.round(2)*100).astype('int')
-        # create mapping to look up the right temperature for different channels
-        mapping = {'a': bb1temp, 'b': bb2temp}
-        
-        # loop over thermal channels 3..9           
-        for channel in ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']:
-            #link to the correct bb temps by checking first letter of channel
-            bbtemps = mapping[channel[0]]
-            
-            #look up the radiances for this channel
-            RBBs = self.t2nrad.ix[bbtemps, self.mcs_div_mapping[channel]]
-            # RBBs has still the T*100 as index, set them to the timestamps of 
-            # the bb temperatures
-            RBBs.index = bbtemps.index
-            for i in range(1,22):
-                self.df['RBB_'+ channel+'_'+str(i).zfill(2)] = RBBs
-        
     def calc_calib_mean_times(self):
-        if self.bbtimes:
-            mean_function = get_mean_bbview_time
-        else:
-            mean_function = get_mean_time
-            
         calibdata = self.df[self.df.is_calib]
         
         grouped = calibdata.groupby('calib_block_labels')
-        
-        times = grouped.apply(mean_function)
+
+        if self.bbtimes:
+            times = grouped.apply(get_mean_bbview_time, self.skipsamples)
+        else:
+            times = grouped.apply(get_mean_time)
         self.calib_times = times
         
-    def get_offsets(self):
+    def skipped_mean(self,df,num_to_skip):
+        return df.ix[df.index[num_to_skip:]].mean()
+        
+    def calc_offsets(self):
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
         
@@ -405,42 +409,97 @@ class Calibrator(object):
         # change here for method of means!!
         # the current method aggregates just 1 value for the whole calibration block
         ###
-        offsets = grouped.mean()
+        if self.skipsamples:
+            offsets = grouped.agg(self.skipped_mean, c.SV_NUM_SKIP_SAMPLE)
+        else:
+            offsets = grouped.mean()
         
-        # set the times as index for this dataframe of offsets
+        # # set the times as index for this dataframe of offsets
         offsets.index = self.calib_times
         
-        self.offsets = get_data_columns(offsets)
-        return self.offsets
+        self.offsets = offsets
         
-    def get_bbcounts(self):
+    def calc_CBB(self):
         # kick out moving data and get only bbviews
         bbviews = self.df[self.df.is_bbview]
 
-        # strict=False enables RBB columns to be averaged as well.
-        bbviews = get_data_columns(bbviews, strict=False)
+        # get only the science data columns
+        bbviews_counts = get_data_columns(bbviews)
 
         # group by calibration block label
         # does bbview ever happen more than once in one calib
         # block?
-        grouped = bbviews.groupby(self.df.calib_block_labels)
+        grouped = bbviews_counts.groupby(self.df.calib_block_labels)
         
         ###
         # change here for the aggregation method
         ###
-        bbcounts = grouped.mean()
-        
+        if self.skipsamples:
+            bbcounts = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
+        else:
+            bbcounts = grouped.mean()
+            
         # set the times as index for this dataframe of bbcounts
         bbcounts.index = self.calib_times
         
-        self.bbcounts = get_data_columns(bbcounts)
+        self.CBB = bbcounts
         
-        # this array only starts from channel 3 because RBBs only exist for thermal
-        # channels
-        self.RBB = bbcounts.filter(regex='RBB_')
+    def get_RBB(self):
+        """Strictly speaking only required for the calib_block gain calculation.
         
-        # rename RBB columns channel names by cutting off initial 'RBB_'
-        self.RBB.rename(columns = lambda x: x[4:],inplace=True)
+        But because this is using all interpolated BB temperatures, this effectively
+        creates RBBs for the whole dataframe.
+        """
+        # create mapping to look up the right temperature for different channels
+        mapping = {'a': self.df['bb_1_temp_interp'], 
+                   'b': self.df['bb_2_temp_interp']}
+        
+        self.RBBs = pd.DataFrame(index=self.df.index)
+        
+        # loop over thermal channels 3..9           
+        for channel in self.thermal_channels:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
+            
+            #look up the radiances for this channel
+            RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
+            for i in range(1,22):
+                self.RBBs[channel+'_'+str(i).zfill(2)] = \
+                    pd.Series(RBBs,index=self.df.index)
+
+    def calc_one_RBB(self):
+        """Calculate like JPL only one RBB value for a mean BB temperature. """
+        # procedure same as calb_cbb
+        bbviews = self.df[self.df.is_bbview]
+        bbviews_temps = bbviews[['bb_1_temp_interp','bb_2_temp_interp']]
+        grouped = bbviews_temps.groupby(self.df.calib_block_labels)
+        bbtemps = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
+        bbtemps.index = self.calib_times
+        self.bbtemps = bbtemps
+        
+        # create mapping to look up the right temperature for different channels
+        mapping = {'a':bbtemps['bb_1_temp_interp'] , 
+                   'b':bbtemps['bb_1_temp_interp']}
+        
+        self.RBB = pd.DataFrame(index=self.calib_times)
+
+        for channel in self.thermal_channels:
+            temps = mapping[channel[0]]
+            RBBs = self.rbbtable.get_radiance(temps, self.mcs_div_mapping[channel])
+            # RBBs.index = temps.index
+            for i in range(1,22):
+                self.RBB[channel+'_'+str(i).zfill(2)] = \
+                    pd.Series(RBBs,index=self.calib_times)
+                
+    def calc_many_RBB(self):
+        bbview_rbbs = self.RBBs[self.df.is_bbview]
+        grouped = bbview_rbbs.groupby(self.df.calib_block_labels)
+        if self.skipsamples:
+            calibRBBs = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
+        else:
+            calib_RBBs = grouped.mean()
+        calib_RBBs.index = self.calib_times
+        self.RBB = calib_RBBs
         
     def calc_gain(self):
         """Calc gain.
@@ -464,10 +523,9 @@ class Calibrator(object):
         
         # note how we are calculating only for thermal channels !!
         denominator = get_thermal_detectors(self.offsets) - \
-                        get_thermal_detectors(self.bbcounts)
+                        get_thermal_detectors(self.CBB)
         gains = numerator / denominator
         self.gains = gains
-        return gains
 
     def interpolate_caldata(self):
         """Interpolated the offsets and gains all over the dataframe.

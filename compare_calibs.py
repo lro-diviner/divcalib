@@ -27,7 +27,7 @@ warnings.filterwarnings('ignore',category=FutureWarning)
 # get divdata file
 #
 
-divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c3d11.divdata'
+divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c6d11.divdata'
 
 columns = ['year','month','date','hour','minute','second','qmi','radiance']
 
@@ -52,23 +52,28 @@ pump = fu.Div247DataPump("20110416")
 # get first hour for that day
 df = pump.get_n_hours(2)
 
+#options for calbibration
+options = dict(bbtimes=True, pad_bbtemps=False,
+               single_rbb=True, skipsamples=True)
 #calibrate
-calib_bb = calib.Calibrator(df, pad_bbtimes=True)
-calib_bb.calibrate()
+calib_mine = calib.Calibrator(df, bbtimes=False, pad_bbtemps=False,
+                                single_rbb=False, skipsamples=False)
+calib_mine.calibrate()
 
-calib_cb = calib.Calibrator(df)
-calib_cb.calibrate()
+calib_jpl = calib.Calibrator(df,bbtimes=True, pad_bbtemps=True,
+                                single_rbb=True, skipsamples=True)
+calib_jpl.calibrate()
 
 # find out the channel that was used by divdata
 cdet = get_channel_from_fname(divrad_fname)
 
 # get a view to the right channel
-myrad_bb = pd.DataFrame(calib_bb.abs_radiance[cdet])
-myrad_cb = pd.DataFrame(calib_cb.abs_radiance[cdet])
+myrad_new = pd.DataFrame(calib_mine.abs_radiance[cdet])
+myrad_old = pd.DataFrame(calib_jpl.abs_radiance[cdet])
 
-compare = myrad_bb.merge(divdata, left_index=True, right_index=True)
-compare.columns = ['new_bbtemps_padded','old']
-compare['new_bbtemps_interp'] = myrad_cb
+compare = myrad_new.merge(divdata, left_index=True, right_index=True)
+compare.columns = ['new','divdata']
+compare['jpl'] = myrad_old
 
 # compare['bb_error'] = (1 - compare.old / compare.new_bb) * 100
 # compare['cb_error'] = (1 - compare.old / compare.new_cb) * 100
