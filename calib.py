@@ -249,11 +249,17 @@ class RBBTable(object):
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
+        sliced = self.df.ix[abs(self.df.index)> 2]
         for ch in range(3,10):
             self.t2rad[ch] = Spline(self.table_temps, self.df[ch],
                                     s=0.0, k=1)
-            self.rad2t[ch] = Spline(self.df[ch],self.table_temps,
-                                    s=0.0, k=1)
+            if ch < 6:
+                data = sliced[ch]
+                temps = sliced.index.values.astype('float')
+            else:
+                data = self.df[ch]
+                temps = self.table_temps
+            self.rad2t[ch] = Spline(data, temps, s=0.0, k=1)
             
     def get_radiance(self, temps, ch):
         return self.t2rad[ch](temps)
@@ -583,7 +589,18 @@ class Calibrator(object):
                 self.norm_to_abs_converter.get_value(2,channel)
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
-            
+    def calc_tb(self):
+        self.Tb = pd.DataFrame(index=self.abs_radiance.index)
+        pbar = ProgressBar(147)
+        i=0
+        for channel in self.thermal_channels:
+            for det in range(1,22):
+                i+=1
+                pbar.animate(i)
+                cdet = channel + '_' + str(det).zfill(2)
+                temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
+                                                self.mcs_div_mapping[channel])
+                self.Tb[cdet] = pd.Series(temps,index=self.Tb.index)
                                                 
             
 #    counts = node.counts
