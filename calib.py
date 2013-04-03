@@ -280,7 +280,8 @@ class Calibrator(object):
     thermal_channels = channels[2:]
     
     def __init__(self, df, bbtimes=True, pad_bbtemps=False, 
-                           single_rbb=True, skipsamples=True):
+                           single_rbb=True, skipsamples=True,
+                           calfitting_order=1):
         self.df = df
         # to control if mean bbview times or mean calib_block_times determine the
         # time of a calibration point
@@ -292,6 +293,8 @@ class Calibrator(object):
         self.single_rbb = single_rbb
         # to control if some of the first samples of views are being skipped
         self.skipsamples = skipsamples
+        # degree of order for the fitting of calibration data
+        self.calfitting_order = calfitting_order
         
         # temperature - radiance converter table       
         self.rbbtable = RBBTable()
@@ -567,8 +570,8 @@ class Calibrator(object):
         for i,det in enumerate(detectors):
             progressbar.animate(i+1)
             # change k for the kind of fit you want
-            s_offset = Spline(cal_times, self.offsets[det], s=0.0, k=1)
-            s_gain   = Spline(cal_times, self.gains[det], s=0.0, k=1)
+            s_offset = Spline(cal_times, self.offsets[det], s=0.0, k=self.calfitting_order)
+            s_gain   = Spline(cal_times, self.gains[det], s=0.0, k=self.calfitting_order)
             col_offset = s_offset(all_times)
             col_gain   = s_gain(all_times)
             offsets_interp[det] = col_offset
