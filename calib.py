@@ -337,6 +337,9 @@ class Calibrator(object):
         # Apply the interpolated values to create science data (T_b, radiances)
         self.calc_radiances()
         
+        # calculate brightness temperatures Tb
+        self.calc_tb()
+        
     def pad_bb_temps(self):
         """ Forward pad bb temps to recreate JPL's calibration. """
         df = self.df
