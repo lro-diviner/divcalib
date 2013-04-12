@@ -447,6 +447,8 @@ class DivXDataPump(object):
 
     def gen_open(self):
         for fname in self.fnames:
+            self.current_fname = fname
+            print fname
             yield open(fname)
             
     def process_one_file(self, f):
@@ -457,14 +459,12 @@ class DivXDataPump(object):
         # caller actually doesn't allow n=None anyways. FIX?
         if n==None:
             n = len(self.fnames)
-        pbar = ProgressBar(n)
         openfiles = self.gen_open()
         i = 0
         while i < n:
-            df = self.process_one_file(openfiles.next())
-            pbar.animate(i+1)
-            yield df
             i += 1
+            df = self.process_one_file(openfiles.next())
+            yield df
             
     def clean_final_df(self, df):
         "need to wait until final df before defining sdtypes."
@@ -475,6 +475,10 @@ class DivXDataPump(object):
     def get_n_hours(self, n):
         df = pd.concat(self.gen_dataframes(n))
         return self.clean_final_df(df)
+        
+    def get_one_hour(self):
+        for df in self.gen_dataframes():
+            yield self.clean_final_df(df)
         
 class RDRDataPump(DivXDataPump):
     datapath = os.path.join(datapath,'rdr_data')
