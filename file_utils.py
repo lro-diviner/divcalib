@@ -27,6 +27,9 @@ def split_by_n(seq, n):
         yield seq[:n]
         seq = seq[n:]
 
+def timediff(s):
+    return s - s.shift(1)
+    
 def parse_header_line(line):
     """Parse header lines.
     
