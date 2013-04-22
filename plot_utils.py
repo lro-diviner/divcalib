@@ -7,6 +7,16 @@ def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
     
 def plot_calib_block(df,label,id,det='a6_11'):
+    """Plot one designated calibration block.
+    
+    Parameters:
+    -----------
+    
+    df:     pandas Dataframe that has the block labels defined to use as filter.
+    label:  one of 'calib','bb','sv','st'
+    id:     number of block label to be plotted
+    det:    identifier of the detector, a6_11 is default being used.
+    """
     if not label.endswith('_block_labels'):
         label = label + '_block_labels'
     dfnow = df[df[label]==id]
