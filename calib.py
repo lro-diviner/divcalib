@@ -624,6 +624,8 @@ class Calibrator(object):
                 self.norm_to_abs_converter.get_value(2,channel)
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
+        logging.info('Calculated radiances.')
+        
     def calc_tb(self):
         self.Tb = pd.DataFrame(index=self.abs_radiance.index)
         pbar = ProgressBar(147)
@@ -636,6 +638,7 @@ class Calibrator(object):
                 temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
                                                 self.mcs_div_mapping[channel])
                 self.Tb[cdet] = pd.Series(temps,index=self.Tb.index)
+        logging.info("Calculated brightness temperatures.")
                                                 
             
 #    counts = node.counts
