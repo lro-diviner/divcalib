@@ -316,6 +316,9 @@ class Calibrator(object):
         
     def calibrate(self):
         
+        ###
+        ### BB TEMPERATURES
+        ###
         # interpolate the bb1 and bb2 temperatures for all times
         # or pad if to recreate JPL calibration
         if self.pad_bbtemps:
@@ -323,30 +326,54 @@ class Calibrator(object):
         else:
             self.interpolate_bb_temps()
 
+        #####
+        ### CALIBRATION BLOCK TIME STAMPS
+        #####
         # determine calibration block mean time stamps
         self.calc_calib_mean_times()
         
+        #####
+        ### RADIANCES FROM TABLE
+        #####
         if self.single_rbb:
             self.calc_one_RBB()
         else:
             # get the normalized radiance for the interpolated bb temps (so all over df)
             self.get_RBB()
             self.calc_many_RBB()
-                
+             
+        #####
+        ### OFFSETS
+        #####   
         # determine the offsets per calib_block
         self.calc_offsets()
         
+        #####
+        ### BB COUNTS
+        #####
         # determine bb counts (=calcCBB) per calib_block
         self.calc_CBB()
         
+        #####
+        ### GAIN
+        ###
         self.calc_gain()
         
+        #####
+        ### INTERPOLATION OF CALIB DATA
+        #####
         # interpolate offsets (and gains?) over the big dataframe block
         self.interpolate_caldata()
         
+        #####
+        ### CALCULATE RADIANCES
+        #####
         # Apply the interpolated values to create science data (T_b, radiances)
         self.calc_radiances()
         
+        #####
+        ### CALCULATE T_B
+        #####
         # calculate brightness temperatures Tb
         self.calc_tb()
         
