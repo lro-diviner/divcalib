@@ -49,14 +49,6 @@ class UnknownMethodError(DivCalibError):
         return "Method {0} not defined here. ({1})".format(self.method,
                                                            self.location)
 
-def get_channel_mean(df, col_str, channel):
-    "The dataframe has to contain c and jdate for this to work."
-    return df.groupby(['c',df.index])[col_str].mean()[channel]
-    
-def get_channel_std(df, col_str, channel):
-    "The dataframe has to contain c and jdate for this to work."
-    return df.groupby(['c',df.index])[col_str].std()[channel]
-
 
 class Flag(object):
     """Helper class to deal with control words or flags.
