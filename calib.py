@@ -125,64 +125,9 @@ class MiscFlag(Flag):
     def __init__(self,value=0):
         super(MiscFlag,self).__init__(value,dic=self.flags)
 
-def plot_calib_data(df, c, det):
-    """plot the area around calibration data in different colors"""
-    cdet = get_cdet_frame(df, c, det)
-    # # use sclk as index
-    # cdet.set_index('sclk',inplace=True)
-    # plot data in space orientation 
-    cdet.counts[cdet.el_cmd==80].plot(style='ko')
-    # plot bb counts in blue
-    cdet.counts[cdet.el_cmd==0].plot(style='ro')
-    # plot moving data in red
-    return cdet.counts[is_moving(cdet)].plot(style='gx',markersize=15)
-
-def get_cdet_frame(df,c,det):
-    return df[(df.c==c) & (df.det==det)]
-
-def get_calib_data(df, moving=False):
-    newdf = df[df.el_cmd.isin([80,0])]
-    return newdf if moving else get_non_moving_data(newdf)
-        
-def get_non_moving_data(df):
-    """take dataframe and filter for moving flag"""
-    return df[-(is_moving(df))]
-
-def label_calibdata(df, calibdf, label):
-    # get a series with the size and index of the incoming dataframe
-    calib_id = pd.Series(np.zeros(len(df.index)), index=df.index)
-    # set the value to 1 (or True) where the calibdf has an index
-    calib_id[calibdf.index] = 1
-    # label the calib_id series and add to the incoming dataframe
-    df[label] = nd.label(calib_id)[0]
     
-def get_offset_use_limits(grouped):
-    # for now, use the end of 2nd spaceview as end of application time
-    # for mean value of set of spaceviews
-    return [g.index[-1] for i,g in grouped.counts if not i==0][1::2]
-
-def add_offset_col(df, grouped):
-    index = get_offset_use_limits
-    data = grouped.coutns.mean()[[2,4,6,8]].values
-    offsets = pd.Series(data, index=index)
-    df['offsets'] = offsets.reindex_like(df, method='bfill')
-
-def get_bb2_col(df):
-    # get the bb2 temps without the nans
-    bb2temps = df.bb_2_temp.dropna()
-    #create interpolater function by interpolating over bb2temps.index (needs
-    # to be integer!) and its values
-    s = Spline(bb2temps.index.values, bb2temps.values, k=1)
-    return pd.Series(s(df.index), index=df.index)
-
-def is_moving(df):
-    miscflags = MiscFlag()
-    movingflag = miscflags.dic['moving']
-    return df.qmi.astype(int) & movingflag !=0
-        
-def get_blocks(df, blocktype, del_zero=True):
-    "Allowed block-types: ['calib','sv','bb']."
-        
+def get_calib_block(df, blocktype, del_zero=True):
+    "Allowed block-types: ['calib','sv','bb','st']."
     try:
         d = dict(list(df.groupby(blocktype + '_block_labels')))
     except KeyError:
