@@ -6,6 +6,9 @@ from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
 from plot_utils import ProgressBar
+import logging
+
+logging.basicConfig(filename='calib.log', level=logging.INFO)
 
 class DivCalibError(Exception):
     """Base class for exceptions in this module."""
@@ -209,8 +212,15 @@ def get_mean_bbview_time(df, skipsamples=True):
     return get_mean_time(bbview)
 
 def get_mean_time(df):
-    t1 = df.index[0]
-    t2 = df.index[-1]
+    try:
+        t1 = df.index[0]
+        t2 = df.index[-1]
+    except IndexError:
+        print "Problem with calculating mean time."
+        logging.warning('Index not found in get_mean_time. Length of df: {0}'.format(
+                        len(df.index)
+        ))
+        return np.nan
     t = t1 + (t2 - t1) // 2
     return t
 
