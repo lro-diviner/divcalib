@@ -142,13 +142,8 @@ def get_calib_block(df, blocktype, del_zero=True):
             pass
     return d
     
-def get_mean_bbview_time(df, skipsamples=True):
-    bbview = df[df.is_bbview]
-    if skipsamples:
-        bbview = bbview.ix[bbview.index[c.BBV_NUM_SKIP_SAMPLE:]]
-    return get_mean_time(bbview)
-
-def get_mean_time(df):
+def get_mean_time(df_in, skipsamples=0):
+    df = df_in[skipsamples:]
     try:
         t1 = df.index[0]
         t2 = df.index[-1]
@@ -226,20 +221,28 @@ class Calibrator(object):
     channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
     thermal_channels = channels[2:]
     
-    def __init__(self, df, bbtimes=True, pad_bbtemps=False, 
+    def __init__(self, df, do_bbtimes=True, pad_bbtemps=False, 
                            single_rbb=True, skipsamples=True,
                            calfitting_order=1):
         self.df = df
         # to control if mean bbview times or mean calib_block_times determine the
         # time of a calibration point
-        self.bbtimes = bbtimes
+        self.do_bbtimes = do_bbtimes
         # to control if bbtemps are interpolated or just forward-filled (=padded)
         self.pad_bbtemps = pad_bbtemps
         # to control if RBB are just determined for 1 mean bb temp or for all bbtemps
         # of a bbview
         self.single_rbb = single_rbb
         # to control if some of the first samples of views are being skipped
-        self.skipsamples = skipsamples
+        if skipsamples:
+            self.BBV_NUM_SKIP_SAMPLE = c.BBV_NUM_SKIP_SAMPLE
+            self.SV_NUM_SKIP_SAMPLE = c.SV_NUM_SKIP_SAMPLE
+            self.STV_NUM_SKIP_SAMPLE = c.STV_NUM_SKIP_SAMPLE
+        else:
+            self.BBV_NUM_SKIP_SAMPLE = 0
+            self.SV_NUM_SKIP_SAMPLE = 0
+            self.STV_NUM_SKIP_SAMPLE = 0
+            
         # degree of order for the fitting of calibration data
         self.calfitting_order = calfitting_order
         
@@ -372,10 +375,14 @@ class Calibrator(object):
         
         grouped = calibdata.groupby('calib_block_labels')
 
-        if self.bbtimes:
-            times = grouped.apply(get_mean_bbview_time, self.skipsamples)
+        if self.do_bbtimes:
+            calibdata = self.df[self.df.is_bbview]
+            to_skip = self.BBV_NUM_SKIP_SAMPLE
         else:
-            times = grouped.apply(get_mean_time)
+            calibdata = self.df[self.df.is_calib]
+            to_skip = 0
+        grouped = calibdata.groupby('calib_block_labels')
+        times = grouped.apply(get_mean_time, to_skip)
         self.calib_times = times
         
     def skipped_mean(self,df,num_to_skip):
