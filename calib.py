@@ -256,9 +256,9 @@ class Calibrator(object):
         
     def calibrate(self):
         
-        ###
+        #####
         ### BB TEMPERATURES
-        ###
+        #####
         # interpolate the bb1 and bb2 temperatures for all times
         # or pad if to recreate JPL calibration
         if self.pad_bbtemps:
@@ -462,7 +462,7 @@ class Calibrator(object):
 
     def calc_one_RBB(self):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
-        # procedure same as calb_cbb
+        # procedure same as calib_cbb
         bbviews = self.df[self.df.is_bbview]
         bbviews_temps = bbviews[['bb_1_temp_interp','bb_2_temp_interp']]
         grouped = bbviews_temps.groupby(self.df.calib_block_labels)
