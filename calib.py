@@ -208,6 +208,56 @@ class RBBTable(object):
     def get_tb(self, rads, ch):
         return self.rad2t[ch](rads)
 
+class CalBlock(object):
+    """Class to handle different options on how to deal with a single cal block.
+    
+    IN:
+        dataframe
+    OUT:
+        via several class methods
+    """
+    def __init__(self, df, skip_samples=0):
+        self.df = df
+        self.skip_samples = skip_samples
+        self.sv_labels = self.get_unique_labels('sv')
+        self.bb_labels = self.get_unique_labels('bb')
+        self.st_labels = self.get_unique_labels('st')
+        self.define_kind()
+
+    def calc_offsets(self):
+        offsets = {}
+        for label in self.sv_labels:
+            spaceviews = self.df[self.df.sv_block_labels == label]
+            offsets[label] = spaceviews[spaceviews.is_spaceview][self.skip_samples:].mean()
+        self.offsets = offsets
+            
+    def get_offsets(self, offset_kind='both'):
+        """Determine offset for calblock.
+        
+        IN:
+            offset_kind. If set to 'both', both sides will be used to determine
+                the offset, 'left' and 'right' do the alternative, respectively.
+        """
+        pass
+
+    def define_kind(self):
+        """Define kind of calblock depending on containing bbview, st or both.
+
+        Possible kinds: 'BB', 'ST', 'BOTH'
+        """
+        # more than 1 kind?
+        if (self.st_labels.size + self.bb_labels.size) > 1:
+            self.kind = 'BOTH'
+        elif self.st_labels.size > 0:
+            self.kind = 'ST'
+        else:
+            self.kind = 'BB'
+        
+    def get_unique_labels(self,view):
+        labels = self.df[view+'_block_labels'].unique()
+        return labels[labels > 0]
+        
+        
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
     
