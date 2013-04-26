@@ -385,8 +385,8 @@ class Calibrator(object):
         times = grouped.apply(get_mean_time, to_skip)
         self.calib_times = times
         
-    def skipped_mean(self,df,num_to_skip):
-        return df.ix[df.index[num_to_skip:]].mean()
+    def skipped_mean(self, df, num_to_skip):
+        return df[num_to_skip:].mean()
         
     def calc_offsets(self):
         # get spaceviews here to kick out moving data
