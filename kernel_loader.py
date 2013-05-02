@@ -2,8 +2,9 @@
 import os
 import spice
 from datetime import datetime as dt
+from file_utils import kernelpath
 
-os.chdir('/Users/maye/data/spice/diviner')
+os.chdir(kernelpath)
 spice.furnsh("ck/moc42_2010100_2010101_v02.bc")
 spice.furnsh("fk/lro_frames_2012255_v02.tf")
 spice.furnsh("fk/lro_dlre_frames_2010132_v04.tf")
