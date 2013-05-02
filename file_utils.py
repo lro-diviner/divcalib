@@ -15,8 +15,11 @@ import zipfile
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
+    kernelpath = '/Users/maye/data/spice/diviner'
 else:
     datapath = '/raid1/maye/'
+    kernelpath = '/raid1/maye/kernels'
+
 
 ####
 #### Tools for parsing text files of data
