@@ -1,12 +1,12 @@
 # coding: utf-8
+import unittest
 import os
 import spice
 from datetime import datetime as dt
 from file_utils import kernelpath
+from diviner import kerneltools
 
-assert 0
-
-def test_loading():
+def test_example_loading():
     os.chdir(kernelpath)
     spice.furnsh("ck/moc42_2010100_2010101_v02.bc")
     spice.furnsh("fk/lro_frames_2012255_v02.tf")
@@ -24,5 +24,17 @@ def test_loading():
     for i,j in zip(t[0],answer[0]):
         assert round(i,3) == round(j,3)
         
+def test_load_for_time():
+    pass
+    
+def test_get_version_from_kernel_fname():
+    fname = 'moc42_2009099_2009100_v01.bc'
+    version = 1
+    pre_ext = os.path.splitext()
+def test_get_times_from_ck_fname():
+    fname = 'moc42_2009099_2009100_v01.bc'
+    start_time = dt.strptime('2009062','%Y%j')
+    end_time = 
+    assert 
 if __name__ == '__main__':
     test_loading()
