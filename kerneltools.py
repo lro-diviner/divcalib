@@ -1,28 +1,17 @@
 # coding: utf-8
-import os
+import os.path as path
 import spice
 from datetime import datetime as dt
 from file_utils import kernelpath
 
-assert 0
-
-def test_loading():
-    os.chdir(kernelpath)
-    spice.furnsh("ck/moc42_2010100_2010101_v02.bc")
-    spice.furnsh("fk/lro_frames_2012255_v02.tf")
-    spice.furnsh("fk/lro_dlre_frames_2010132_v04.tf")
-    spice.furnsh("ick/lrodv_2010090_2010121_v01.bc")
-    spice.furnsh("lsk/naif0010.tls")
-    spice.furnsh('sclk/lro_clkcor_2010096_v00.tsc')
-    spice.furnsh("spk/fdf29_2010100_2010101_n01.bsp")
-    spice.furnsh('./planet_spk/de421.bsp')
-
-    utc = dt.strptime('2010100 10','%Y%j %H').isoformat()
-    et = spice.utc2et(utc)
-    t = spice.spkpos('sun',et,'LRO_DLRE_SCT_REF','lt+s','lro')
-    answer = ((-63972935.85033857, -55036272.7848299, 123524941.9877458), 499.009424105693)
-    for i,j in zip(t[0],answer[0]):
-        assert round(i,3) == round(j,3)
-        
-if __name__ == '__main__':
-    test_loading()
+def get_version_from_fname(fname):
+    # cut off extension
+    pre_ext = path.splitext(fname)[0]
+    # split by _ and get last element (the version number string, if available)
+    if not '_' in pre_ext:
+        return None
+    last_token = pre_ext.split('_')[-1]
+    if not last_token.startswith('v'):
+        return None
+    return int(last_token[1:])
+    
