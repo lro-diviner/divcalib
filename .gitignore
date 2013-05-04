@@ -37,3 +37,4 @@ nohup.out
 *.tab
 .fuse*
 playing\ around.ipynb
+*.log

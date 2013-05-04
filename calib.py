@@ -311,7 +311,8 @@ class Calibrator(object):
         # of a bbview
         self.single_rbb = single_rbb
         # to control if some of the first samples of views are being skipped
-        if skipsamples:
+        self.skipsamples = skipsamples
+        if skipsamples == True:
             self.BBV_NUM_SKIP_SAMPLE = c.BBV_NUM_SKIP_SAMPLE
             self.SV_NUM_SKIP_SAMPLE = c.SV_NUM_SKIP_SAMPLE
             self.STV_NUM_SKIP_SAMPLE = c.STV_NUM_SKIP_SAMPLE
@@ -448,10 +449,7 @@ class Calibrator(object):
             df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
     
     def calc_calib_mean_times(self):
-        calibdata = self.df[self.df.is_calib]
-        
-        grouped = calibdata.groupby('calib_block_labels')
-        
+
         if self.do_bbtimes:
             calibdata = self.df[self.df.is_bbview]
             to_skip = self.BBV_NUM_SKIP_SAMPLE
