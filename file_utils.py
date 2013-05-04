@@ -25,17 +25,20 @@ else:
 #### Tools for parsing text files of data
 ####
 
+
 def split_by_n(seq, n):
     while seq:
         yield seq[:n]
         seq = seq[n:]
 
+
 def timediff(s):
     return s - s.shift(1)
-    
+
+
 def parse_header_line(line):
     """Parse header lines.
-    
+
     >>> s = ' a   b  c    '
     >>> parse_header_line(s)
     ['a', 'b', 'c']
@@ -49,10 +52,11 @@ def parse_header_line(line):
     else:
         newline = line.split()
     return [i.strip() for i in newline]
-    
+
+
 def get_headers_pprint(fname):
     """Get headers from pprint output.
-    
+
     >>> fname = '/Users/maye/data/diviner/noise2.tab'
     >>> headers = get_headers_pprint(fname)
     >>> headers[:7]
@@ -62,9 +66,10 @@ def get_headers_pprint(fname):
         headers = parse_header_line(f.readline())
     return headers
 
+
 def get_headers_pds(fname):
     """Get headers from PDS RDR files.
-    
+
     >>> fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
     >>> headers = get_headers_pds(fname)
     >>> headers[:7]
@@ -75,11 +80,12 @@ def get_headers_pds(fname):
             f.readline()
         headers = parse_header_line(f.readline())
     return headers
- 
+
+
 def read_pprint(fname):
     """Read tabular diviner data into pandas data frame and return it.
-    
-    Lower level function. Use read_div_data which calls this as appropriate.    
+
+    Lower level function. Use read_div_data which calls this as appropriate.
     """
 
     # pandas parser does not read this file correctly, but loadtxt does.
@@ -95,9 +101,10 @@ def read_pprint(fname):
     dataframe.sort('jdate',inplace=True)
     return dataframe
 
+
 def read_pds(fname,nrows=None):
     """Read tabular files from the PDS depository.
-    
+
     Lower level function. Use read_div_data which calls this as appropriate.
     """
     headers = get_headers_pds(fname)
@@ -106,14 +113,15 @@ def read_pds(fname,nrows=None):
     return pd.io.parsers.read_csv(fname,
                                       dialect = dialect,
                                       comment='#',
-                                      names=headers, 
-                                      na_values=['-9999.0'], 
-                                      skiprows=4, 
+                                      names=headers,
+                                      na_values=['-9999.0'],
+                                      skiprows=4,
                                       nrows=nrows,
                                       parse_dates=[[0,1]],
                                       index_col=0,
                                       )
-    
+
+
 def get_df_from_h5(fname):
     """Provide df from h5 file."""
     try:
@@ -125,6 +133,7 @@ def get_df_from_h5(fname):
         print("file {0} not found.".format(fname))
     return df
 
+
 def read_div_data(fname, **kwargs):
     with open(fname) as f:
         line = f.readline()
@@ -135,10 +144,12 @@ def read_div_data(fname, **kwargs):
         else:
             return read_pprint(fname)
 
-   
+
 ####
 #### tools for parsing binary data of Diviner
 ####
+
+
 def parse_descriptor(fpath):
     f = open(fpath)
     lines = f.readlines()
@@ -157,12 +168,14 @@ def parse_descriptor(fpath):
     rec_dtype = np.dtype([(key,'f8') for key in keys])
     return rec_dtype,keys
 
+
 def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
     else:
-        despath = 'div247.des'
+        despath = '/raid1/u/paige/maye/src/diviner/div247.des'
     return parse_descriptor(despath)
+
 
 def get_div38_dtypes():
     if 'darwin' in sys.platform:
@@ -170,16 +183,17 @@ def get_div38_dtypes():
     else:
         despath = '/u/paige/maye/raid/div38/div38.des'
     return parse_descriptor(despath)
-    
+
 ###
 ### rdrplus tools
 ###
+
 
 def read_rdrplus(fpath,nrows):
     with open(fpath) as f:
         line = f.readline()
         headers = parse_header_line(line)
-        
+
     return pd.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
                                       skiprows=1, nrows=nrows)
 
@@ -188,13 +202,15 @@ def read_rdrplus(fpath,nrows):
 ### general tools for data preparation
 ###
 
+
 def format_time(intime):
     t = intime.to_datetime()
     s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
     tail = s[-7:]
     f = round(float(tail), 3)
     return pd.Timestamp(s[:-7]+str(f)[1:])
-    
+
+
 def generate_date_index(dataframe):
     """Parse date fields/columns with pandas date converter parsers.
 
@@ -213,6 +229,7 @@ def generate_date_index(dataframe):
             d.yyyy, d.mm, d.dd, d.hh, d.mn, d.ss)
     return date_index
 
+
 def index_by_time(df, drop_dates=True):
     "must return a new df because the use of drop"
     newdf = df.set_index(generate_date_index(df))
@@ -227,6 +244,7 @@ def index_by_time(df, drop_dates=True):
             newdf = newdf.drop(cols_to_drop, axis=1)
     return newdf
 
+
 def prepare_data(df_in):
     """Declare NaN value and pad nan data for some."""
     nan = np.nan
@@ -237,24 +255,29 @@ def prepare_data(df_in):
     df.moving.replace(nan,inplace=True)
     return df
 
+
 def get_sv_selector(df):
     "Create dataframe selecotr for pointing limits of divconstants 'c' file"
     return (df.last_az_cmd >= c.SV_AZ_MIN) & (df.last_az_cmd <= c.SV_AZ_MAX) & \
            (df.last_el_cmd >= c.SV_EL_MIN) & (df.last_el_cmd <= c.SV_EL_MAX)
 
+
 def get_bb_selector(df):
     "Create dataframe selecotr for pointing limits of divconstants 'c' file"
     return (df.last_az_cmd >= c.BB_AZ_MIN) & (df.last_az_cmd <= c.BB_AZ_MAX) & \
            (df.last_el_cmd >= c.BB_EL_MIN) & (df.last_el_cmd <= c.BB_EL_MAX)
-    
+
+
 def get_st_selector(df):
     "Create dataframe selecotr for pointing limits of divconstants 'c' file"
     return (df.last_az_cmd >= c.ST_AZ_MIN) & (df.last_az_cmd <= c.ST_AZ_MAX) & \
            (df.last_el_cmd >= c.ST_EL_MIN) & (df.last_el_cmd <= c.ST_EL_MAX)
 
+
 def get_stowed_selector(df):
     return (df.last_az_cmd == 0) & (df.last_el_cmd == 0)
-    
+
+
 def define_sdtype(df):
     df['sdtype'] = 0
     df.sdtype[get_sv_selector(df)] = 1
@@ -274,11 +297,11 @@ def define_sdtype(df):
     df['sv_block_labels'] = nd.label( df.sdtype==1 )[0]
     df['bb_block_labels'] = nd.label( df.sdtype==2 )[0]
     df['st_block_labels'] = nd.label( df.sdtype==3 )[0]
-    
-    # this resets data from sdtypes >0 above that is still 'moving' to be 
+
+    # this resets data from sdtypes >0 above that is still 'moving' to be
     # sdtype=-1 (i.e. 'moving', defined by me)
     df.sdtype[df.moving==1] = -1
-    
+
     # now I don't need to check for moving anymore, the sdtypes are clean
     df['is_spaceview'] = (df.sdtype == 1)
     df['is_bbview']    = (df.sdtype == 2)
@@ -290,11 +313,13 @@ def define_sdtype(df):
     # this does the same as above labeling, albeit here the blocks are numbered
     # individually. Not sure I will need it but might come in handy.
 
+
 def fname_to_df(fname,rec_dtype,keys):
     with open(fname) as f:
         data = np.fromfile(f,dtype=rec_dtype)
     df = pd.DataFrame(data,columns=keys)
     return df
+
 
 def folder_to_df(folder, top_end=None, verbose=False):
     rec_dtype, keys = get_div247_dtypes()
@@ -317,14 +342,16 @@ def folder_to_df(folder, top_end=None, verbose=False):
         dfall = pd.concat([dfall,df])
     to_store = dfall[dfall.calib_block_labels>0]
     return to_store
-   
+
+
 def get_storename(folder):
     path = os.path.realpath(folder)
     dirname = '/raid1/maye/data/h5_div247'
     basename = os.path.basename(path)
     storename = os.path.join(dirname,basename+'.h5')
     return storename
-     
+
+
 def folder_to_store(folder):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder+'/*.div247')
@@ -375,8 +402,8 @@ class DataPump(object):
             if os.path.isfile(fname_pattern):
                 self.get_df(fname_pattern)
             elif os.path.isdir(fname_pattern):
-                pass    
-                
+                pass
+
         self.timestr = timestr
         self.current_time = dateparser(timestr)
         self.fname = os.path.join(datapath,
@@ -385,22 +412,26 @@ class DataPump(object):
 
     #def gen_fnames(self, pattern, top):
     #    for path, dirlist, filelist in os.walk(top)
+
     def get_fnames(self):
         dirname = os.path.dirname(self.fname)
         fnames = glob.glob(dirname + '/*.div247')
         fnames.sort()
         self.fnames = fnames
         self.index = self.fnames.index(self.fname)
+
     def open_and_process(self):
         df = fname_to_df(self.fname, self.rec_dtype, self.keys)
         df = prepare_data(df)
         define_sdtype(df)
         self.df = df
+
     def get_df(self,fname):
         self.fname = fname
         self.get_fnames()
         self.open_and_process()
         return self.df
+
     def get_next(self):
         self.fname = self.fnames[self.index+1]
         self.index+=1
@@ -419,34 +450,44 @@ class H5DataPump(object):
 
     def get_fnames(self):
         return glob.glob(os.path.join(self.datapath, self.timestr[:4]+'*'))
-        
+
     def store_generator(self):
         for fname in self.fnames:
             yield pd.HDFStore(fname)
-    
+
     def fname_generator(self):
         for fname in self.fnames:
             yield fname
-        
+
     def df_generator(self):
         for fname in self.fnames:
-            yield self.get_df_from_h5(fname)                
+            yield self.get_df_from_h5(fname)
 
 
 class DivXDataPump(object):
-    "Class to stream div38 or div247 data."
-    
+    """Abstract Class to stream div38 or div247 data.
+
+    Needs to be completed in derived class.
+    Things missing is self.datapath to be set in deriving class.
+    """
     def __init__(self, timestr):
+        """timestr is of format yyyymm[dd[hh]], used directly by glob.
+
+        This means, less files are found if the timestr is longer, as it
+        is then more restrictive.
+        """
         self.timestr = timestr
+        self.time = dateparser(timestr)
         self.fnames = self.find_fnames()
         if len(self.fnames) == 0:
             print("No files found.")
         self.fnames.sort()
 
     def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.timestr[:6], 
+        "Needs self.datapath to be defined in derived class."
+        return glob.glob(os.path.join(self.datapath, self.timestr[:6],
                                       self.timestr+'*'))
-    
+
     def gen_fnames(self):
         for fname in self.fnames:
             yield fname
@@ -456,11 +497,11 @@ class DivXDataPump(object):
             self.current_fname = fname
             print fname
             yield open(fname)
-            
+
     def process_one_file(self, f):
         data = np.fromfile(f, dtype = self.rec_dtype)
         return pd.DataFrame(data, columns=self.keys)
-        
+
     def gen_dataframes(self, n=None):
         # caller actually doesn't allow n=None anyways. FIX?
         if n==None:
@@ -471,24 +512,28 @@ class DivXDataPump(object):
             i += 1
             df = self.process_one_file(openfiles.next())
             yield df
-            
+
     def clean_final_df(self, df):
         "need to wait until final df before defining sdtypes."
         df = prepare_data(df)
         define_sdtype(df)
         return df
-        
+
     def get_n_hours(self, n):
         df = pd.concat(self.gen_dataframes(n))
         return self.clean_final_df(df)
-        
+
+    def read_hour(self, hour):
+
+    def add_next_hour(self):
+
     def get_one_hour(self):
         for df in self.gen_dataframes():
             yield self.clean_final_df(df)
-        
+
 class RDRDataPump(DivXDataPump):
     datapath = os.path.join(datapath,'rdr_data')
-    
+
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath, self.timestr+'*_RDR.TAB'))
 
@@ -496,20 +541,20 @@ class RDRDataPump(DivXDataPump):
         for fname in self.fnames:
             zfile = zipfile.ZipFile(fname)
             yield zfile.open(zfile.namelist()[0])
-            
+
     def process_one_file(self, f):
         columns = get_headers_pprint(f.name)
         return pd.io.parsers.read_csv(f, skipinitialspace=True, skiprows=1,
-                                      names=columns, na_values=['-9999.0'], 
+                                      names=columns, na_values=['-9999.0'],
                                       parse_dates=[[0,1]], index_col=0)
-        
+
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
     datapath = os.path.join(datapath, "div247")
     rec_dtype, keys  = get_div247_dtypes()
 
-            
+
 class Div38DataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'div38')
     rec_dtype, keys = get_div38_dtypes()
