@@ -102,11 +102,7 @@ def read_pprint(fname):
     return dataframe
 
 
-<<<<<<< HEAD
-def read_pds(fname,nrows=None):
-=======
 def read_pds(fname, nrows=None):
->>>>>>> 0e45f43cb26895cadeb5b0881ab7c829f4148497
     """Read tabular files from the PDS depository.
 
     Lower level function. Use read_div_data which calls this as appropriate.
@@ -174,7 +170,6 @@ def parse_descriptor(fpath):
     return rec_dtype, keys
 
 
-
 def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
@@ -195,11 +190,7 @@ def get_div38_dtypes():
 ###
 
 
-<<<<<<< HEAD
-def read_rdrplus(fpath,nrows):
-=======
 def read_rdrplus(fpath, nrows):
->>>>>>> 0e45f43cb26895cadeb5b0881ab7c829f4148497
     with open(fpath) as f:
         line = f.readline()
         headers = parse_header_line(line)
@@ -218,11 +209,7 @@ def format_time(intime):
     s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
     tail = s[-7:]
     f = round(float(tail), 3)
-<<<<<<< HEAD
-    return pd.Timestamp(s[:-7]+str(f)[1:])
-=======
     return pd.Timestamp(s[:-7] + str(f)[1:])
->>>>>>> 0e45f43cb26895cadeb5b0881ab7c829f4148497
 
 
 def generate_date_index(dataframe):
@@ -307,16 +294,6 @@ def define_sdtype(df):
     # DECISION: block labels contain moving data as well
     # WARNING: But not all! As the end of calib block has pointing commands set to obs!
     # below defined "is_xxx" do NOT contain moving data.
-<<<<<<< HEAD
-    df['calib_block_labels'] = nd.label( (df.sdtype==1) | (df.sdtype==2) | (df.sdtype==3))[0]
-    df['sv_block_labels'] = nd.label( df.sdtype==1 )[0]
-    df['bb_block_labels'] = nd.label( df.sdtype==2 )[0]
-    df['st_block_labels'] = nd.label( df.sdtype==3 )[0]
-
-    # this resets data from sdtypes >0 above that is still 'moving' to be
-    # sdtype=-1 (i.e. 'moving', defined by me)
-    df.sdtype[df.moving==1] = -1
-=======
     df['calib_block_labels'] = nd.label((df.sdtype == 1) | (df.sdtype == 2) | (df.sdtype == 3))[0]
     df['sv_block_labels'] = nd.label(df.sdtype == 1)[0]
     df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
@@ -325,7 +302,6 @@ def define_sdtype(df):
     # this resets data from sdtypes >0 above that is still 'moving' to be
     # sdtype=-1 (i.e. 'moving', defined by me)
     df.sdtype[df.moving == 1] = -1
->>>>>>> 0e45f43cb26895cadeb5b0881ab7c829f4148497
 
     # now I don't need to check for moving anymore, the sdtypes are clean
     df['is_spaceview'] = (df.sdtype == 1)
@@ -339,11 +315,7 @@ def define_sdtype(df):
     # individually. Not sure I will need it but might come in handy.
 
 
-<<<<<<< HEAD
-def fname_to_df(fname,rec_dtype,keys):
-=======
 def fname_to_df(fname, rec_dtype, keys):
->>>>>>> 0e45f43cb26895cadeb5b0881ab7c829f4148497
     with open(fname) as f:
         data = np.fromfile(f, dtype=rec_dtype)
     df = pd.DataFrame(data, columns=keys)
@@ -563,6 +535,7 @@ class DivXDataPump(object):
     def get_one_hour(self):
         for df in self.gen_dataframes():
             yield self.clean_final_df(df)
+
 
 class RDRDataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'rdr_data')
