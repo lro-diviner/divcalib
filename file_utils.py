@@ -170,6 +170,7 @@ def parse_descriptor(fpath):
     return rec_dtype, keys
 
 
+
 def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
@@ -535,7 +536,6 @@ class DivXDataPump(object):
     def get_one_hour(self):
         for df in self.gen_dataframes():
             yield self.clean_final_df(df)
-
 
 class RDRDataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'rdr_data')
