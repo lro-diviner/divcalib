@@ -2,7 +2,6 @@ from __future__ import division
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
-from scipy import ndimage as nd
 from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
 from plot_utils import ProgressBar
@@ -25,9 +24,9 @@ class ViewLengthError(DivCalibError):
         self.value = value
         self.value2 = value2
     def __str__(self):
-        return "Length of {0}-view not {1}. Instead: ".format(self.view,
-                                        c.SV_LENGTH_TOTAL) + repr(self.value) +\
-                                        repr(self.value2)
+        return "Length of {0}-view not {1}."\
+                " Instead: ".format(self.view,
+                                    c.SV_LENGTH_TOTAL) + repr(self.value) + repr(self.value2)
 
 
 class NoOfViewsError(DivCalibError):
@@ -563,7 +562,7 @@ class Calibrator(object):
         bbview_rbbs = self.RBBs[self.df.is_bbview]
         grouped = bbview_rbbs.groupby(self.df.calib_block_labels)
         if self.skipsamples:
-            calibRBBs = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
+            calib_RBBs = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
         else:
             calib_RBBs = grouped.mean()
         calib_RBBs.index = self.calib_times

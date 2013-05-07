@@ -5,6 +5,8 @@ import spice
 from datetime import datetime as dt
 from diviner.file_utils import kernelpath
 from diviner import kerneltools
+from nose.tools import assert_equals
+
 
 def test_example_loading():
     currentdir = os.getcwd()
@@ -18,29 +20,33 @@ def test_example_loading():
     spice.furnsh("spk/fdf29_2010100_2010101_n01.bsp")
     spice.furnsh('./planet_spk/de421.bsp')
 
-    utc = dt.strptime('2010100 10','%Y%j %H').isoformat()
+    utc = dt.strptime('2010100 10', '%Y%j %H').isoformat()
     et = spice.utc2et(utc)
-    t = spice.spkpos('sun',et,'LRO_DLRE_SCT_REF','lt+s','lro')
-    answer = ((-63972935.85033857, -55036272.7848299, 123524941.9877458), 499.009424105693)
-    for i,j in zip(t[0],answer[0]):
-        assert round(i,3) == round(j,3)
+    t = spice.spkpos('sun', et, 'LRO_DLRE_SCT_REF', 'lt+s', 'lro')
+    answer = ((-63972935.85033857, -55036272.7848299, 123524941.9877458),
+                499.009424105693)
+    for i, j in zip(t[0], answer[0]):
+        assert_equals(round(i, 3), round(j, 3))
     os.chdir(currentdir)
-        
+
+
 def test_get_version_from_fname():
     fname = 'moc42_2009099_2009100_v01.bc'
     version = 1
-    assert version == kerneltools.get_version_from_fname(fname)
-    
+    assert_equals(version, kerneltools.get_version_from_fname(fname))
+
+
 def test_get_times_from_ck():
     fname = 'moc42_2009099_2009100_v01.bc'
-    start_time = dt.strptime('2009099','%Y%j')
-    end_time = dt.strptime('2009100','%Y%j')
+    start_time = dt.strptime('2009099', '%Y%j')
+    end_time = dt.strptime('2009100', '%Y%j')
     result = kerneltools.get_times_from_ck(fname)
-    assert start_time == result[0]
-    assert end_time == result[1]
-    
+    assert_equals(start_time, result[0])
+    assert_equals(end_time, result[1])
+
+
 def test_load_kernels_for_timestamp():
-    time = dt(2010,10,10)
+    time = dt(2010, 10, 10)
     nr_kernels_to_load = 8
-    assert kerneltools.load_kernels_for_timestamp(time) == nr_kernels_to_load
-    
+    assert_equals(kerneltools.load_kernels_for_timestamp(time),
+                  nr_kernels_to_load)
