@@ -9,8 +9,9 @@ from scipy import ndimage as nd
 import divconstants as c
 import os
 from datetime import timedelta
+from datetime import datetime as dt
 import csv
-from plot_utils import ProgressBar
+# from plot_utils import ProgressBar
 import zipfile
 
 if sys.platform == 'darwin':
@@ -170,7 +171,6 @@ def parse_descriptor(fpath):
     return rec_dtype, keys
 
 
-
 def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
@@ -239,7 +239,8 @@ def index_by_time(df, drop_dates=True):
     # newdf.index = (pd.Series(newdf.index)).map(format_time)
     if drop_dates:
         try:
-            cols_to_drop = ['year', 'month', 'date', 'hour', 'minute', 'second']
+            cols_to_drop = ['year', 'month', 'date',
+                            'hour', 'minute', 'second']
             newdf = newdf.drop(cols_to_drop, axis=1)
         except ValueError:
             cols_to_drop = ['yyyy', 'mm', 'dd', 'hh', 'mn', 'ss']
@@ -260,20 +261,26 @@ def prepare_data(df_in):
 
 def get_sv_selector(df):
     "Create dataframe selecotr for pointing limits of divconstants 'c' file"
-    return (df.last_az_cmd >= c.SV_AZ_MIN) & (df.last_az_cmd <= c.SV_AZ_MAX) & \
-           (df.last_el_cmd >= c.SV_EL_MIN) & (df.last_el_cmd <= c.SV_EL_MAX)
+    return (df.last_az_cmd >= c.SV_AZ_MIN) & \
+           (df.last_az_cmd <= c.SV_AZ_MAX) & \
+           (df.last_el_cmd >= c.SV_EL_MIN) & \
+           (df.last_el_cmd <= c.SV_EL_MAX)
 
 
 def get_bb_selector(df):
     "Create dataframe selecotr for pointing limits of divconstants 'c' file"
-    return (df.last_az_cmd >= c.BB_AZ_MIN) & (df.last_az_cmd <= c.BB_AZ_MAX) & \
-           (df.last_el_cmd >= c.BB_EL_MIN) & (df.last_el_cmd <= c.BB_EL_MAX)
+    return (df.last_az_cmd >= c.BB_AZ_MIN) & \
+           (df.last_az_cmd <= c.BB_AZ_MAX) & \
+           (df.last_el_cmd >= c.BB_EL_MIN) & \
+           (df.last_el_cmd <= c.BB_EL_MAX)
 
 
 def get_st_selector(df):
     "Create dataframe selecotr for pointing limits of divconstants 'c' file"
-    return (df.last_az_cmd >= c.ST_AZ_MIN) & (df.last_az_cmd <= c.ST_AZ_MAX) & \
-           (df.last_el_cmd >= c.ST_EL_MIN) & (df.last_el_cmd <= c.ST_EL_MAX)
+    return (df.last_az_cmd >= c.ST_AZ_MIN) & \
+           (df.last_az_cmd <= c.ST_AZ_MAX) & \
+           (df.last_el_cmd >= c.ST_EL_MIN) & \
+           (df.last_el_cmd <= c.ST_EL_MAX)
 
 
 def get_stowed_selector(df):
@@ -293,9 +300,12 @@ def define_sdtype(df):
     # attached to each other to deal with them later as a separate calibration
     # block
     # DECISION: block labels contain moving data as well
-    # WARNING: But not all! As the end of calib block has pointing commands set to obs!
+    # WARNING: But not all moving data is contained in block labels!
+    # The end of calib block has pointing commands set to nadir.
     # below defined "is_xxx" do NOT contain moving data.
-    df['calib_block_labels'] = nd.label((df.sdtype == 1) | (df.sdtype == 2) | (df.sdtype == 3))[0]
+    df['calib_block_labels'] = nd.label((df.sdtype == 1) | \
+                                        (df.sdtype == 2) | \
+                                        (df.sdtype == 3))[0]
     df['sv_block_labels'] = nd.label(df.sdtype == 1)[0]
     df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
     df['st_block_labels'] = nd.label(df.sdtype == 3)[0]
@@ -474,6 +484,9 @@ class DivXDataPump(object):
     Needs to be completed in derived class.
     Things missing is self.datapath to be set in deriving class.
     """
+    timestr_parser = {4: '%Y', 6: '%Y%m',
+                      8: '%Y%m%d', 10: '%Y%m%d%H'}
+
     def __init__(self, timestr):
         """timestr is of format yyyymm[dd[hh]], used directly by glob.
 
@@ -481,7 +494,8 @@ class DivXDataPump(object):
         is then more restrictive.
         """
         self.timestr = timestr
-        self.time = dateparser(timestr)
+        self.time = dt.strptime(timestr,
+                                self.timestr_parser[len(timestr)])
         self.fnames = self.find_fnames()
         if len(self.fnames) == 0:
             print("No files found.")
@@ -537,11 +551,13 @@ class DivXDataPump(object):
         for df in self.gen_dataframes():
             yield self.clean_final_df(df)
 
+
 class RDRDataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'rdr_data')
 
     def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.timestr + '*_RDR.TAB'))
+        return glob.glob(os.path.join(self.datapath,
+                                      self.timestr + '*_RDR.TAB'))
 
     def gen_open(self):
         for fname in self.fnames:
