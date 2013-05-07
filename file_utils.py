@@ -515,6 +515,9 @@ class DivXDataPump(object):
             self.current_fname = fname
             print fname
             yield open(fname)
+    
+    def get_fname_from_time(self, time):
+        return time.strftime("%Y%m%d%H.div247")
 
     def process_one_file(self, f):
         data = np.fromfile(f, dtype=self.rec_dtype)
@@ -539,6 +542,20 @@ class DivXDataPump(object):
 
     def get_n_hours(self, n):
         df = pd.concat(self.gen_dataframes(n))
+        return self.clean_final_df(df)
+
+    def get_n_hours_from_t(self, n, t):
+        "t in hours, n = how many hours."
+        start_time = self.time + timedelta(hours=t)
+        l = []
+        for i in xrange(n):
+            new_time = start_time + timedelta(hours=i)
+            basename = self.get_fname_from_time(new_time)
+            print(basename)
+            dirname = os.path.dirname(self.fnames[0])
+            fname = os.path.join(dirname,basename)
+            l.append(self.process_one_file(fname))
+        df = pd.concat(l)
         return self.clean_final_df(df)
 
     def read_hour(self, hour):
