@@ -4,6 +4,7 @@ import spice
 from datetime import datetime as dt
 from file_utils import kernelpath
 
+
 def get_version_from_fname(fname):
     # cut off extension
     pre_ext = os.path.splitext(fname)[0]
@@ -13,10 +14,11 @@ def get_version_from_fname(fname):
     last_token = pre_ext.split('_')[-1]
     if not last_token.startswith('v'):
         return None
-    return int(last_token[1:])
+    return last_token, int(last_token[1:])
     
+
 def get_times_from_ck(fname):
-    "Parse times from a ck filename."
+    "Parse times from a ck filename. Returns python datetime objects."
     # ex: 'moc42_2009099_2009100_v01.bc'
     # i checked: all ck files start with moc42
     tokens = os.path.splitext(fname)[0].split('_')
@@ -26,6 +28,36 @@ def get_times_from_ck(fname):
     endtime = dt.strptime(endstr, formatstr)
     return (starttime, endtime)
     
+
 def load_kernels_for_timestamp(timestamp):
     number_of_kernels_loaded = 0
     return number_of_kernels_loaded
+    
+
+class CKFileName(object):
+    """Class to create and handle CK file names."""
+    extension = 'bc'
+    prefix = 'moc42' # have not seen any other one
+    
+    def __init__(self, timestr=None, fname=None):
+        super(CKFileName, self).__init__()
+        if fname is not None:
+            self.fname = fname
+            self.dirname = os.path.dirname(fname)
+            self.basename = os.path.basename(fname)
+            self.version_string, self.version = get_version_from_fname(fname)
+            self.start, self.end = get_times_from_ck(fname)
+        elif timestr is not None:
+            self.timestr = timestr
+            self.from_timestr(timestr)
+        else:
+            raise Exception('CKFileName','You have to provide either timestr or fname.')
+            
+    def from_timestr(self, timestr):
+        pass
+    
+    @classmethod
+    def from_fname(cls, fname):
+        "Including this for better readability. same as CKFileName(fname=fname)"
+        return cls(fname=fname)
+        

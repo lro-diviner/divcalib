@@ -1,5 +1,4 @@
 # coding: utf-8
-import unittest
 import os
 import spice
 from datetime import datetime as dt
@@ -33,7 +32,7 @@ def test_example_loading():
 def test_get_version_from_fname():
     fname = 'moc42_2009099_2009100_v01.bc'
     version = 1
-    assert_equals(version, kerneltools.get_version_from_fname(fname))
+    assert_equals(('v01',version), kerneltools.get_version_from_fname(fname))
 
 
 def test_get_times_from_ck():
@@ -43,6 +42,18 @@ def test_get_times_from_ck():
     result = kerneltools.get_times_from_ck(fname)
     assert_equals(start_time, result[0])
     assert_equals(end_time, result[1])
+
+
+def test_CKFileName():
+    fname = 'moc42_2009099_2009100_v01.bc'
+    start_time = dt.strptime('2009099', '%Y%j')
+    end_time = dt.strptime('2009100', '%Y%j')
+    ck = kerneltools.CKFileName.from_fname(fname)
+    assert_equals(ck.version_string, 'v01')
+    assert_equals(ck.version, 1)
+    assert_equals(ck.prefix, 'moc42')
+    assert_equals(ck.start, start_time)
+    assert_equals(ck.end, end_time)
 
 
 def test_load_kernels_for_timestamp():
