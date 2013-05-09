@@ -34,15 +34,18 @@ def get_times_from_ck(fname):
     return (starttime, endtime)
 
 
-def load_kernels_for_timestamp(timestamp):
+def load_kernels_for_timestr(timestr):
     number_of_kernels_loaded = 0
     return number_of_kernels_loaded
 
 
-def get_available_ckernels():
+def get_available_ck():
     root = os.path.join(kernelpath, 'ck')
     return os.listdir(root)
 
+def find_ck_for_timestr(timestr):
+    """docstring for find_ck_for_timestr"""
+    return 'bogus_path'
 
 class CKFileName(object):
     """Class to create and handle CK file names."""
