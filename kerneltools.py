@@ -17,7 +17,7 @@ def get_version_from_fname(fname):
     return last_token, int(last_token[1:])
     
 
-def get_times_from_ck(fname):
+def get_times_from_ck(fname): 
     "Parse times from a ck filename. Returns python datetime objects."
     # ex: 'moc42_2009099_2009100_v01.bc'
     # i checked: all ck files start with moc42
@@ -32,13 +32,26 @@ def get_times_from_ck(fname):
 def load_kernels_for_timestamp(timestamp):
     number_of_kernels_loaded = 0
     return number_of_kernels_loaded
-    
+  
+def get_available_ckernels()  :
+    root = os.path.join(kernelpath, 'ck')
+    return os.listdir(root)
 
 class CKFileName(object):
     """Class to create and handle CK file names."""
     extension = 'bc'
     prefix = 'moc42' # have not seen any other one
+    root = os.path.join(kernelpath,'ck')
     
+    @classmethod
+    def from_fname(cls, fname):
+        "Including this for better readability. same as CKFileName(fname=fname)"
+        return cls(fname=fname)
+        
+    @classmethod
+    def from_timestr(cls, timestr):
+        return cls(timestr=timestr)
+
     def __init__(self, timestr=None, fname=None):
         super(CKFileName, self).__init__()
         if fname is not None:
@@ -49,15 +62,8 @@ class CKFileName(object):
             self.start, self.end = get_times_from_ck(fname)
         elif timestr is not None:
             self.timestr = timestr
-            self.from_timestr(timestr)
+            time = dt.strptime(timestr, '%Y%m%d%H')
+            
         else:
             raise Exception('CKFileName','You have to provide either timestr or fname.')
             
-    def from_timestr(self, timestr):
-        pass
-    
-    @classmethod
-    def from_fname(cls, fname):
-        "Including this for better readability. same as CKFileName(fname=fname)"
-        return cls(fname=fname)
-        
