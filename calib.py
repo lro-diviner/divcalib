@@ -186,7 +186,7 @@ class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
     def __init__(self):
         super(RBBTable, self).__init__()
-        self.df = pd.load('data/T_to_Normalized_Radiance.df')
+        self.df = pd.load('./data/T_to_Normalized_Radiance.df')
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
@@ -327,7 +327,7 @@ class Calibrator(object):
         self.rbbtable = RBBTable()
         
         # loading converter factors norm-to-abs-radiances
-        self.norm_to_abs_converter = pd.load('data/Normalized_to_Absolute_Radiance.df')
+        self.norm_to_abs_converter = pd.load('./data/Normalized_to_Absolute_Radiance.df')
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = self.channels[2:]
     
