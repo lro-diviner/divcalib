@@ -339,6 +339,10 @@ class Calibrator(object):
         # interpolate the bb1 and bb2 temperatures for all times
         # or pad if to recreate JPL calibration
         if self.pad_bbtemps:
+            ### WARNING!
+            ## This can cut off a calib point and make the offset times unfit the calib
+            ## mean times.
+            ### WARNING!
             self.pad_bb_temps()
         else:
             self.interpolate_bb_temps()
@@ -449,12 +453,18 @@ class Calibrator(object):
     
     def calc_calib_mean_times(self):
 
+        # if we use bb views to define the time of a calib block (a la JPL)
         if self.do_bbtimes:
+            # filter for bbview data
             calibdata = self.df[self.df.is_bbview]
             to_skip = self.BBV_NUM_SKIP_SAMPLE
         else:
+            # use the whole calib block to define time of it.
+            # Advantage: spaceviews without bbviews still get their time marker
             calibdata = self.df[self.df.is_calib]
             to_skip = 0
+        # each sv, bb, sv block or sv,st,sv(,bb,sv) block has one calib_block label
+        # therefore grouping by it enables to determine a calib marker time
         grouped = calibdata.groupby('calib_block_labels')
         times = grouped.apply(get_mean_time, to_skip)
         self.calib_times = times
