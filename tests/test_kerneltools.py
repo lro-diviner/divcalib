@@ -49,7 +49,7 @@ def test_CKFileName():
     fname = 'moc42_2009099_2009100_v01.bc'
     start_time = dt.strptime('2009099', '%Y%j')
     end_time = dt.strptime('2009100', '%Y%j')
-    ck = kerneltools.CKFileName.from_fname(fname)
+    ck = kerneltools.CKFileName(fname)
     assert_equals(ck.version_string, 'v01')
     assert_equals(ck.version, 1)
     assert_equals(ck.prefix, 'moc42')
