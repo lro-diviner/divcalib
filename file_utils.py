@@ -11,7 +11,6 @@ import divconstants as c
 import os
 from datetime import timedelta
 from datetime import datetime as dt
-import csv
 # from plot_utils import ProgressBar
 import zipfile
 
@@ -109,7 +108,7 @@ def read_tabbed_rdr(fname, nrows=None):
                                 na_values=['-9999.0'],
                                 nrows=nrows,
                                 parse_dates=[[0, 1]],
-                                index_col=0
+                                index_col=0,
                                 )
     # the comment='#' does not skip line comments, but reads an empty
     # line that sets all fields to NaN. Dropping them here:
@@ -132,7 +131,7 @@ def read_div_data(fname, **kwargs):
     with open(fname) as f:
         line = f.readline()
         if any(['dlre_edr.c' in line, 'Header' in line]):
-            return read_pds(fname, **kwargs)
+            return read_tabbed_rdr(fname, **kwargs)
         elif fname.endswith('.h5'):
             return get_df_from_h5(fname)
         else:
@@ -508,7 +507,7 @@ class DivXDataPump(object):
             self.current_fname = fname
             print(fname)
             yield open(fname)
-    
+
     def get_fname_from_time(self, time):
         return time.strftime("%Y%m%d%H.div247")
 
@@ -546,7 +545,7 @@ class DivXDataPump(object):
             basename = self.get_fname_from_time(new_time)
             print(basename)
             dirname = os.path.dirname(self.fnames[0])
-            fname = os.path.join(dirname,basename)
+            fname = os.path.join(dirname, basename)
             l.append(self.process_one_file(fname))
         df = pd.concat(l)
         return self.clean_final_df(df)
