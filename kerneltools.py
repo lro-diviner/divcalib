@@ -39,13 +39,10 @@ def load_kernels_for_timestr(timestr):
     return number_of_kernels_loaded
 
 
-def get_available_ck():
-    root = os.path.join(kernelpath, 'ck')
-    return os.listdir(root)
-
 def find_ck_for_timestr(timestr):
     """docstring for find_ck_for_timestr"""
     return 'bogus_path'
+
 
 class CKFileName(object):
     """Class to create and handle CK file names."""
@@ -53,26 +50,22 @@ class CKFileName(object):
     prefix = 'moc42'  # have not seen any other one
     root = os.path.join(kernelpath, 'ck')
 
-    @classmethod
-    def from_fname(cls, fname):
-        "Including this for better readability. same as CKFileName(fname=fname)"
-        return cls(fname=fname)
-
-    @classmethod
-    def from_timestr(cls, timestr):
-        return cls(timestr=timestr)
-
-    def __init__(self, timestr=None, fname=None):
+    def __init__(self, fname):
         super(CKFileName, self).__init__()
-        if fname is not None:
-            self.fname = fname
-            self.dirname = os.path.dirname(fname)
-            self.basename = os.path.basename(fname)
-            self.version_string, self.version = get_version_from_fname(fname)
-            self.start, self.end = get_times_from_ck(fname)
-        elif timestr is not None:
-            self.timestr = timestr
-            time = dt.strptime(timestr, '%Y%m%d%H')
+        self.fname = fname
+        self.dirname = os.path.dirname(fname)
+        self.basename = os.path.basename(fname)
+        self.version_string, self.version = get_version_from_fname(fname)
+        self.start, self.end = get_times_from_ck(fname)
+        
 
-        else:
-            raise Exception('CKFileName', 'You have to provide either timestr or fname.')
+def get_available_ck():
+    root = os.path.join(kernelpath, 'ck')
+    fnames = os.listdir(root)
+    cleaned = []
+    for fname in fnames:
+        if fname.split('_')[0] != 'moc42': continue
+        if os.path.splitext(fname)[-1] != 'bc': continue
+        t1, t2 = get_times_from_ck(fname)
+        
+        
