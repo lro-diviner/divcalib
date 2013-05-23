@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # file utilities for Diviner
+from __future__ import print_function, division
 import pandas as pd
 import numpy as np
 import sys
@@ -68,19 +69,14 @@ def get_headers_pprint(fname):
     return headers
 
 
-def get_headers_pds(fname):
-    """Get headers from PDS RDR files.
-
-    >>> fname = '/Users/maye/data/diviner/201204090110_RDR.TAB'
-    >>> headers = get_headers_pds(fname)
-    >>> headers[:7]
-    ['utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk']
-    """
+def get_rdr_headers(fname):
+    """Get headers from both ops and PDS RDR files."""
     with open(fname) as f:
-        for i in range(3):
-            f.readline()
-        headers = parse_header_line(f.readline())
-    return headers
+        while True:
+            line = f.readline()
+            if not line.startswith('# Header'):
+                break
+    return parse_header_line(line)
 
 
 def read_pprint(fname):
@@ -103,24 +99,21 @@ def read_pprint(fname):
     return dataframe
 
 
-def read_pds(fname, nrows=None):
-    """Read tabular files from the PDS depository.
-
-    Lower level function. Use read_div_data which calls this as appropriate.
-    """
-    headers = get_headers_pds(fname)
-    with open(fname) as f:
-        dialect = csv.Sniffer().sniff(f.read(2048))
-    return pd.io.parsers.read_csv(fname,
-                                      dialect=dialect,
-                                      comment='#',
-                                      names=headers,
-                                      na_values=['-9999.0'],
-                                      skiprows=4,
-                                      nrows=nrows,
-                                      parse_dates=[[0, 1]],
-                                      index_col=0,
-                                      )
+def read_tabbed_rdr(fname, nrows=None):
+    """Read tabular RDR files from opsRDR or the PDS."""
+    headers = get_rdr_headers(fname)
+    df = pd.io.parsers.read_csv(fname,
+                                comment='#',
+                                skipinitialspace=True,
+                                names=headers,
+                                na_values=['-9999.0'],
+                                nrows=nrows,
+                                parse_dates=[[0, 1]],
+                                index_col=0
+                                )
+    # the comment='#' does not skip line comments, but reads an empty
+    # line that sets all fields to NaN. Dropping them here:
+    return df.dropna(how='all')
 
 
 def get_df_from_h5(fname):
@@ -343,7 +336,7 @@ def folder_to_df(folder, top_end=None, verbose=False):
     olddf = None
     for i, fname in enumerate(fnames[:top_end]):
         if verbose:
-            print round(float(i) * 100 / top_end, 1), '%'
+            print(round(float(i) * 100 / top_end, 1), '%')
         df = fname_to_df(fname, rec_dtype, keys)
         df = prepare_data(df)
         define_sdtype(df)
@@ -368,12 +361,12 @@ def folder_to_store(folder):
     rec_dtype, keys = get_div247_dtypes()
     fnames = glob.glob(folder + '/*.div247')
     if not fnames:
-        print "Found no files."
+        print("Found no files.")
         return
     fnames.sort()
     # opening store in overwrite-mode
     storename = get_storename(folder)
-    print storename
+    print(storename)
     store = pd.HDFStore(storename, mode='w')
     nfiles = len(fnames)
     olddf = None
@@ -381,7 +374,7 @@ def folder_to_store(folder):
             'st_block_labels', 'is_spaceview', 'is_bbview', 'is_stview',
             'is_moving', 'is_stowed', 'is_calib']
     for i, fname in enumerate(fnames):
-        print round(float(i) * 100 / nfiles, 1), '%'
+        print(round(float(i) * 100 / nfiles, 1), '%')
         df = fname_to_df(fname, rec_dtype, keys)
         df = prepare_data(df)
         define_sdtype(df)
@@ -396,11 +389,11 @@ def folder_to_store(folder):
             store.append('df', to_store, data_columns=cols)
         except Exception as e:
             store.close()
-            print 'at', fname
-            print 'something went wrong at appending into store.'
-            print e
+            print('at', fname)
+            print('something went wrong at appending into store.')
+            print(e)
             return
-    print "Done."
+    print("Done.")
     store.close()
 
 
@@ -513,7 +506,7 @@ class DivXDataPump(object):
     def gen_open(self):
         for fname in self.fnames:
             self.current_fname = fname
-            print fname
+            print(fname)
             yield open(fname)
     
     def get_fname_from_time(self, time):
