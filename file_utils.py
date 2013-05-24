@@ -70,11 +70,15 @@ def get_headers_pprint(fname):
 
 def get_rdr_headers(fname):
     """Get headers from both ops and PDS RDR files."""
-    with open(fname) as f:
-        while True:
-            line = f.readline()
-            if not line.startswith('# Header'):
-                break
+    if isinstance(fname, zipfile.ZipFile):
+        f = fname.open(fname.namelist()[0])
+    else:
+        f = open(fname)
+    while True:
+        line = f.readline()
+        if not line.startswith('# Header'):
+            break
+    f.close()
     return parse_header_line(line)
 
 
@@ -100,8 +104,12 @@ def read_pprint(fname):
 
 def read_tabbed_rdr(fname, nrows=None):
     """Read tabular RDR files from opsRDR or the PDS."""
+    if isinstance(fname, zipfile.ZipFile):
+        name = fname.open(fname.namelist()[0])
+    else:
+        name = fname
     headers = get_rdr_headers(fname)
-    df = pd.io.parsers.read_csv(fname,
+    df = pd.io.parsers.read_csv(name,
                                 comment='#',
                                 skipinitialspace=True,
                                 names=headers,
@@ -533,6 +541,9 @@ class DivXDataPump(object):
         return df
 
     def get_n_hours(self, n):
+        #broken
+        print("Broken!!!")
+        return
         df = pd.concat(self.gen_dataframes(n))
         return self.clean_final_df(df)
 
@@ -557,6 +568,8 @@ class DivXDataPump(object):
         pass
 
     def get_one_hour(self):
+        print("Broken!!")
+        return
         for df in self.gen_dataframes():
             yield self.clean_final_df(df)
 
@@ -574,10 +587,7 @@ class RDRDataPump(DivXDataPump):
             yield zfile.open(zfile.namelist()[0])
 
     def process_one_file(self, f):
-        columns = get_headers_pprint(f.name)
-        return pd.io.parsers.read_csv(f, skipinitialspace=True, skiprows=1,
-                                      names=columns, na_values=['-9999.0'],
-                                      parse_dates=[[0, 1]], index_col=0)
+        return read_tabbed_rdr(f.name)
 
 
 class Div247DataPump(DivXDataPump):
