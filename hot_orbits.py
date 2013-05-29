@@ -14,14 +14,16 @@ class HotOrbits(object):
     """docstring for HotOrbits"""
     savepath = '/Users/maye/Dropbox/DDocuments/DIVINER/calib/hot_orbits/jpl_meeting/'
 
-    def __init__(self, ch2study, df):
+    def __init__(self, ch2study, df, title_prefix=''):
         super(HotOrbits, self).__init__()
         self.ch2study = ch2study
         self.df = df
+        self.title_prefix = title_prefix
         
         # my calibration
-        c = calib.Calibrator(df, pad_bbtemps=True, single_rbb=False)
+        c = calib.Calibrator(df, single_rbb=False)
         c.calibrate()
+        self.c = c
         
         # get only Tb
         Tb_all = calib.get_data_columns(c.Tb)
@@ -40,7 +42,7 @@ class HotOrbits(object):
         ylabel('Tb [K]')
         xlabel('Time [UTC]')
         titlestr = self.ch2study + ' Tb Det 01 11 21'
-        title(titlestr)
+        title(' '.join([self.title_prefix, titlestr]))
         savefig(self.savepath + '_'.join(titlestr.split()) + '.png')
 
     def plot_raw(self, ):
@@ -62,7 +64,7 @@ class HotOrbits(object):
         # if len(df[df.is_stview]) is not 0:
         #     df[df.is_stview][col].plot(style='c.', markersize=5, )
         titlestr = ch2study + ' raw  plus marked calib views'
-        title(titlestr)
+        title(' '.join([self.title_prefix, titlestr]))
         ylabel('Counts')
         xlabel('Time [UTC')
         savefig(self.savepath + '_'.join(titlestr.split()) + '.png')
@@ -75,14 +77,15 @@ class HotOrbits(object):
             df = self.chmean
         
         figure()
-        for i in range(2, 12):
-            df[i].plot(style='r')
-        for i in range(12, 22):
-            df[i].plot(style='g')
-        df[1].plot(style='c')
+        df.plot()
+        # for i in range(1, 12):
+        #     df[i].plot(style='r')
+        # for i in range(12, 22):
+        #     df[i].plot(style='g')
+        # df[21].plot(style='c')
         legend(ncol=5)
         titlestr = self.ch2study + ' Tb Deviations from {0} detector sides sorted'.format(kind)
-        title(titlestr)
+        title(' '.join([self.title_prefix, titlestr]))
         savefig(self.savepath + '_'.join(titlestr.split()) + '.png')
         
     def imshow(self):
@@ -90,45 +93,63 @@ class HotOrbits(object):
         imshow(self.Tb.values.T, interpolation='none', aspect='auto')  
         colorbar(orientation='horizontal')
         titlestr = self.ch2study + ' channel image plot'
-        title(titlestr)
+        title(' '.join([self.title_prefix, titlestr]))
         savefig(self.savepath + '_'.join(titlestr.split()) + '.png')
         
     def plot_max_deviation_det(self):
         figure()
-        chmedian.idxmax(axis=1).plot(style='.')
+        self.chmedian.idxmax(axis=1).plot(style='.')
         xlabel('Time [UTC]')
         ylabel('Detector number')
         tstr = 'Which detector shows the largest deviation from the median'
-        title(tstr)
+        title(' '.join([self.title_prefix,tstr]))
         savefig(self.savepath + '_'.join(tstr.split()) + '.png')
         
+    def plot_kde(self):
+        self.Tb.plot(kind='kde')
+        legend()
+        tstr = 'Detector KDEs'
+        title(' '.join([self.title_prefix, tstr]))
+        savefig(self.savepath + '_'.join(tstr.split()) + '.png')
+        
+    def plot_gains_interp(self):
+        self.c.gains_interp.plot(style='*')
+        savefig(self.savepath + 'gains_interp.png')
 
 class HotOrbitsDivData(HotOrbits):
-    def __init__(self, ch2study, Tb):
+    def __init__(self, ch2study, Tb, title_prefix=""):
         self.ch2study = ch2study
         self.Tb = Tb
         self.chmedian = Tb.apply(lambda x: x - x.median(), axis=1)
         self.chmean = Tb.apply(lambda x: x - x.mean(), axis=1)
-        
-# Orbit 8172: 2011-091T20:43:23 UTC date: 2011-04-01
-#
+        self.savepath = self.savepath + 'divdata_'
+        self.title_prefix = title_prefix
+####
+### start of script
+####
 
 # Channel to study:
 ch2study = 'b3'
 
 # get L1A data
-pump = fu.Div247DataPump('20110402')
-df = pump.get_n_hours_from_t(1, 4)
+timestr = '20110402'
+offset = 4
+# pump = fu.Div247DataPump(timestr)
+# df = pump.get_n_hours_from_t(4, offset)
+# 
+# hotorbits = HotOrbits(ch2study, df, timestr + str(offset))
 
-hotorbits = HotOrbits(ch2study, df)
-
-hotorbits.plot_detectors()
+# hotorbits.plot_detectors()
 
 # hotorbits.plot_raw()
 
-hotorbits.imshow()
+# hotorbits.imshow()
 
-hotorbits.plot_lips()
+# hotorbits.plot_lips()
+# hotorbits.plot_max_deviation_det()
+# hotorbits.plot_kde()
+
+# hotorbits.plot_gains_interp()
 
 # statistics for each channel
 # hotorbits.Tb.boxplot()
@@ -136,7 +157,6 @@ hotorbits.plot_lips()
 # or this simple statistic?
 # Tb.std()
 
-# df.plot(kind='kde')
 
 divdata = pd.io.parsers.read_csv('/Users/maye/data/diviner/hot_orbit_ch9.txt', sep=r'\s*', names=['year', 'month', 'date', 'hour', 'minute', 'second', 'det', 'tb', 'qca'])
 
@@ -147,7 +167,10 @@ print("\nqca: ",df.qca.unique())
 df = df.reset_index()
 df = df.pivot(index='index', columns='det', values='tb')
 df.columns = range(1,22)
-divhotorbits = HotOrbitsDivData(ch2study, df)
+divhotorbits = HotOrbitsDivData(ch2study, df, timestr + str(offset) + '_divdata')
 divhotorbits.plot_detectors()
+divhotorbits.imshow()
+divhotorbits.plot_max_deviation_det()
+divhotorbits.plot_kde()
 
 show()
