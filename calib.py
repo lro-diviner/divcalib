@@ -186,7 +186,7 @@ class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
     def __init__(self):
         super(RBBTable, self).__init__()
-        self.df = pd.load('./data/T_to_Normalized_Radiance.df')
+        self.df = pd.load('../data/T_to_Normalized_Radiance.df')
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
@@ -211,7 +211,7 @@ class CalBlock(object):
     """Class to handle different options on how to deal with a single cal block.
     
     IN:
-        dataframe
+        dataframe, containing all meta-data like label numbers, H/K etc.
     OUT:
         via several class methods
     """
@@ -222,22 +222,34 @@ class CalBlock(object):
         self.bb_labels = self.get_unique_labels('bb')
         self.st_labels = self.get_unique_labels('st')
         self.define_kind()
+        self.calculate_offsets()
 
-    def calc_offsets(self):
-        offsets = {}
-        for label in self.sv_labels:
-            spaceviews = self.df[self.df.sv_block_labels == label]
-            offsets[label] = spaceviews[spaceviews.is_spaceview][self.skip_samples:].mean()
-        self.offsets = offsets
-            
-    def get_offsets(self, offset_kind='both'):
-        """Determine offset for calblock.
+    @property
+    def mean_time(self):
+        """Use module function to calculate the mean value of the center data.
         
+        The center_data dataframe is determined from the kind of this calibblock.
+        For an ST block, it's the stview data, BB -> is_bbview respectively.
+        """
+        return get_mean_time(self.center_data, self.skip_samples)
+        
+    def calculate_offsets(self):
+        """Determine offsets for each available spacelook.
+        
+        At initialisation, the object receives the number of samples to skip.
+        This number is used here for the offset calculation
+        """
+        offsetdata = get_data_columns(self.df[self.df.is_spaceview])
+        grouped = offsetdata.groupby(self.df.sv_block_labels)
+        self.offsets = grouped.agg(lambda x: x[self.skip_samples:].mean())
+        self.offset_stds = grouped.agg(lambda x: x[self.skip_samples:].std())
+        
+    def get_offsets(self, kind='both'):
+        """Provide offsets for method as required.
         IN:
             offset_kind. If set to 'both', both sides will be used to determine
                 the offset, 'left' and 'right' do the alternative, respectively.
         """
-        pass
 
     def define_kind(self):
         """Define kind of calblock depending on containing bbview, st or both.
@@ -247,14 +259,19 @@ class CalBlock(object):
         # more than 1 kind?
         if (self.st_labels.size + self.bb_labels.size) > 1:
             self.kind = 'BOTH'
+            # for the lack of a better definition, if this calib block both
+            # contains ST and BB data, I take both as 'center_data'
+            self.center_data = self.df[(self.df.is_stview) | (self.df.is_bbview)]
         elif self.st_labels.size > 0:
             self.kind = 'ST'
+            self.center_data = self.df[self.df.is_stview]
         else:
             self.kind = 'BB'
+            self.center_data = self.df[self.df.is_bbview]
         
     def get_unique_labels(self,view):
-        labels = self.df[view+'_block_labels'].unique()
-        return labels[labels > 0]
+        labels = self.df[view + '_block_labels'].unique()
+        return np.sort(labels[labels > 0])
  
         
 class View(object):
@@ -327,7 +344,7 @@ class Calibrator(object):
         self.rbbtable = RBBTable()
         
         # loading converter factors norm-to-abs-radiances
-        self.norm_to_abs_converter = pd.load('./data/Normalized_to_Absolute_Radiance.df')
+        self.norm_to_abs_converter = pd.load('../data/Normalized_to_Absolute_Radiance.df')
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = self.channels[2:]
     
@@ -455,8 +472,9 @@ class Calibrator(object):
 
         # if we use bb views to define the time of a calib block (a la JPL)
         if self.do_bbtimes:
-            # filter for bbview data
-            calibdata = self.df[self.df.is_bbview]
+            # filter for bbview data (leaves out stviews !!!)
+            bbvdata = self.df[self.df.is_bbview]
+            alldata = self.df[self.df.is_bbview | self.df.is_stview]
             to_skip = self.BBV_NUM_SKIP_SAMPLE
         else:
             # use the whole calib block to define time of it.
@@ -465,14 +483,23 @@ class Calibrator(object):
             to_skip = 0
         # each sv, bb, sv block or sv,st,sv(,bb,sv) block has one calib_block label
         # therefore grouping by it enables to determine a calib marker time
-        grouped = calibdata.groupby('calib_block_labels')
-        times = grouped.apply(get_mean_time, to_skip)
-        self.calib_times = times
+        grouped = bbvdata.groupby('calib_block_labels')
+        bbtimes = grouped.apply(get_mean_time, to_skip)
+        
+        grouped = alldata.groupby('calib_block_labels')
+        allcaltimes = grouped.apply(get_mean_time, to_skip)
+        self.calib_times = allcaltimes
+        self.bbcal_times = bbtimes
     
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
     
     def calc_offsets(self):
+        
+        ##
+        ### currently stviews are included here, but in calc_calib_mean_times not!!
+        ##
+        
         # get spaceviews here to kick out moving data
         spaceviews = self.df[self.df.is_spaceview]
         
@@ -486,10 +513,7 @@ class Calibrator(object):
         # change here for method of means!!
         # the current method aggregates just 1 value for the whole calibration block
         ###
-        if self.skipsamples:
-            offsets = grouped.agg(self.skipped_mean, c.SV_NUM_SKIP_SAMPLE)
-        else:
-            offsets = grouped.mean()
+        offsets = grouped.agg(self.skipped_mean, self.SV_NUM_SKIP_SAMPLE)
         
         # # set the times as index for this dataframe of offsets
         offsets.index = self.calib_times
@@ -511,13 +535,10 @@ class Calibrator(object):
         ###
         # change here for the aggregation method
         ###
-        if self.skipsamples:
-            bbcounts = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
-        else:
-            bbcounts = grouped.mean()
+        bbcounts = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
         
         # set the times as index for this dataframe of bbcounts
-        bbcounts.index = self.calib_times
+        bbcounts.index = self.bbcal_times
         
         self.CBB = bbcounts
     
@@ -575,7 +596,7 @@ class Calibrator(object):
             calib_RBBs = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
         else:
             calib_RBBs = grouped.mean()
-        calib_RBBs.index = self.calib_times
+        calib_RBBs.index = self.bbcal_times
         self.RBB = calib_RBBs
     
     def calc_gain(self):
