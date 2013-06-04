@@ -6,8 +6,14 @@ from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
 from plot_utils import ProgressBar
 import logging
+from numpy import poly1d
 
 logging.basicConfig(filename='calib.log', level=logging.INFO)
+
+channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
+thermal_channels = channels[2:]
+detectors = [i + '_' + str(j).zfill(2) for i in channels for j in range(1,22)]
+thermal_detectors = detectors[-147:]
 
 class DivCalibError(Exception):
     """Base class for exceptions in this module."""
@@ -207,6 +213,31 @@ class RBBTable(object):
     def get_tb(self, rads, ch):
         return self.rad2t[ch](rads)
 
+
+class RadianceCorrection(object):
+    """Polynomial correction for the interpolated radiances. 
+    
+    This is the equivalent class to RConvertTable class in JPL's code.
+    """
+    def __init__(self):
+        super(RadianceCorrection, self).__init__()
+        excelfile = pd.io.parsers.ExcelFile('../data/Rn_vs_Rn_interp_coefficients.xlsx')
+        shname = excelfile.sheet_names[0]
+        df = excelfile.parse(shname, skiprows=[0,1],index_col=0,header=None)
+        df.index.name = ""
+        df.columns = thermal_detectors
+        self.df = df
+        
+    def convertR(self, radiance, chan, det):
+        detID = str(chan) + '_' + str(det).zfill(2)
+        # put the reverse order (decreasing) of the excel sheet into poly1d object
+        p = poly1d(self.df[detID][::-1].values)
+        return p(radiance)
+        
+    def correctR(self, radiance, chan,det):
+        "This function is for numerical chan and det values."
+        print "Not implemented."
+        
 class CalBlock(object):
     """Class to handle different options on how to deal with a single cal block.
     
@@ -217,12 +248,17 @@ class CalBlock(object):
     """
     def __init__(self, df, skip_samples=0):
         self.df = df
+        self.number = df.calib_block_labels[0]
         self.skip_samples = skip_samples
         self.sv_labels = self.get_unique_labels('sv')
         self.bb_labels = self.get_unique_labels('bb')
         self.st_labels = self.get_unique_labels('st')
-        self.define_kind()
-        self.calculate_offsets()
+        self.spaceviews = get_data_columns(df[df.is_spaceview])
+        self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
+        
+    def get_unique_labels(self,view):
+        labels = self.df[view + '_block_labels'].unique()
+        return np.sort(labels[labels > 0])
 
     @property
     def mean_time(self):
@@ -232,17 +268,19 @@ class CalBlock(object):
         For an ST block, it's the stview data, BB -> is_bbview respectively.
         """
         return get_mean_time(self.center_data, self.skip_samples)
-        
-    def calculate_offsets(self):
+    
+    @property
+    def offsets(self):
         """Determine offsets for each available spacelook.
         
         At initialisation, the object receives the number of samples to skip.
         This number is used here for the offset calculation
         """
-        offsetdata = get_data_columns(self.df[self.df.is_spaceview])
-        grouped = offsetdata.groupby(self.df.sv_block_labels)
-        self.offsets = grouped.agg(lambda x: x[self.skip_samples:].mean())
-        self.offset_stds = grouped.agg(lambda x: x[self.skip_samples:].std())
+        return self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
+
+    @property
+    def sv_stds(self):
+        return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
         
     def get_offsets(self, kind='both'):
         """Provide offsets for method as required.
@@ -250,29 +288,33 @@ class CalBlock(object):
             offset_kind. If set to 'both', both sides will be used to determine
                 the offset, 'left' and 'right' do the alternative, respectively.
         """
-
-    def define_kind(self):
+        print("Not implemented.")
+        
+    @property
+    def kind(self):
         """Define kind of calblock depending on containing bbview, st or both.
 
         Possible kinds: 'BB', 'ST', 'BOTH'
         """
         # more than 1 kind?
         if (self.st_labels.size + self.bb_labels.size) > 1:
-            self.kind = 'BOTH'
+            return 'BOTH'
+        elif self.st_labels.size > 0:
+            return 'ST'
+        else:
+            return 'BB'
+        
+    @property
+    def center_data(self):
+        if self.kind == 'BOTH':
             # for the lack of a better definition, if this calib block both
             # contains ST and BB data, I take both as 'center_data'
-            self.center_data = self.df[(self.df.is_stview) | (self.df.is_bbview)]
-        elif self.st_labels.size > 0:
-            self.kind = 'ST'
-            self.center_data = self.df[self.df.is_stview]
-        else:
-            self.kind = 'BB'
-            self.center_data = self.df[self.df.is_bbview]
-        
-    def get_unique_labels(self,view):
-        labels = self.df[view + '_block_labels'].unique()
-        return np.sort(labels[labels > 0])
- 
+            return self.df[(self.df.is_stview) | (self.df.is_bbview)]
+        elif self.kind == 'BB':
+            return self.df[self.df.is_bbview]
+        elif self.kind == 'ST':
+            return self.df[self.df.is_stview]
+             
         
 class View(object):
     def __init__(self, df, type, skip_samples=0):
@@ -311,9 +353,6 @@ class Calibrator(object):
                        'a4': 4, 'a5': 5, 'a6': 6, 
                        'b1': 7, 'b2': 8, 'b3': 9}
                            
-    channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
-    thermal_channels = channels[2:]
-    
     def __init__(self, df, do_bbtimes=True, pad_bbtemps=False, 
                            single_rbb=True, skipsamples=True,
                            calfitting_order=1):
@@ -346,7 +385,7 @@ class Calibrator(object):
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.load('../data/Normalized_to_Absolute_Radiance.df')
         # rename column names to match channel names here
-        self.norm_to_abs_converter.columns = self.channels[2:]
+        self.norm_to_abs_converter.columns = self.thermal_channels
     
     def calibrate(self):
         
@@ -452,7 +491,7 @@ class Calibrator(object):
         # loop over both temperature arrays [DRY !]
         # the number of data points in bb1temps are much higher, but for
         # consistency we should interpolate both the same way.
-        for bbtemp in [bb1temps,bb2temps]:
+        for bbtemp in [bb1temps, bb2temps]:
             # converting the time series to floats for interpolation
             ind = bbtemp.index.values.astype('float64')
             
