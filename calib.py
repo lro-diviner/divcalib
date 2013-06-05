@@ -10,10 +10,11 @@ from numpy import poly1d
 
 logging.basicConfig(filename='calib.log', level=logging.INFO)
 
-channels = ['a1','a2','a3','a4','a5','a6','b1','b2','b3']
+channels = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']
 thermal_channels = channels[2:]
-detectors = [i + '_' + str(j).zfill(2) for i in channels for j in range(1,22)]
+detectors = [i + '_' + str(j).zfill(2) for i in channels for j in range(1, 22)]
 thermal_detectors = detectors[-147:]
+
 
 class DivCalibError(Exception):
     """Base class for exceptions in this module."""
@@ -22,7 +23,7 @@ class DivCalibError(Exception):
 
 class ViewLengthError(DivCalibError):
     """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
-    
+
     SV_LENGTH_TOTAL defined at top of this file.
     """
     def __init__(self, view, value,value2):
@@ -196,16 +197,25 @@ class RBBTable(object):
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
-        sliced = self.df.ix[abs(self.df.index)> 2]
-        for ch in range(3,10):
+        # the radiances for abs(T) < 3 K are 0 for channels 3-5 which means that during the
+        # backward lookup of radiance to T, the 0 radiance can not be looked up functionally
+        # (it's now a relation and not a function anymore). This makes the Spline interpolator
+        # ignore the negative part which I cannot afford.
+        # The work-around is to interpolate from T -3 to 3 (which are impossibly close to 0 
+        # anyway for channels 3-5), ignoring the all 0 values for T in [-2..2]
+        sliced = self.df.ix[abs(self.df.index) > 2]
+        for ch in range(3, 10):
+            # store the Spline interpolators in dictionary, 1 per channel
             self.t2rad[ch] = Spline(self.table_temps, self.df[ch],
                                     s=0.0, k=1)
+            # for channels 3-5, take the data without the values around 0:
             if ch < 6:
                 data = sliced[ch]
                 temps = sliced.index.values.astype('float')
             else:
                 data = self.df[ch]
                 temps = self.table_temps
+            # store the Spline interpolators in dictionary, 1 per channel
             self.rad2t[ch] = Spline(data, temps, s=0.0, k=1)
     
     def get_radiance(self, temps, ch):
@@ -385,7 +395,7 @@ class Calibrator(object):
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.load('../data/Normalized_to_Absolute_Radiance.df')
         # rename column names to match channel names here
-        self.norm_to_abs_converter.columns = self.thermal_channels
+        self.norm_to_abs_converter.columns = thermal_channels
     
     def calibrate(self):
         
@@ -407,16 +417,17 @@ class Calibrator(object):
         ### CALIBRATION BLOCK TIME STAMPS
         #####
         # determine calibration block mean time stamps
-        self.calc_calib_mean_times()
+        self.calc_calib_times()
         
         #####
         ### RADIANCES FROM TABLE
         #####
         if self.single_rbb:
+            # calculate only one radiance per mean BB temperature per calib block
             self.calc_one_RBB()
         else:
-            # get the normalized radiance for the interpolated bb temps (so all over df)
-            self.get_RBB()
+            # look-up all radiances for all interpolated bb temperatures and then 
+            # calculate the mean value of the radiances per calib block
             self.calc_many_RBB()
         
         #####
@@ -507,7 +518,7 @@ class Calibrator(object):
             # get new temperatures at all_times
             df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
     
-    def calc_calib_mean_times(self):
+    def calc_calib_times(self):
 
         # if we use bb views to define the time of a calib block (a la JPL)
         if self.do_bbtimes:
@@ -536,7 +547,7 @@ class Calibrator(object):
     def calc_offsets(self):
         
         ##
-        ### currently stviews are included here, but in calc_calib_mean_times not!!
+        ### currently stviews are included here, but in calc_calib_times not!!
         ##
         
         # get spaceviews here to kick out moving data
