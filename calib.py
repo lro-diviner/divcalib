@@ -374,6 +374,8 @@ class Calibrator(object):
         self.pad_bbtemps = pad_bbtemps
         # to control if RBB are just determined for 1 mean bb temp or for all bbtemps
         # of a bbview
+        # I have confirmed in tests that the results differ negligibly (2e-16 rads)
+        # and the JPL method is better in speed
         self.single_rbb = single_rbb
         # to control if some of the first samples of views are being skipped
         self.skipsamples = skipsamples
@@ -592,63 +594,58 @@ class Calibrator(object):
         
         self.CBB = bbcounts
     
-    def get_RBB(self):
-        """Strictly speaking only required for the calib_block gain calculation.
+    def lookup_radiances_for_thermal_channels(self, mapping_source, store):        
+        # different mapping sources depending on if we lookup only for single
+        # values at calblock times or for all interpolated temperatures
+        # the caller of this function determines this by providing the mapping source
+        mapping = {'a': mapping_source['bb_1_temp_interp'],
+                   'b': mapping_source['bb_2_temp_interp']}
         
-        But because this is using all interpolated BB temperatures, this effectively
-        creates RBBs for the whole dataframe.
-        """
-        # create mapping to look up the right temperature for different channels
-        mapping = {'a': self.df['bb_1_temp_interp'],
-                   'b': self.df['bb_2_temp_interp']}
-        
-        self.RBBs = pd.DataFrame(index=self.df.index)
-        
-        # loop over thermal channels 3..9
-        for channel in self.thermal_channels:
+        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
+        for channel in thermal_channels:
             #link to the correct bb temps by checking first letter of channel
             bbtemps = mapping[channel[0]]
             
             #look up the radiances for this channel
             RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
+            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
             for i in range(1,22):
-                self.RBBs[channel+'_'+str(i).zfill(2)] = \
-                    pd.Series(RBBs,index=self.df.index)
+                col_name = channel + '_' + str(i).zfill(2)
+                store[col_name] = channel_rbbs
     
-    def calc_one_RBB(self):
+    def calc_one_RBB(self, return_values=False):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
         # procedure same as calib_cbb
-        bbviews = self.df[self.df.is_bbview]
-        bbviews_temps = bbviews[['bb_1_temp_interp','bb_2_temp_interp']]
+        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
+        bbviews_temps = self.df[self.df.is_bbview][T_cols]
         grouped = bbviews_temps.groupby(self.df.calib_block_labels)
-        bbtemps = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
-        bbtemps.index = self.calib_times
-        self.bbtemps = bbtemps
+        bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
+        bbtemps.index = self.bbcal_times
         
-        # create mapping to look up the right temperature for different channels
-        mapping = {'a':bbtemps['bb_1_temp_interp'] ,
-                   'b':bbtemps['bb_1_temp_interp']}
+        # here the end product is already an RBB value per calib time
+        self.RBB = pd.DataFrame(index=self.bbcal_times)
+
+        self.lookup_radiances_for_thermal_channels(bbtemps, self.RBB)
+        if return_values:
+            return self.RBB
+            
+    def calc_many_RBB(self, return_values=False):
+        # lookup radiances for all interpolated BB temperatures
+        self.RBB_all = pd.DataFrame(index=self.df.index)
+        self.lookup_radiances_for_thermal_channels(self.df, self.RBB_all)
         
-        self.RBB = pd.DataFrame(index=self.calib_times)
-        
-        for channel in self.thermal_channels:
-            temps = mapping[channel[0]]
-            RBBs = self.rbbtable.get_radiance(temps, self.mcs_div_mapping[channel])
-            # RBBs.index = temps.index
-            for i in range(1,22):
-                self.RBB[channel+'_'+str(i).zfill(2)] = \
-                    pd.Series(RBBs,index=self.calib_times)
-    
-    def calc_many_RBB(self):
-        bbview_rbbs = self.RBBs[self.df.is_bbview]
+        # calculate mean values for radiances for calib blocks
+        bbview_rbbs = self.RBB_all[self.df.is_bbview]
         grouped = bbview_rbbs.groupby(self.df.calib_block_labels)
         if self.skipsamples:
-            calib_RBBs = grouped.agg(self.skipped_mean, c.BBV_NUM_SKIP_SAMPLE)
+            calib_RBBs = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
         else:
             calib_RBBs = grouped.mean()
         calib_RBBs.index = self.bbcal_times
         self.RBB = calib_RBBs
-    
+        if return_values:
+            return self.RBB
+            
     def calc_gain(self):
         """Calc gain.
         
@@ -693,7 +690,7 @@ class Calibrator(object):
         # the target where we want to interpolate for
         all_times = sdata.index.values.astype('float64')
         
-        # these are the times as defined by above calc_calib_mean_times
+        # these are the times as defined by above calc_calib_times
         cal_times = self.calib_times.values.astype('float64')
         
         # create 2 new pd.DataFrames to hold the interpolated gains and offsets
@@ -725,7 +722,7 @@ class Calibrator(object):
         abs_radiance = norm_radiance.copy()
         # as the conversion factor is only given per channel we only need
         # to loop over channels here, not single detectors
-        for channel in self.thermal_channels:
+        for channel in thermal_channels:
             # this filter catches all detectors for the current channel
             abs_radiance[abs_radiance.filter(regex=channel+'_').columns] *= \
                 self.norm_to_abs_converter.get_value(2,channel)
@@ -737,7 +734,7 @@ class Calibrator(object):
         self.Tb = pd.DataFrame(index=self.abs_radiance.index)
         pbar = ProgressBar(147)
         i=0
-        for channel in self.thermal_channels:
+        for channel in thermal_channels:
             for det in range(1,22):
                 i+=1
                 pbar.animate(i)
