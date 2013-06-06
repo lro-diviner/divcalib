@@ -286,8 +286,13 @@ class CalBlock(object):
         At initialisation, the object receives the number of samples to skip.
         This number is used here for the offset calculation
         """
-        return self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
-
+        # # work only with data channels:
+        # data = get_data_columns(self.sv_grouped)
+        # first, mean values of each spaceview, with skipped removed:
+        mean_spaceviews = self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
+        # then return mean value of these 2 labels:
+        return mean_spaceviews.mean()
+        
     @property
     def sv_stds(self):
         return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
@@ -526,7 +531,7 @@ class Calibrator(object):
         if self.do_bbtimes:
             # filter for bbview data (leaves out stviews !!!)
             bbvdata = self.df[self.df.is_bbview]
-            alldata = self.df[self.df.is_bbview | self.df.is_stview]
+            # alldata = self.df[self.df.is_bbview | self.df.is_stview]
             to_skip = self.BBV_NUM_SKIP_SAMPLE
         else:
             # use the whole calib block to define time of it.
@@ -538,9 +543,9 @@ class Calibrator(object):
         grouped = bbvdata.groupby('calib_block_labels')
         bbtimes = grouped.apply(get_mean_time, to_skip)
         
-        grouped = alldata.groupby('calib_block_labels')
-        allcaltimes = grouped.apply(get_mean_time, to_skip)
-        self.calib_times = allcaltimes
+        # grouped = alldata.groupby('calib_block_labels')
+        # allcaltimes = grouped.apply(get_mean_time, to_skip)
+        self.calib_times = bbtimes
         self.bbcal_times = bbtimes
     
     def skipped_mean(self, df, num_to_skip):
@@ -552,20 +557,22 @@ class Calibrator(object):
         ### currently stviews are included here, but in calc_calib_times not!!
         ##
         
-        # get spaceviews here to kick out moving data
-        spaceviews = self.df[self.df.is_spaceview]
+        def process_calblock(df):
+            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
+            if cb.kind == 'ST':
+                return
+            return cb.offsets
         
-        # only work with the real data, filter out meta-data
-        spaceviews = get_data_columns(spaceviews, strict=True)
+        caldata = self.df[self.df.is_calib]
         
         # group by the calibration block labels
-        grouped = spaceviews.groupby(self.df.calib_block_labels)
+        grouped = caldata.groupby(self.df.calib_block_labels)
         
         ###
         # change here for method of means!!
         # the current method aggregates just 1 value for the whole calibration block
         ###
-        offsets = grouped.agg(self.skipped_mean, self.SV_NUM_SKIP_SAMPLE)
+        offsets = get_data_columns(grouped.agg(process_calblock)).dropna()
         
         # # set the times as index for this dataframe of offsets
         offsets.index = self.calib_times
