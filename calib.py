@@ -237,9 +237,15 @@ class RadianceCorrection(object):
         p = poly1d(self.df[detID][::-1].values)
         return p(radiance)
         
-    def correctR(self, radiance, chan,det):
-        "This function is for numerical chan and det values."
-        print "Not implemented."
+    def correct_radiance(self, radiance):
+        "Apply polynomials from table on radiance"
+        detID = radiance.name
+        if detID not in thermal_detectors:
+            return radiance
+        # [::-1] is required because I have to invert the sequence of Marc Foote's 
+        # table, as poly1d needs it in highest order first
+        p = poly1d(self.df[detID][::-1].values)
+        return p(radiance)
         
 class CalBlock(object):
     """Class to handle different options on how to deal with a single cal block.
@@ -363,7 +369,7 @@ class Calibrator(object):
                            
     def __init__(self, df, do_bbtimes=True, pad_bbtemps=False, 
                            single_rbb=True, skipsamples=True,
-                           do_the_bug=False,
+                           do_the_bug=False, do_rad_corr=True,
                            calfitting_order=1):
         self.df = df
         # to control if mean bbview times or mean calib_block_times determine the
@@ -390,6 +396,9 @@ class Calibrator(object):
         
         # check impact of bug
         self.do_the_bug = do_the_bug
+        
+        # control if radiance should be corrected
+        self.do_rad_corr = do_rad_corr
         
         # degree of order for the fitting of calibration data
         self.calfitting_order = calfitting_order
@@ -731,7 +740,12 @@ class Calibrator(object):
     
     def calc_radiances(self):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
+        
+        if self.do_rad_corr:
+            thermal_dets = get_thermal_detectors(norm_radiance)
+            norm_radiance = thermal_dets.apply(self.radcorr.correct_radiance)
         abs_radiance = norm_radiance.copy()
+
         # as the conversion factor is only given per channel we only need
         # to loop over channels here, not single detectors
         for channel in thermal_channels:
