@@ -370,6 +370,7 @@ class Calibrator(object):
                            
     def __init__(self, df, do_bbtimes=True, pad_bbtemps=False, 
                            single_rbb=True, skipsamples=True,
+                           do_the_bug=False,
                            calfitting_order=1):
         self.df = df
         # to control if mean bbview times or mean calib_block_times determine the
@@ -393,11 +394,18 @@ class Calibrator(object):
             self.SV_NUM_SKIP_SAMPLE = 0
             self.STV_NUM_SKIP_SAMPLE = 0
         
+        
+        # check impact of bug
+        self.do_the_bug = do_the_bug
+        
         # degree of order for the fitting of calibration data
         self.calfitting_order = calfitting_order
         
         # temperature - radiance converter table
         self.rbbtable = RBBTable()
+        
+        # radiance non-linearity correction
+        self.radcorr = RadianceCorrection()
         
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.load('../data/Normalized_to_Absolute_Radiance.df')
@@ -605,8 +613,12 @@ class Calibrator(object):
         # different mapping sources depending on if we lookup only for single
         # values at calblock times or for all interpolated temperatures
         # the caller of this function determines this by providing the mapping source
-        mapping = {'a': mapping_source['bb_1_temp_interp'],
-                   'b': mapping_source['bb_2_temp_interp']}
+        if self.do_the_bug:
+            mapping = {'a': mapping_source['bb_1_temp_interp'],
+                       'b': mapping_source['bb_1_temp_interp']}
+        else:
+            mapping = {'a': mapping_source['bb_1_temp_interp'],
+                       'b': mapping_source['bb_2_temp_interp']}
         
         # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
         for channel in thermal_channels:
