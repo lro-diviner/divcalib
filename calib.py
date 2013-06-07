@@ -176,18 +176,11 @@ def calc_offsets_at_all_times(data, offsets):
     caldata2 = offsets.ix[np.where(left_diff < right_diff, left_time, right_time)]
     return caldata2
 
-def get_data_columns(df,strict=True):
-    "Filtering for the div247 channel names"
-    if strict:
-        pattern = '^[ab][0-9]_[0-2][0-9]'
-    else:
-        pattern = '[ab][0-9]_[0-2][0-9]'
-    return df.filter(regex=pattern)
+def get_data_columns(df):
+    return df.filter(items=detectors)
 
 def get_thermal_detectors(df):
-    t1 = df.filter(regex='a[3-6]_[0-2][0-9]')
-    t2 = df.filter(regex='b[1-3]_[0-2][0-9]')
-    return pd.concat([t1,t2],axis=1)
+    return df.filter(items=thermal_detectors)
 
 class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
@@ -702,7 +695,7 @@ class Calibrator(object):
         sdata = self.df[self.df.sdtype==0]
         
         # only work with real data, filter out meta-data
-        sdata = get_data_columns(sdata, strict=True)
+        sdata = get_data_columns(sdata)
         
         # times are converted to float64 for the interpolation routine
         
