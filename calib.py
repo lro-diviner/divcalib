@@ -370,6 +370,7 @@ class Calibrator(object):
     def __init__(self, df, do_bbtimes=True, pad_bbtemps=False, 
                            single_rbb=True, skipsamples=True,
                            do_the_bug=False, do_rad_corr=True,
+                           do_negative_corr=False,
                            calfitting_order=1):
         self.df = df
         # to control if mean bbview times or mean calib_block_times determine the
@@ -399,6 +400,9 @@ class Calibrator(object):
         
         # control if radiance should be corrected
         self.do_rad_corr = do_rad_corr
+        
+        # subtract the radiance correction instead of adding
+        self.do_negative_corr = do_negative_corr
         
         # degree of order for the fitting of calibration data
         self.calfitting_order = calfitting_order
@@ -742,8 +746,15 @@ class Calibrator(object):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
         
         if self.do_rad_corr:
-            thermal_dets = get_thermal_detectors(norm_radiance)
-            norm_radiance = thermal_dets.apply(self.radcorr.correct_radiance)
+            # restricting to thermal dets is not required thanks to handling
+            # it upstairs, so commenting it out for now.
+            # thermal_dets = get_thermal_detectors(norm_radiance)
+            corrected = norm_radiance.apply(self.radcorr.correct_radiance)
+            diff = corrected - norm_radiance
+            if self.do_negative_corr:
+                norm_radiance = norm_radiance - diff
+            else:
+                norm_radiance = norm_radiance + diff
         abs_radiance = norm_radiance.copy()
 
         # as the conversion factor is only given per channel we only need
@@ -766,7 +777,7 @@ class Calibrator(object):
                 pbar.animate(i)
                 cdet = channel + '_' + str(det).zfill(2)
                 temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
-                                                self.mcs_div_mapping[channel])
+                                             self.mcs_div_mapping[channel])
                 self.Tb[cdet] = pd.Series(temps,index=self.Tb.index)
         logging.info("Calculated brightness temperatures.")
 
