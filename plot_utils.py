@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from matplotlib.pylab import gcf,title, subplots
+from matplotlib.pylab import gcf,title, subplots, figure
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.animation as animation
+import numpy as np
 import sys
 import pandas as pd
 
+
 def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
+
     
 def plot_calib_block(df,label,id,det='a6_11'):
     """Plot one designated calibration block.
@@ -32,7 +37,8 @@ def plot_calib_block(df,label,id,det='a6_11'):
     df_to_plot.plot(style='.')
     title(det)
 
-def plot_all_channels(df, det_list, **kwargs):
+
+def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
     """plot the data for each det in det_list for all channels.
     
     Parameters:
@@ -40,17 +46,60 @@ def plot_all_channels(df, det_list, **kwargs):
         det_list    list of detector numbers between 1..21
         **kwargs    keyword arguments for subplots call
     """
+    df = df_in.resample('10s')
+    print("Resampled to 10 s.")
     fig, axes = subplots(3,3, **kwargs)
     for ch in range(1,7):
+        if ch in [1,2] and only_thermal: continue
         axis = axes.flatten()[ch-1]
         cols = ['a'+str(ch)+'_'+str(i).zfill(2) for i in det_list]
         df[cols].plot(ax=axis)
+        axis.legend(loc='best')
         axis.set_title('Channel {0}'.format(ch))
     for ch in range(1,4):
         axis = axes.flatten()[ch-1+6]
         cols = ['b'+str(ch)+'_'+str(i).zfill(2) for i in det_list]
-        df[cols].plot(ax=axes.flatten()[ch-1+6])
+        df[cols].plot(ax=axis)
         axis.set_title('Channel {0}'.format(ch+6))
+        axis.legend(loc='best')
+
+   
+def create_plot_pointings(azim_start=-60,
+                          azim_min=-80,
+                          azim_max=-40,
+                          elev_start=30,
+                          elev_min=-10):
+    # azimuths
+    azis_down = range(azim_start, azim_min, -1)
+    azis_up = range(azim_min, azim_max)
+    azis_down2 = range(azim_max, azim_start, -1)
+    azis = azis_down + azis_up + azis_down2
+    # elevations
+    elevs_down = range(elev_start, elev_min, -1)
+    elevs_up = range(elev_min, elev_start)
+    elevs = elevs_down + elevs_up
+    # return pointing tuples
+    return zip(elevs, azis)    
+    
+ 
+def plot3d_animation(df_in):
+    df = df_in.resample('1min')
+    Z = df.values.T
+    x = np.arange(len(df))
+    y = np.arange(21)
+    X, Y = np.meshgrid(x, y)
+    pointings = create_plot_pointings()
+    
+    def update_pointing(pointing):
+        ax.view_init(*pointing)
+    
+    fig = figure(figsize=(10,8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_wireframe(X, Y, Z, rstride=5, cstride=5)
+    
+    view_ani = animation.FuncAnimation(fig, update_pointing, pointings,
+                                       interval=100, repeat_delay=2000)
+                                       
     
 class ProgressBar:
     def __init__(self, iterations):
