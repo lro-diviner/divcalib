@@ -22,6 +22,29 @@ else:
     kernelpath = '/raid1/maye/kernels'
 
 
+###
+### Tools for data output to tables
+###
+
+def prepare_write(Tb):
+    Tb['year'] = Tb.index.year
+    Tb['month'] = Tb.index.month
+    Tb['day'] = Tb.index.day
+    Tb['hour'] = Tb.index.hour
+    Tb['minute'] = Tb.index.minute
+    
+    dtimes = Tb.index.to_pydatetime()
+    
+    
+    Tb['second'] = ['.'.join([str(dt.second),str(dt.microsecond)]) for dt in dtimes]
+    cols = Tb.columns
+    time_cols = cols[-6:]
+    dets = cols[:-6]
+    new_cols = pd.Index(time_cols.tolist() + dets.tolist())
+    return Tb.reindex(columns=new_cols)
+
+    
+
 ####
 #### Tools for parsing text files of data
 ####
