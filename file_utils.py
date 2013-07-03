@@ -602,7 +602,7 @@ class RDRDataPump(DivXDataPump):
 
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*_RDR.TAB'))
+                                      self.timestr + '*_RDR.TAB.zip'))
 
     def gen_open(self):
         for fname in self.fnames:
