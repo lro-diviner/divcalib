@@ -17,10 +17,11 @@ import zipfile
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
     kernelpath = '/Users/maye/data/spice/diviner'
+    codepath = '/Users/maye/Dropbox/src/diviner'
 else:
     datapath = '/raid1/maye/'
     kernelpath = '/raid1/maye/kernels'
-
+    codepath = '/u/paige/maye/src/diviner'
 
 ###
 ### Tools for data output to tables
@@ -71,20 +72,34 @@ class FileName(object):
         self.time = dt.strptime(self.timestr, format)
         self.format = format
     
-    def get_previous_hour(self):
+    def get_previous_hour_dtime(self):
         return self.time - timedelta(hours=1)
         
+    def get_previous_hour(self):
+        dtime = self.get_previous_hour_dtime()
+        return dtime.strftime(self.format)
+        
+    def get_previous_hour_fname(self):
+        dtime = self.get_previous_hour_dtime()
+        timestr = dtime.strftime(self.format)
+        return os.path.join(self.dirname, timestr + self.rest)
+        
     def set_previous_hour(self):
-        newtime = self.get_previous_hour()
+        newtime = self.get_previous_hour_dtime()
         self.time = newtime
         self.timestr = newtime.strftime(self.format)
         return self.fname
         
-    def get_next_hour(self):
+    def get_next_hour_dtime(self):
         return self.time + timedelta(hours=1)
         
+    def get_next_hour_fname(self):
+        dtime = self.get_next_hour_dtime()
+        timestr = dtime.strftime(self.format)
+        return os.path.join(self.dirname, timestr + self.rest)
+        
     def set_next_hour(self):
-        newtime = self.get_next_hour()
+        newtime = self.get_next_hour_dtime()
         self.time = newtime
         self.timestr = newtime.strftime(self.format)
         return self.fname
