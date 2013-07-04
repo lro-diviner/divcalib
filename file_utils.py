@@ -72,14 +72,22 @@ class FileName(object):
         self.format = format
     
     def get_previous_hour(self):
-        newtime = self.time - timedelta(hours=1)
+        return self.time - timedelta(hours=1)
+        
+    def set_previous_hour(self):
+        newtime = self.get_previous_hour()
         self.time = newtime
         self.timestr = newtime.strftime(self.format)
+        return self.fname
         
     def get_next_hour(self):
-        newtime = self.time + timedelta(hours=1)
+        return self.time + timedelta(hours=1)
+        
+    def set_next_hour(self):
+        newtime = self.get_next_hour()
         self.time = newtime
         self.timestr = newtime.strftime(self.format)
+        return self.fname
         
     @property
     def fname(self):
