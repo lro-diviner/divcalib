@@ -27,4 +27,10 @@ def test_get_rdr_headers():
     assert_equals(headers_pds, answer_pds)
     assert_equals(headers_ops, answer_ops)
 
-
+def test_get_fname_hour():
+    fname = '/Users/maye/data/diviner/opsRDR/2013052205_RDR.TAB'
+    fnameC = fu.FileName(fname)
+    assert_equals(fnameC.year, '2013')
+    assert_equals(fnameC.month, '05')
+    assert_equals(fnameC.day, '22')
+    assert_equals(fnameC.hour, '05')
