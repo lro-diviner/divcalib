@@ -43,8 +43,48 @@ def prepare_write(Tb):
     new_cols = pd.Index(time_cols.tolist() + dets.tolist())
     return Tb.reindex(columns=new_cols)
 
+class FileName(object):
+    """Managing class for file name attributes """
+    def __init__(self, fname):
+        super(FileName, self).__init__()
+        self.basename = os.path.basename(fname)
+        self.dirname = os.path.dirname(fname)
+        self.timestr= self.basename.split('_')[0]
+        # save everything after the first '_' as rest
+        self.rest = self.basename[self.basename.find('_'):]
+        # split of the time elements
+        self.year = self.timestr[:4]
+        self.month = self.timestr[4:6]
+        self.day = self.timestr[6:8]
+        # if timestr is not long enough, self.hour will be empty string ''
+        self.hour = self.timestr[8:10]
+        # set time member
+        self.set_time()
     
-
+    def set_time(self):
+        if len(self.timestr) == 8:
+            format = '%Y%m%d'
+        elif len(self.timestr) == 10:
+            format = "%Y%m%d%H"
+        else:
+            format = '%Y%m%d%H%M'
+        self.time = dt.strptime(self.timestr, format)
+        self.format = format
+    
+    def get_previous_hour(self):
+        newtime = self.time - timedelta(hours=1)
+        self.time = newtime
+        self.timestr = newtime.strftime(self.format)
+        
+    def get_next_hour(self):
+        newtime = self.time + timedelta(hours=1)
+        self.time = newtime
+        self.timestr = newtime.strftime(self.format)
+        
+    @property
+    def fname(self):
+        return os.path.join(self.dirname, self.timestr + self.rest)
+        
 ####
 #### Tools for parsing text files of data
 ####
