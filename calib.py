@@ -7,6 +7,8 @@ import divconstants as c
 from plot_utils import ProgressBar
 import logging
 from numpy import poly1d
+import os
+import file_utils as fu
 
 logging.basicConfig(filename='calib.log', level=logging.INFO)
 
