@@ -188,7 +188,7 @@ class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
     def __init__(self):
         super(RBBTable, self).__init__()
-        self.df = pd.load(os.path.join(fu.codepath,
+        self.df = pd.read_pickle(os.path.join(fu.codepath,
                                        'data',
                                        'T_to_Normalized_Radiance.df'))
         self.table_temps = self.df.index.values.astype('float')
@@ -231,6 +231,9 @@ class RadianceCorrection(object):
         excelfile = pd.io.parsers.ExcelFile(os.path.join(fu.codepath,
                                                          'data',
                                                          'Rn_vs_Rn_interp_coefficients.xlsx'))
+        # excelfile = pd.io.excel.ExcelFile(os.path.join(fu.codepath,
+        #                                          'data',
+        #                                          'Rn_vs_Rn_interp_coefficients.xlsx'))
         shname = excelfile.sheet_names[0]
         df = excelfile.parse(shname, skiprows=[0,1],index_col=0,header=None)
         df.index.name = ""
@@ -420,7 +423,7 @@ class Calibrator(object):
         self.radcorr = RadianceCorrection()
         
         # loading converter factors norm-to-abs-radiances
-        self.norm_to_abs_converter = pd.load(os.path.join(fu.codepath,
+        self.norm_to_abs_converter = pd.read_pickle(os.path.join(fu.codepath,
                                                           'data',
                                                           'Normalized_to_Absolute_Radiance.df'))
         # rename column names to match channel names here
