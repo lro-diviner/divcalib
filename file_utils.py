@@ -19,14 +19,36 @@ if sys.platform == 'darwin':
     kernelpath = '/Users/maye/data/spice/diviner'
     codepath = '/Users/maye/Dropbox/src/diviner'
 else:
-    datapath = '/raid1/maye/'
+    datapath = '/raid1/maye'
     kernelpath = '/raid1/maye/kernels'
     codepath = '/u/paige/maye/src/diviner'
+
+
+vec_dateparser = np.vectorize(dateparser)
 
 ###
 ### Tools for data output to tables
 ###
 
+def read_dlre_fmt():
+    with open(os.path.join(datapath, 'dlre_rdr.fmt')):
+        lines = f.readlines()
+    
+    def parse_strings(s):
+        s = s[:-2]
+        return int(s[s.find('=')+2:])
+    
+    bytes = []
+    start_bytes = []
+    for line in lines:
+        if 'BYTES' in line:
+            bytes.append(parse_string(line))
+        elif 'START_BYTE' in line:
+            start_bytes.append(parse_string(line)-1)
+    
+    return start_bytes, bytes
+    
+    
 def prepare_write(Tb):
     Tb['year'] = Tb.index.year
     Tb['month'] = Tb.index.month
@@ -43,6 +65,7 @@ def prepare_write(Tb):
     dets = cols[:-6]
     new_cols = pd.Index(time_cols.tolist() + dets.tolist())
     return Tb.reindex(columns=new_cols)
+
 
 class FileName(object):
     """Managing class for file name attributes """
@@ -107,6 +130,7 @@ class FileName(object):
     @property
     def fname(self):
         return os.path.join(self.dirname, self.timestr + self.rest)
+
         
 ####
 #### Tools for parsing text files of data
@@ -138,20 +162,7 @@ def parse_header_line(line):
         newline = line.split(',')
     else:
         newline = line.split()
-    return [i.strip() for i in newline]
-
-
-def get_headers_pprint(fname):
-    """Get headers from pprint output.
-
-    >>> fname = '/Users/maye/data/diviner/noise2.tab'
-    >>> headers = get_headers_pprint(fname)
-    >>> headers[:7]
-    ['date', 'month', 'year', 'hour', 'minute', 'second', 'jdate']
-    """
-    with open(fname) as f:
-        headers = parse_header_line(f.readline())
-    return headers
+    return [i.strip().lower() for i in newline]
 
 
 def get_rdr_headers(fname):
@@ -168,6 +179,75 @@ def get_rdr_headers(fname):
     return parse_header_line(line)
 
 
+class RDRReader(object):
+    """docstring for RDRReader"""
+    def __init__(self, fname, nrows=None):
+        super(RDRReader, self).__init__()
+        self.fname = fname
+        if isinstance(fname, zipfile.ZipFile):
+            self.f = fname.open(fname.namelist()[0])
+        else:
+            self.f = open(fname)
+        self.get_rdr_headers()
+        
+    def get_rdr_headers(self):
+        """Get headers from both ops and PDS RDR files."""
+        # skipcounter
+        self.no_to_skip = 0
+        while True:
+            line = self.f.readline()
+            self.no_to_skip += 1
+            if not line.startswith('# Header'):
+                break
+        self.f.seek(0)
+        self.headers = parse_header_line(line)
+        
+    def read_df(self, nrows=None):
+        df = pd.io.parsers.read_csv(self.f,
+                                    skiprows=self.no_to_skip,
+                                    skipinitialspace=True,
+                                    names=self.headers,
+                                    na_values=['-9999.0'],
+                                    nrows=nrows,
+                                    )
+        times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+        df.set_index(times, inplace=True)
+        return df.drop(['date','utc'], axis=1)
+                                             
+
+def get_l1a_headers(fname):
+    with open(fname) as f:
+        for _ in range(6):
+            f.readline()
+        headers = parse_header_line(f.readline())
+    return headers
+
+
+def read_l1a_data(fname, nrows=None):
+    headers = get_l1a_headers(fname)
+    df = pd.io.parsers.read_csv(fname,
+                                names=headers,
+                                na_values='-9999',
+                                skiprows=8,
+                                skipinitialspace=True)
+    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+    df.set_index(times, inplace=True)
+    return df.drop(['date','utc'], axis=1)
+
+
+def get_headers_pprint(fname):
+    """Get headers from pprint output.
+
+    >>> fname = '/Users/maye/data/diviner/noise2.tab'
+    >>> headers = get_headers_pprint(fname)
+    >>> headers[:7]
+    ['date', 'month', 'year', 'hour', 'minute', 'second', 'jdate']
+    """
+    with open(fname) as f:
+        headers = parse_header_line(f.readline())
+    return headers
+
+    
 def read_pprint(fname):
     """Read tabular diviner data into pandas data frame and return it.
 
@@ -187,28 +267,7 @@ def read_pprint(fname):
     dataframe.sort('jdate', inplace=True)
     return dataframe
 
-
-def read_tabbed_rdr(fname, nrows=None):
-    """Read tabular RDR files from opsRDR or the PDS."""
-    if isinstance(fname, zipfile.ZipFile):
-        name = fname.open(fname.namelist()[0])
-    else:
-        name = fname
-    headers = get_rdr_headers(fname)
-    df = pd.io.parsers.read_csv(name,
-                                comment='#',
-                                skipinitialspace=True,
-                                names=headers,
-                                na_values=['-9999.0'],
-                                nrows=nrows,
-                                parse_dates=[[0, 1]],
-                                index_col=0,
-                                )
-    # the comment='#' does not skip line comments, but reads an empty
-    # line that sets all fields to NaN. Dropping them here:
-    return df.dropna(how='all')
-
-
+                               
 def get_df_from_h5(fname):
     """Provide df from h5 file."""
     try:
@@ -592,10 +651,6 @@ class DivXDataPump(object):
         return glob.glob(os.path.join(self.datapath, self.timestr[:6],
                                       self.timestr + '*'))
 
-    def gen_fnames(self):
-        for fname in self.fnames:
-            yield fname
-
     def gen_open(self):
         for fname in self.fnames:
             self.current_fname = fname
@@ -675,6 +730,38 @@ class RDRDataPump(DivXDataPump):
     def process_one_file(self, f):
         return read_tabbed_rdr(f.name)
 
+    def open(self):
+        zfile = zipfile.ZipFile(self.fnames[0])
+        df = read_tabbed_rdr(zfile)
+        # df.rename(columns={'el_cmd':'last_el_cmd','az_cmd':'last_az_cmd'})
+        # define_sdtype(df)
+        return df
+    
+
+class L1ADataPump(DivXDataPump):
+    datapath = os.path.join(datapath, 'l1a_data')
+    
+    def find_fnames(self):
+        return glob.glob(os.path.join(self.datapath,
+                                      self.timestr + '*_L1A.TAB'))
+    
+    def clean_final_df(self,df):
+        df.last_el_cmd.replace(np.nan, inplace=True)
+        df.last_az_cmd.replace(np.nan, inplace=True)
+        df.moving.replace(np.nan, inplace=True)
+        define_sdtype(df)
+        return df
+        
+    def get_3_hour_block(self, fname):
+        fnobj = FileName(fname)
+        self.fnobj = fnobj
+        l = []
+        l.append(read_l1a_data(fnobj.get_previous_hour_fname()))
+        l.append(read_l1a_data(fnobj.fname))
+        l.append(read_l1a_data(fnobj.get_next_hour_fname()))
+        df = pd.concat(l)
+        return self.clean_final_df(df)
+                                         
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
