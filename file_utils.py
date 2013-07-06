@@ -9,7 +9,7 @@ from dateutil.parser import parse as dateparser
 import os
 from datetime import timedelta
 from datetime import datetime as dt
-from data_pre import define_sdtype, prepare_data
+from diviner.data_prep import define_sdtype, prepare_data
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -180,29 +180,46 @@ def get_rdr_headers(fname):
 
 
 class RDRReader(object):
-    """docstring for RDRReader"""
+    """RDRs are usually zipped, so this wrapper takes care of that."""
+    datapath = os.path.join(datapath, 'rdr_data')
+    
+    @classmethod
+    def from_timestr(cls, timestr):
+        fnames = glob.glob(os.path.join(cls.datapath,
+                                        timestr + '*_RDR.TAB.zip'))
+        return cls(fname=fnames[0])
+
     def __init__(self, fname, nrows=None):
         super(RDRReader, self).__init__()
         self.fname = fname
-        if isinstance(fname, zipfile.ZipFile):
-            self.f = fname.open(fname.namelist()[0])
-        else:
-            self.f = open(fname)
         self.get_rdr_headers()
+        
+    def find_fnames(self):
+        self.fnames = glob.glob(os.path.join(self.datapath,
+                                      self.timestr + '*_RDR.TAB.zip'))
+
+    def open(self):
+        if self.fname.lower().endswith('.zip'):
+            zfile = zipfile.ZipFile(self.fname)
+            self.f = zfile.open(zfile.namelist()[0])
+        else:
+            self.f = open(self.fname)
         
     def get_rdr_headers(self):
         """Get headers from both ops and PDS RDR files."""
         # skipcounter
+        self.open()
         self.no_to_skip = 0
         while True:
             line = self.f.readline()
             self.no_to_skip += 1
             if not line.startswith('# Header'):
                 break
-        self.f.seek(0)
         self.headers = parse_header_line(line)
+        self.f.close()
         
     def read_df(self, nrows=None):
+        self.open()
         df = pd.io.parsers.read_csv(self.f,
                                     skiprows=self.no_to_skip,
                                     skipinitialspace=True,
@@ -212,7 +229,13 @@ class RDRReader(object):
                                     )
         times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
         df.set_index(times, inplace=True)
+        self.f.close()
         return df.drop(['date','utc'], axis=1)
+
+    def gen_open(self):
+        for fname in self.fnames:
+            zfile = zipfile.ZipFile(fname)
+            yield zfile.open(zfile.namelist()[0])
                                              
 
 def get_l1a_headers(fname):
@@ -591,30 +614,6 @@ class DivXDataPump(object):
         for df in self.gen_dataframes():
             yield self.clean_final_df(df)
 
-
-class RDRDataPump(DivXDataPump):
-    datapath = os.path.join(datapath, 'rdr_data')
-
-    def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*_RDR.TAB.zip'))
-
-    def gen_open(self):
-        for fname in self.fnames:
-            zfile = zipfile.ZipFile(fname)
-            yield zfile.open(zfile.namelist()[0])
-
-    def process_one_file(self, f):
-        rdrfile = RDRReader(f.name)
-        return rdrfile.read_df()
-
-    def open(self):
-        rdr = RDRReader(self.fnames[0])
-        df = rdr.read_df()
-        # df.rename(columns={'el_cmd':'last_el_cmd','az_cmd':'last_az_cmd'})
-        # define_sdtype(df)
-        return df
-    
 
 class L1ADataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'l1a_data')
