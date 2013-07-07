@@ -34,7 +34,7 @@ def test_get_fname_hour():
     assert_equals(fnameC.hour, '05')
 
 
-def test_parse_times_pd_to_datetime():
+def test_parse_times():
     val = '01-Apr-2011 00:00:01.978000'
     format = '%d-%b-%Y %H:%M:%S.%f'
     dtime = dt.datetime.strptime(val, format)
@@ -43,19 +43,6 @@ def test_parse_times_pd_to_datetime():
     # previous assignment just provides 1 column with 2 values, need .T(ransform)
     df = df.T
     df.columns = ['date','utc']
-    parsed = fu.parse_times_pd_to_datetime(df).index[0].to_datetime()
+    parsed = fu.parse_times(df).index[0].to_datetime()
     assert_equals(parsed, dtime)
 
-
-def test_parse_times_dt_datetime():
-    val = '01-Apr-2011 00:00:01.978000'
-    format = '%d-%b-%Y %H:%M:%S.%f'
-    dtime = dt.datetime.strptime(val, format)
-    l = [dtime.strftime('%d-%b-%Y'),dtime.strftime('%H:%M:%S.%f')]
-    df = pd.DataFrame(l)
-    # previous assignment just provides 1 column with 2 values, need .T(ransform)
-    df = df.T
-    df.columns = ['date','utc']
-    parsed = fu.parse_times_dt_datetime(df).index[0].to_datetime()
-    assert_equals(parsed, dtime)
-    

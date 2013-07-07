@@ -227,10 +227,8 @@ class RDRReader(object):
                                     na_values=['-9999.0'],
                                     nrows=nrows,
                                     )
-        times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
-        df.set_index(times, inplace=True)
         self.f.close()
-        return df.drop(['date','utc'], axis=1)
+        return parse_times(df)
 
     def gen_open(self):
         for fname in self.fnames:
@@ -246,7 +244,7 @@ def get_l1a_headers(fname):
     return headers
 
 
-def parse_times_dt_datetime(df):
+def parse_times(df):
     format = '%d-%b-%Y %H:%M:%S.%f'
 
     parse = lambda x: dt.strptime(x, format)
@@ -256,14 +254,15 @@ def parse_times_dt_datetime(df):
     df.set_index(time, inplace=True)
     return df.drop(['date','utc'], axis=1)
     
-    
-def parse_times_pd_to_datetime(df):
-    format = format='%d-%b-%Y %H:%M:%S.%f'
-    # this is buggy, but was faster. replace it when fixed.
-    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
-    
-    df.set_index(times, inplace=True)
-    return df.drop(['date','utc'], axis=1)
+
+# this is currently broken so i take it out for now.    
+# def parse_times(df):
+#     format = format='%d-%b-%Y %H:%M:%S.%f'
+#     # this is buggy, but was faster. replace it when fixed.
+#     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+#     
+#     df.set_index(times, inplace=True)
+#     return df.drop(['date','utc'], axis=1)
     
 
 def read_l1a_data(fname, nrows=None):
