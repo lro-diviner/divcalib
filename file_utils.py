@@ -246,6 +246,26 @@ def get_l1a_headers(fname):
     return headers
 
 
+def parse_times_dt_datetime(df):
+    format = '%d-%b-%Y %H:%M:%S.%f'
+
+    parse = lambda x: dt.strptime(x, format)
+    date_utc = df.date + ' ' + df.utc
+    time = date_utc.map(parse)
+
+    df.set_index(time, inplace=True)
+    return df.drop(['date','utc'], axis=1)
+    
+    
+def parse_times_pd_to_datetime(df):
+    format = format='%d-%b-%Y %H:%M:%S.%f'
+    # this is buggy, but was faster. replace it when fixed.
+    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+    
+    df.set_index(times, inplace=True)
+    return df.drop(['date','utc'], axis=1)
+    
+
 def read_l1a_data(fname, nrows=None):
     headers = get_l1a_headers(fname)
     df = pd.io.parsers.read_csv(fname,
@@ -253,9 +273,7 @@ def read_l1a_data(fname, nrows=None):
                                 na_values='-9999',
                                 skiprows=8,
                                 skipinitialspace=True)
-    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
-    df.set_index(times, inplace=True)
-    return df.drop(['date','utc'], axis=1)
+    return parse_times_dt_datetime(df)
 
 
 def get_headers_pprint(fname):
