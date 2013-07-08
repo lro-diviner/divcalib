@@ -218,7 +218,7 @@ class RDRReader(object):
         self.headers = parse_header_line(line)
         self.f.close()
         
-    def read_df(self, nrows=None):
+    def read_df(self, nrows=None, do_parse_times=True):
         self.open()
         df = pd.io.parsers.read_csv(self.f,
                                     skiprows=self.no_to_skip,
@@ -228,7 +228,7 @@ class RDRReader(object):
                                     nrows=nrows,
                                     )
         self.f.close()
-        return parse_times(df)
+        return parse_times(df) if do_parse_times else df
 
     def gen_open(self):
         for fname in self.fnames:
