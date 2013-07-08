@@ -272,7 +272,7 @@ def read_l1a_data(fname, nrows=None):
                                 na_values='-9999',
                                 skiprows=8,
                                 skipinitialspace=True)
-    return parse_times_dt_datetime(df)
+    return parse_times(df)
 
 
 def get_headers_pprint(fname):
