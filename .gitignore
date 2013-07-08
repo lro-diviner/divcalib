@@ -39,3 +39,5 @@ nohup.out
 .fuse*
 playing\ around.ipynb
 *.log
+.ipynb_checkpoints
+
