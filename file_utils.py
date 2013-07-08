@@ -252,8 +252,10 @@ def parse_times(df):
     time = date_utc.map(parse)
 
     df.set_index(time, inplace=True)
-    return df.drop(['date','utc'], axis=1)
-    
+    # dropped date and utc before, but i think it's simpler
+    # to just keep it
+    # return df.drop(['date','utc'], axis=1)
+    return df
 
 # this is currently broken so i take it out for now.    
 # def parse_times(df):
