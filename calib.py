@@ -228,12 +228,12 @@ class RadianceCorrection(object):
     """
     def __init__(self):
         super(RadianceCorrection, self).__init__()
-        excelfile = pd.io.parsers.ExcelFile(os.path.join(fu.codepath,
-                                                         'data',
-                                                         'Rn_vs_Rn_interp_coefficients.xlsx'))
-        # excelfile = pd.io.excel.ExcelFile(os.path.join(fu.codepath,
-        #                                          'data',
-        #                                          'Rn_vs_Rn_interp_coefficients.xlsx'))
+        # excelfile = pd.io.parsers.ExcelFile(os.path.join(fu.codepath,
+        #                                                  'data',
+        #                                                  'Rn_vs_Rn_interp_coefficients.xlsx'))
+        excelfile = pd.io.excel.ExcelFile(os.path.join(fu.codepath,
+                                                 'data',
+                                                 'Rn_vs_Rn_interp_coefficients.xlsx'))
         shname = excelfile.sheet_names[0]
         df = excelfile.parse(shname, skiprows=[0,1],index_col=0,header=None)
         df.index.name = ""
