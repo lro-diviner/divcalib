@@ -53,14 +53,14 @@ pump = fu.Div247DataPump("20110416")
 df = pump.get_n_hours(2)
 
 #options for calbibration
-options = dict(bbtimes=True, pad_bbtemps=False,
+options = dict(do_bbtimes=True, pad_bbtemps=False,
                single_rbb=True, skipsamples=True)
 #calibrate
-calib_mine = calib.Calibrator(df, bbtimes=False, pad_bbtemps=False,
+calib_mine = calib.Calibrator(df, do_bbtimes=False, pad_bbtemps=False,
                                 single_rbb=False, skipsamples=False)
 calib_mine.calibrate()
 
-calib_jpl = calib.Calibrator(df,bbtimes=True, pad_bbtemps=True,
+calib_jpl = calib.Calibrator(df, do_bbtimes=True, pad_bbtemps=True,
                                 single_rbb=True, skipsamples=True)
 calib_jpl.calibrate()
 
@@ -75,16 +75,16 @@ compare = myrad_new.merge(divdata, left_index=True, right_index=True)
 compare.columns = ['new','divdata']
 compare['jpl'] = myrad_old
 
-# compare['bb_error'] = (1 - compare.old / compare.new_bb) * 100
-# compare['cb_error'] = (1 - compare.old / compare.new_cb) * 100
+compare['bb_error'] = (1 - compare.old / compare.new_bb) * 100
+compare['cb_error'] = (1 - compare.old / compare.new_cb) * 100
 
 
-# compare['rel_error'].plot()
-# compare.old.plot(secondary_y=True)
-# divdata.radiance.plot(style='r.',label='old')
-# myrad.plot(style='g.',label='new')
-# plt.legend(loc='best')
-# plt.savefig(divrad_fname+'.png',dpi=100)
-# plt.show()
+compare['bb_error'].plot()
+compare.old.plot(secondary_y=True)
+divdata.radiance.plot(style='r.',label='old')
+myrad.plot(style='g.',label='new')
+plt.legend(loc='best')
+plt.savefig(divrad_fname+'.png',dpi=100)
+plt.show()
 print
 
