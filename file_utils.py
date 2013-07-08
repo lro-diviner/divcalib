@@ -6,26 +6,49 @@ import numpy as np
 import sys
 import glob
 from dateutil.parser import parse as dateparser
-from scipy import ndimage as nd
-import divconstants as c
 import os
 from datetime import timedelta
 from datetime import datetime as dt
+from diviner.data_prep import define_sdtype, prepare_data
+
 # from plot_utils import ProgressBar
 import zipfile
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
     kernelpath = '/Users/maye/data/spice/diviner'
+    codepath = '/Users/maye/Dropbox/src/diviner'
 else:
-    datapath = '/raid1/maye/'
+    datapath = '/raid1/maye'
     kernelpath = '/raid1/maye/kernels'
+    codepath = '/u/paige/maye/src/diviner'
 
+
+vec_dateparser = np.vectorize(dateparser)
 
 ###
 ### Tools for data output to tables
 ###
 
+def read_dlre_fmt():
+    with open(os.path.join(datapath, 'dlre_rdr.fmt')) as f:
+        lines = f.readlines()
+    
+    def parse_string(s):
+        s = s[:-2]
+        return int(s[s.find('=')+2:])
+    
+    bytes = []
+    start_bytes = []
+    for line in lines:
+        if 'BYTES' in line:
+            bytes.append(parse_string(line))
+        elif 'START_BYTE' in line:
+            start_bytes.append(parse_string(line)-1)
+    
+    return start_bytes, bytes
+    
+    
 def prepare_write(Tb):
     Tb['year'] = Tb.index.year
     Tb['month'] = Tb.index.month
@@ -42,6 +65,7 @@ def prepare_write(Tb):
     dets = cols[:-6]
     new_cols = pd.Index(time_cols.tolist() + dets.tolist())
     return Tb.reindex(columns=new_cols)
+
 
 class FileName(object):
     """Managing class for file name attributes """
@@ -71,19 +95,42 @@ class FileName(object):
         self.time = dt.strptime(self.timestr, format)
         self.format = format
     
-    def get_previous_hour(self):
-        newtime = self.time - timedelta(hours=1)
-        self.time = newtime
-        self.timestr = newtime.strftime(self.format)
+    def get_previous_hour_dtime(self):
+        return self.time - timedelta(hours=1)
         
-    def get_next_hour(self):
-        newtime = self.time + timedelta(hours=1)
+    def get_previous_hour(self):
+        dtime = self.get_previous_hour_dtime()
+        return dtime.strftime(self.format)
+        
+    def get_previous_hour_fname(self):
+        dtime = self.get_previous_hour_dtime()
+        timestr = dtime.strftime(self.format)
+        return os.path.join(self.dirname, timestr + self.rest)
+        
+    def set_previous_hour(self):
+        newtime = self.get_previous_hour_dtime()
         self.time = newtime
         self.timestr = newtime.strftime(self.format)
+        return self.fname
+        
+    def get_next_hour_dtime(self):
+        return self.time + timedelta(hours=1)
+        
+    def get_next_hour_fname(self):
+        dtime = self.get_next_hour_dtime()
+        timestr = dtime.strftime(self.format)
+        return os.path.join(self.dirname, timestr + self.rest)
+        
+    def set_next_hour(self):
+        newtime = self.get_next_hour_dtime()
+        self.time = newtime
+        self.timestr = newtime.strftime(self.format)
+        return self.fname
         
     @property
     def fname(self):
         return os.path.join(self.dirname, self.timestr + self.rest)
+
         
 ####
 #### Tools for parsing text files of data
@@ -115,20 +162,7 @@ def parse_header_line(line):
         newline = line.split(',')
     else:
         newline = line.split()
-    return [i.strip() for i in newline]
-
-
-def get_headers_pprint(fname):
-    """Get headers from pprint output.
-
-    >>> fname = '/Users/maye/data/diviner/noise2.tab'
-    >>> headers = get_headers_pprint(fname)
-    >>> headers[:7]
-    ['date', 'month', 'year', 'hour', 'minute', 'second', 'jdate']
-    """
-    with open(fname) as f:
-        headers = parse_header_line(f.readline())
-    return headers
+    return [i.strip().lower() for i in newline]
 
 
 def get_rdr_headers(fname):
@@ -145,6 +179,115 @@ def get_rdr_headers(fname):
     return parse_header_line(line)
 
 
+class RDRReader(object):
+    """RDRs are usually zipped, so this wrapper takes care of that."""
+    datapath = os.path.join(datapath, 'rdr_data')
+    
+    @classmethod
+    def from_timestr(cls, timestr):
+        fnames = glob.glob(os.path.join(cls.datapath,
+                                        timestr + '*_RDR.TAB.zip'))
+        return cls(fname=fnames[0])
+
+    def __init__(self, fname, nrows=None):
+        super(RDRReader, self).__init__()
+        self.fname = fname
+        self.get_rdr_headers()
+        
+    def find_fnames(self):
+        self.fnames = glob.glob(os.path.join(self.datapath,
+                                      self.timestr + '*_RDR.TAB.zip'))
+
+    def open(self):
+        if self.fname.lower().endswith('.zip'):
+            zfile = zipfile.ZipFile(self.fname)
+            self.f = zfile.open(zfile.namelist()[0])
+        else:
+            self.f = open(self.fname)
+        
+    def get_rdr_headers(self):
+        """Get headers from both ops and PDS RDR files."""
+        # skipcounter
+        self.open()
+        self.no_to_skip = 0
+        while True:
+            line = self.f.readline()
+            self.no_to_skip += 1
+            if not line.startswith('# Header'):
+                break
+        self.headers = parse_header_line(line)
+        self.f.close()
+        
+    def read_df(self, nrows=None):
+        self.open()
+        df = pd.io.parsers.read_csv(self.f,
+                                    skiprows=self.no_to_skip,
+                                    skipinitialspace=True,
+                                    names=self.headers,
+                                    na_values=['-9999.0'],
+                                    nrows=nrows,
+                                    )
+        self.f.close()
+        return parse_times(df)
+
+    def gen_open(self):
+        for fname in self.fnames:
+            zfile = zipfile.ZipFile(fname)
+            yield zfile.open(zfile.namelist()[0])
+                                             
+
+def get_l1a_headers(fname):
+    with open(fname) as f:
+        for _ in range(6):
+            f.readline()
+        headers = parse_header_line(f.readline())
+    return headers
+
+
+def parse_times(df):
+    format = '%d-%b-%Y %H:%M:%S.%f'
+
+    parse = lambda x: dt.strptime(x, format)
+    date_utc = df.date + ' ' + df.utc
+    time = date_utc.map(parse)
+
+    df.set_index(time, inplace=True)
+    return df.drop(['date','utc'], axis=1)
+    
+
+# this is currently broken so i take it out for now.    
+# def parse_times(df):
+#     format = format='%d-%b-%Y %H:%M:%S.%f'
+#     # this is buggy, but was faster. replace it when fixed.
+#     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+#     
+#     df.set_index(times, inplace=True)
+#     return df.drop(['date','utc'], axis=1)
+    
+
+def read_l1a_data(fname, nrows=None):
+    headers = get_l1a_headers(fname)
+    df = pd.io.parsers.read_csv(fname,
+                                names=headers,
+                                na_values='-9999',
+                                skiprows=8,
+                                skipinitialspace=True)
+    return parse_times_dt_datetime(df)
+
+
+def get_headers_pprint(fname):
+    """Get headers from pprint output.
+
+    >>> fname = '/Users/maye/data/diviner/noise2.tab'
+    >>> headers = get_headers_pprint(fname)
+    >>> headers[:7]
+    ['date', 'month', 'year', 'hour', 'minute', 'second', 'jdate']
+    """
+    with open(fname) as f:
+        headers = parse_header_line(f.readline())
+    return headers
+
+    
 def read_pprint(fname):
     """Read tabular diviner data into pandas data frame and return it.
 
@@ -164,28 +307,7 @@ def read_pprint(fname):
     dataframe.sort('jdate', inplace=True)
     return dataframe
 
-
-def read_tabbed_rdr(fname, nrows=None):
-    """Read tabular RDR files from opsRDR or the PDS."""
-    if isinstance(fname, zipfile.ZipFile):
-        name = fname.open(fname.namelist()[0])
-    else:
-        name = fname
-    headers = get_rdr_headers(fname)
-    df = pd.io.parsers.read_csv(name,
-                                comment='#',
-                                skipinitialspace=True,
-                                names=headers,
-                                na_values=['-9999.0'],
-                                nrows=nrows,
-                                parse_dates=[[0, 1]],
-                                index_col=0,
-                                )
-    # the comment='#' does not skip line comments, but reads an empty
-    # line that sets all fields to NaN. Dropping them here:
-    return df.dropna(how='all')
-
-
+                               
 def get_df_from_h5(fname):
     """Provide df from h5 file."""
     try:
@@ -198,11 +320,12 @@ def get_df_from_h5(fname):
     return df
 
 
-def read_div_data(fname, **kwargs):
+def read_div_data(fname):
     with open(fname) as f:
         line = f.readline()
         if any(['dlre_edr.c' in line, 'Header' in line]):
-            return read_tabbed_rdr(fname, **kwargs)
+            rdr = RDRReader(f.fname)
+            return rdr.read_df()
         elif fname.endswith('.h5'):
             return get_df_from_h5(fname)
         else:
@@ -263,130 +386,6 @@ def read_rdrplus(fpath, nrows):
                                       skiprows=1, nrows=nrows)
 
 
-###
-### general tools for data preparation
-###
-
-
-def format_time(intime):
-    t = intime.to_datetime()
-    s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
-    tail = s[-7:]
-    f = round(float(tail), 3)
-    return pd.Timestamp(s[:-7] + str(f)[1:])
-
-
-def generate_date_index(dataframe):
-    """Parse date fields/columns with pandas date converter parsers.
-
-    Parse the date columns and create a date index from it
-    In: pandas dataframe read in from diviner div38 data
-    Out: DatetimeIndex
-    """
-    d = dataframe
-    try:
-        d.second = np.round(d.second * 1000) / 1000
-        date_index = pd.io.date_converters.parse_all_fields(
-            d.year, d.month, d.date, d.hour, d.minute, d.second)
-    except AttributeError:
-        d.ss = np.round(d.ss * 1000) / 1000
-        date_index = pd.io.date_converters.parse_all_fields(
-            d.yyyy, d.mm, d.dd, d.hh, d.mn, d.ss)
-    return date_index
-
-
-def index_by_time(df, drop_dates=True):
-    "must return a new df because the use of drop"
-    newdf = df.set_index(generate_date_index(df))
-    # force 3-digit precision on time stamp
-    # newdf.index = (pd.Series(newdf.index)).map(format_time)
-    if drop_dates:
-        try:
-            cols_to_drop = ['year', 'month', 'date',
-                            'hour', 'minute', 'second']
-            newdf = newdf.drop(cols_to_drop, axis=1)
-        except ValueError:
-            cols_to_drop = ['yyyy', 'mm', 'dd', 'hh', 'mn', 'ss']
-            newdf = newdf.drop(cols_to_drop, axis=1)
-    return newdf
-
-
-def prepare_data(df_in):
-    """Declare NaN value and pad nan data for some."""
-    nan = np.nan
-    df = index_by_time(df_in)
-    df[df == -9999.0] = nan
-    df.last_el_cmd.replace(nan, inplace=True)
-    df.last_az_cmd.replace(nan, inplace=True)
-    df.moving.replace(nan, inplace=True)
-    return df
-
-
-def get_sv_selector(df):
-    "Create dataframe selecotr for pointing limits of divconstants 'c' file"
-    return (df.last_az_cmd >= c.SV_AZ_MIN) & \
-           (df.last_az_cmd <= c.SV_AZ_MAX) & \
-           (df.last_el_cmd >= c.SV_EL_MIN) & \
-           (df.last_el_cmd <= c.SV_EL_MAX)
-
-
-def get_bb_selector(df):
-    "Create dataframe selecotr for pointing limits of divconstants 'c' file"
-    return (df.last_az_cmd >= c.BB_AZ_MIN) & \
-           (df.last_az_cmd <= c.BB_AZ_MAX) & \
-           (df.last_el_cmd >= c.BB_EL_MIN) & \
-           (df.last_el_cmd <= c.BB_EL_MAX)
-
-
-def get_st_selector(df):
-    "Create dataframe selecotr for pointing limits of divconstants 'c' file"
-    return (df.last_az_cmd >= c.ST_AZ_MIN) & \
-           (df.last_az_cmd <= c.ST_AZ_MAX) & \
-           (df.last_el_cmd >= c.ST_EL_MIN) & \
-           (df.last_el_cmd <= c.ST_EL_MAX)
-
-
-def get_stowed_selector(df):
-    return (df.last_az_cmd == 0) & (df.last_el_cmd == 0)
-
-
-def define_sdtype(df):
-    df['sdtype'] = 0
-    df.sdtype[get_sv_selector(df)] = 1
-    df.sdtype[get_bb_selector(df)] = 2
-    df.sdtype[get_st_selector(df)] = 3
-    df.sdtype[get_stowed_selector(df)] = -2
-    # the following defines the sequential list of calibration blocks inside
-    # the dataframe. nd.label provides an ID for each sequential part where
-    # the given condition is true.
-    # this still includes the moving areas, because i want the sv and bbv
-    # attached to each other to deal with them later as a separate calibration
-    # block
-    # DECISION: block labels contain moving data as well
-    # WARNING: But not all moving data is contained in block labels!
-    # The end of calib block has pointing commands set to nadir.
-    # below defined "is_xxx" do NOT contain moving data.
-    df['calib_block_labels'] = nd.label((df.sdtype == 1) | \
-                                        (df.sdtype == 2) | \
-                                        (df.sdtype == 3))[0]
-    df['sv_block_labels'] = nd.label(df.sdtype == 1)[0]
-    df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
-    df['st_block_labels'] = nd.label(df.sdtype == 3)[0]
-
-    # this resets data from sdtypes >0 above that is still 'moving' to be
-    # sdtype=-1 (i.e. 'moving', defined by me)
-    df.sdtype[df.moving == 1] = -1
-
-    # now I don't need to check for moving anymore, the sdtypes are clean
-    df['is_spaceview'] = (df.sdtype == 1)
-    df['is_bbview'] = (df.sdtype == 2)
-    df['is_stview'] = (df.sdtype == 3)
-    df['is_moving'] = (df.sdtype == -1)
-    df['is_stowed'] = (df.sdtype == -2)
-    df['is_calib'] = df.is_spaceview | df.is_bbview | df.is_stview
-
-    # this does the same as above labeling, albeit here the blocks are numbered
-    # individually. Not sure I will need it but might come in handy.
 
 
 def fname_to_df(fname, rec_dtype, keys):
@@ -569,10 +568,6 @@ class DivXDataPump(object):
         return glob.glob(os.path.join(self.datapath, self.timestr[:6],
                                       self.timestr + '*'))
 
-    def gen_fnames(self):
-        for fname in self.fnames:
-            yield fname
-
     def gen_open(self):
         for fname in self.fnames:
             self.current_fname = fname
@@ -637,21 +632,30 @@ class DivXDataPump(object):
             yield self.clean_final_df(df)
 
 
-class RDRDataPump(DivXDataPump):
-    datapath = os.path.join(datapath, 'rdr_data')
-
+class L1ADataPump(DivXDataPump):
+    datapath = os.path.join(datapath, 'l1a_data')
+    
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*_RDR.TAB.zip'))
-
-    def gen_open(self):
-        for fname in self.fnames:
-            zfile = zipfile.ZipFile(fname)
-            yield zfile.open(zfile.namelist()[0])
-
-    def process_one_file(self, f):
-        return read_tabbed_rdr(f.name)
-
+                                      self.timestr + '*_L1A.TAB'))
+    
+    def clean_final_df(self,df):
+        df.last_el_cmd.replace(np.nan, inplace=True)
+        df.last_az_cmd.replace(np.nan, inplace=True)
+        df.moving.replace(np.nan, inplace=True)
+        define_sdtype(df)
+        return df
+        
+    def get_3_hour_block(self, fname):
+        fnobj = FileName(fname)
+        self.fnobj = fnobj
+        l = []
+        l.append(read_l1a_data(fnobj.get_previous_hour_fname()))
+        l.append(read_l1a_data(fnobj.fname))
+        l.append(read_l1a_data(fnobj.get_next_hour_fname()))
+        df = pd.concat(l)
+        return self.clean_final_df(df)
+                                         
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
