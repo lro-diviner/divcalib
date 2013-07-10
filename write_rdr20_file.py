@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-from collections import OrderedDict
+from diviner import file_utils as fu
+import os
+import sys
 
 # example data line, lined up with above header line:
 header = '#        date,            utc,             jdate, orbit, sundist,   sunlat,    sunlon,             sclk,     sclat,     sclon,       scrad,       scalt,  el_cmd,  az_cmd,   af, orientlat, orientlon, c, det,    vlookx,    vlooky,    vlookz,   radiance,       tb,      clat,      clon,     cemis,   csunzen,   csunazi, cloctime,    cphase,  roi, o, v, i, m, q, p, e, z, t, h, d, n, s, a, b'
@@ -225,7 +227,7 @@ def write_rdr20_file(timestr, ch):
                       (29,'cloctime','{:8.1f}'),
                      ]
 
-    subformat_allnans = [
+    subformat_nan = [
                       (22,'radiance','{:10.1f}'),
                       (23,'tb','{:8.1f}'),
                       (24,'clat','{:9.1f}'),
@@ -283,7 +285,7 @@ def write_rdr20_file(timestr, ch):
     chid = 'C' + int(ch)
     
     # open file and start write-loop
-    f = open(os.path.join(outpath, timestr + '_' + chid + '_RDR.TAB','w')
+    f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'),'w')
 
     # header defined above, globally for this file.
     f.write(header+'\r\n')
