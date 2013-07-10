@@ -9,7 +9,7 @@ from dateutil.parser import parse as dateparser
 import os
 from datetime import timedelta
 from datetime import datetime as dt
-from diviner.data_prep import define_sdtype, prepare_data
+from diviner.data_prep import define_sdtype, prepare_data, index_by_time
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -665,7 +665,17 @@ class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
     datapath = os.path.join(datapath, "div247")
     rec_dtype, keys = get_div247_dtypes()
-
+    
+    def clean_final_df(self, df_in):
+        """Declare NaN value and pad nan data for some."""
+        df = index_by_time(df_in)
+        df[df == -9999.0] = np.nan
+        df.last_el_cmd.replace(np.nan, inplace=True)
+        df.last_az_cmd.replace(np.nan, inplace=True)
+        df.moving.replace(np.nan, inplace=True)
+        define_sdtype(df)
+        return df
+        
 
 class Div38DataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'div38')
