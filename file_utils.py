@@ -16,15 +16,18 @@ import zipfile
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
+    outpath = '/Users/maye/data/diviner/out'
     kernelpath = '/Users/maye/data/spice/diviner'
     codepath = '/Users/maye/Dropbox/src/diviner'
 else:
     datapath = '/raid1/maye'
+    outpath = '/raid1/maye/rdr_out'
     kernelpath = '/raid1/maye/kernels'
     codepath = '/u/paige/maye/src/diviner'
 
+l1adatapath = os.path.join(datapath,'l1a_data')
+rdrdatapath = os.path.join(datapath,'rdr_data')
 
-vec_dateparser = np.vectorize(dateparser)
 
 ###
 ### Tools for data output to tables
@@ -224,7 +227,6 @@ class RDRReader(object):
                                     skiprows=self.no_to_skip,
                                     skipinitialspace=True,
                                     names=self.headers,
-                                    na_values=['-9999.0'],
                                     nrows=nrows,
                                     )
         self.f.close()
