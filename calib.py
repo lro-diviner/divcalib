@@ -393,13 +393,15 @@ class Calibrator(object):
                            do_negative_corr=False,
                            calfitting_order=1):
         self.df = df
+        self.caldata = self.df[self.df.is_calib]
+        self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
         # to control if mean bbview times or mean calib_block_times determine the
         # time of a calibration point
         self.do_bbtimes = do_bbtimes
         # to control if bbtemps are interpolated or just forward-filled (=padded)
         self.pad_bbtemps = pad_bbtemps
-        # to control if RBB are just determined for 1 mean bb temp or for all bbtemps
-        # of a bbview
+        # to control if RBB are just determined for 1 mean bb temp (JPL's method) 
+        #or for all bbtemps of a bbview
         # I have confirmed in tests that the results differ negligibly (2e-16 rads)
         # and the JPL method is better in speed
         self.single_rbb = single_rbb
@@ -537,23 +539,19 @@ class Calibrator(object):
         # bb_1_temp is much more often sampled than bb_2_temp
         bb1temps = df.bb_1_temp.dropna()
         bb2temps = df.bb_2_temp.dropna()
-        
-        # accessing the multi-index like this provides the unique index set
-        # at that level, in this case the dataframe timestamps
+
+        # converting to float because the fitting libraries want to have floats
         all_times = df.index.values.astype('float64')
         
-        # loop over both temperature arrays [DRY !]
+        # loop over both temperature arrays [D.R.Y. principle!]
         # the number of data points in bb1temps are much higher, but for
         # consistency we should interpolate both the same way.
         for bbtemp in [bb1temps, bb2temps]:
             # converting the time series to floats for interpolation
             ind = bbtemp.index.values.astype('float64')
             
-            # I found the best parameters by trial and error, as to what looked
-            # like a best compromise between smoothing and overfitting
-            # note_2: decided to go back to k=1,s=0 (from s=0.05) review later?
-            # k=1 basically is a linear interpolation between 2 points
-            # k=2 quadratic, k=3 cubic, k=4 is maximum possible (but no sense)
+            # s=0.0 means I do not allow distance from measured points for the spline
+            # k=1 means that it will be a local-linear fitted spline between points
             
             # create interpolator function
             temp_interpolator = Spline(ind, bbtemp, s=0.0, k=1)
@@ -563,26 +561,21 @@ class Calibrator(object):
     
     def calc_calib_times(self):
 
-        # if we use bb views to define the time of a calib block (a la JPL)
-        if self.do_bbtimes:
-            # filter for bbview data (leaves out stviews !!!)
-            bbvdata = self.df[self.df.is_bbview]
-            # alldata = self.df[self.df.is_bbview | self.df.is_stview]
-            to_skip = self.BBV_NUM_SKIP_SAMPLE
-        else:
-            # use the whole calib block to define time of it.
-            # Advantage: spaceviews without bbviews still get their time marker
-            calibdata = self.df[self.df.is_calib]
-            to_skip = 0
-        # each sv, bb, sv block or sv,st,sv(,bb,sv) block has one calib_block label
-        # therefore grouping by it enables to determine a calib marker time
-        grouped = bbvdata.groupby('calib_block_labels')
-        bbtimes = grouped.apply(get_mean_time, to_skip)
+        def process_calblock(df):
+            if len(df) < 240:
+                return
+            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
+            if cb.kind == "ST":
+                return
+            return cb.mean_time            
         
-        # grouped = alldata.groupby('calib_block_labels')
-        # allcaltimes = grouped.apply(get_mean_time, to_skip)
-        self.calib_times = bbtimes
-        self.bbcal_times = bbtimes
+        # if above just returns, it has a None value, dropping them here:
+        self.calib_times = self.calgrouped.apply(process_calblock).dropna()
+        
+        # the times used for bb calculations are currently called bbcal_times.
+        # currently, i don't see the need for them to be different, but that might
+        # change in the future.
+        self.bbcal_times = self.calib_times
     
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
@@ -594,21 +587,23 @@ class Calibrator(object):
         ##
         
         def process_calblock(df):
+            # if the df has less than 240 samples, then part of the calblock are cut off.
+            # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
+            # for calibration to have the central hour ROI calibrated correctly only and written
+            # out.But this means to ensure that the calib times don't use less than 240 either.u
+            if len(df) < 240:
+                print(len(df))
+                return
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             if cb.kind == 'ST':
                 return
             return cb.offsets
         
-        caldata = self.df[self.df.is_calib]
-        
-        # group by the calibration block labels
-        grouped = caldata.groupby(self.df.calib_block_labels)
-        
         ###
         # change here for method of means!!
         # the current method aggregates just 1 value for the whole calibration block
         ###
-        offsets = get_data_columns(grouped.agg(process_calblock)).dropna()
+        offsets = get_data_columns(self.calgrouped.agg(process_calblock)).dropna()
         
         # # set the times as index for this dataframe of offsets
         offsets.index = self.calib_times
@@ -632,6 +627,8 @@ class Calibrator(object):
         ###
         bbcounts = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
         
+        # reindex for the available calib times:
+        bbcounts = bbcounts.reindex(self.calib_times.index)
         # set the times as index for this dataframe of bbcounts
         bbcounts.index = self.bbcal_times
         
@@ -667,6 +664,11 @@ class Calibrator(object):
         bbviews_temps = self.df[self.df.is_bbview][T_cols]
         grouped = bbviews_temps.groupby(self.df.calib_block_labels)
         bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
+        # in case one of the calib block labels was dropped for a reason while 
+        # calculating the calib_times, I drop it here, too, by only taking the 
+        # calib_block_labels that are in the index of self.calib_times
+        bbtemps = bbtemps.reindex(self.calib_times.index)
+        # now the sizes have to match , after the above reindexing
         bbtemps.index = self.bbcal_times
         
         # here the end product is already an RBB value per calib time
