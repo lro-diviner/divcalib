@@ -134,7 +134,7 @@ class MiscFlag(Flag):
         super(MiscFlag,self).__init__(value,dic=self.flags)
 
 
-def get_calib_block(df, blocktype, del_zero=True):
+def get_calib_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb','st']."
     try:
         d = dict(list(df.groupby(blocktype + '_block_labels')))
@@ -151,15 +151,23 @@ def get_calib_block(df, blocktype, del_zero=True):
     return d
 
 def get_mean_time(df_in, skipsamples=0):
+    """Determine mean time for a given dataframe.
+    
+    This calculation depends on the number of skipped samples. This is consistent with
+    the existing approach that is done by JPL's previous calibration. They would 
+    calculate the time starting from the node counter 'bbstart', which is the starting
+    point after skipping samples, compared to 'bborigstart' which is the first node
+    of a bb-view.
+    """
+    # rec
     df = df_in[skipsamples:]
     try:
         t1 = df.index[0]
         t2 = df.index[-1]
     except IndexError:
         print "Problem with calculating mean time."
-        logging.warning('Index not found in get_mean_time. Length of df: {0}'.format(
-                        len(df.index)
-        ))
+        logging.warning('Index not found in get_mean_time. '
+                        'Length of df: {0}'.format(len(df.index)))
         return np.nan
     t = t1 + (t2 - t1) // 2
     return t
@@ -285,20 +293,21 @@ class CalBlock(object):
         The center_data dataframe is determined from the kind of this calibblock.
         For an ST block, it's the stview data, BB -> is_bbview respectively.
         """
+        # being strict here: if CalBlock is too short, return nothing
+        if len(self.df) < 240:
+            return
         return get_mean_time(self.center_data, self.skip_samples)
     
     @property
     def offsets(self):
         """Determine offsets for each available spacelook.
         
-        At initialisation, the object receives the number of samples to skip.
+        At initialisation, this object receives the number of samples to skip.
         This number is used here for the offset calculation
         """
-        # # work only with data channels:
-        # data = get_data_columns(self.sv_grouped)
         # first, mean values of each spaceview, with skipped removed:
         mean_spaceviews = self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
-        # then return mean value of these 2 labels:
+        # then return mean value of these 2 labels, detectors as index.
         return mean_spaceviews.mean()
         
     @property
