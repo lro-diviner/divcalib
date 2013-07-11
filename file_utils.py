@@ -659,7 +659,11 @@ class L1ADataPump(DivXDataPump):
         l.append(read_l1a_data(fnobj.get_next_hour_fname()))
         df = pd.concat(l)
         return self.clean_final_df(df)
-                                         
+            
+    def get_default(self):
+        df = read_l1a_data(self.fnames[0])
+        return self.clean_final_df(df) 
+                                    
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
