@@ -333,8 +333,10 @@ class CalBlock(object):
             return 'BOTH'
         elif self.st_labels.size > 0:
             return 'ST'
-        else:
+        elif self.bb_labels.size > 0:
             return 'BB'
+        else:
+            return None
         
     @property
     def center_data(self):
