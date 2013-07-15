@@ -9,11 +9,79 @@ import os
 from os.path import join as pjoin
 import pprint
 from multiprocessing import Pool
+from diviner import mypool
 
+# leave out visual channels for now
+l1a_channels = calib.channels[2:]
+rdr_channels = range(1,10)[2:]
+
+def process_one_channel(args):
+    # unpack argument tuple
+    fn, l1a_channel, rdr_channel, tbout_all, radout_all, rdrdf, dfdate, dfutc = args
+
+    print("Processing channel",rdr_channel)
+    
+    # filter out for channel of interest
+    tbout = tbout_all.filter(regex=l1a_channel+'_')
+    radout = radout_all.filter(regex=l1a_channel+'_')
+
+    # rename detector names to rdr standard, and reverse detector numbering for
+    # detectors of telescope B
+    if l1a_channel.startswith('b'):
+        tbout.columns = radout.columns = range(21,0,-1)
+    else:
+        tbout.rename(columns=lambda x:int(x[3:]), inplace=True)
+        radout.rename(columns=lambda x:int(x[3:]), inplace=True)
+  
+    rdrch = rdrdf[rdrdf.c == rdr_channel]
+
+    rdrout = rdrch[['date','utc','jdate','clat','clon','sclat','sclon','scrad',
+                    'orientlat','orientlon',
+                    'sunlat','sunlon','sundist','orbit','scalt','af','c','det','cemis','cloctime',
+                    'qca','qge','qmi']]
+
+    rdrout.columns = ['date','utc','jdate','clat','clon','sclat','sclon','scrad',
+                    'vert_lat','vert_lon',
+                    'sunlat','sunlon','sundst','orbit','scalt','af','c','det','cemis','cloctime',
+                    'qca','qge','qmi']
+
+
+    #fix the columns names so the orientlat orientlon will be the wrong name from
+    # divdata: vert_lan and vert_lon
+    # because the index of tbout is less than df, only the dates for tbout's index 
+    # should be picked out of df
+    tbout['date'] = dfdate
+    tbout['utc'] = dfutc
+    radout['date'] = dfdate
+    radout['utc'] = dfutc
+
+    tbmolten = pd.melt(tbout, id_vars=['date','utc'], value_vars=range(1,22))
+    radmolten = pd.melt(radout, id_vars=['date','utc'], value_vars=range(1,22))
+
+    # the melting process left funny columns names. repair.
+    tbmolten.columns = ['date','utc','det','tb']
+    radmolten.columns = ['date','utc','det','radiance']
+
+    data_out = tbmolten.merge(rdrout, on=['date','utc','det'])
+    data_out = radmolten.merge(data_out, on=['date','utc','det'])
+    print("Merged successfully. Writing out to csv now.")
+
+    # create filename
+    basename = fn.timestr + '_C' + str(rdr_channel) + '_' + mode + '_RDR20.csv'
+    dirname = fu.get_month_sample_path_from_mode(mode)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    outfname = pjoin(dirname, basename)
+
+    # don't write out the meaningless integer index
+    data_out.to_csv(outfname, index=False)
+    print("Finished",os.path.basename(outfname))
+    
 def main(input_tuple):
 
     # unpack the tuple
-    l1afname, l1a_channel, rdr_channel, mode = input_tuple
+    l1afname, mode = input_tuple
+    
     
     # create FileName handler object from given filename.
     fn = fu.FileName(l1afname)
@@ -24,66 +92,61 @@ def main(input_tuple):
     print("Loading L1A file",l1afname)
     df = pump.get_3_hour_block(l1afname)
 
-    c = calib.Calibrator(df)
+    # Determine what kind of calibration is requested
+    rad_corr = True
+    skipsamples = True
+    calfitting_order=1
+    if mode == 'no_rad_corr':
+        rad_corr = False
+    elif mode == 'no_skip':
+        skipsamples = False
+    elif mode.startswith('calfit'):
+        calfitting_order = int(mode[-1])
+    elif mode == 'nominal':
+        pass
+    else:
+        print("Unrecognized calibration mode requested.")
+        sys.exit(-1)
+        
+    c = calib.Calibrator(df, do_rad_corr=rad_corr, 
+                             skipsamples=skipsamples,
+                             calfitting_order=calfitting_order)
+    
     c.calibrate()
     
     print("\nFinished calibrating.")
     
-    # filter to middle hour of 3h interval
-    tbout = c.Tb.ix[c.Tb.index.hour == int(fn.hour)]
-    radout = c.abs_radiance.ix[c.abs_radiance.index.hour == int(fn.hour)]
-    
-    # filter out for channel of interest
-    tbout = tbout.filter(regex=l1a_channel+'_')
-    radout = radout.filter(regex=l1a_channel+'_')
-    
-    # rename detector names to rdr standard
-    tbout.rename(columns=lambda x:int(x[3:]), inplace=True)
-    radout.rename(columns=lambda x:int(x[3:]), inplace=True)
-    
-    print("Reading old RDR now.")
+    print("Reading old RDR now for",fn.timestr)
     rdr = fu.RDRReader.from_timestr(fn.timestr)
     # don't parse times for speed reasons
     rdrdf = rdr.read_df(do_parse_times=False)
-    print("Done.")
-    
-    rdrch = rdrdf[rdrdf.c == rdr_channel]
+    print("Done reading RDR for",fn.timestr)
 
-    rdrout = rdrch[['date','utc','clat','clon','det']]
-
-    # get the original date and utc columns for simplicity
-    # (could also create them from index)
-    orig_dateutc = df[['date','utc']].ix[df.index.hour == int(fn.hour)]
-
-    # reindex to reduced dataset of Tb (only calibratable data points survived)
-    orig_dateutc = orig_dateutc.reindex(index=tbout.index)
-
-    tbout['date'] = orig_dateutc.date
-    tbout['utc'] = orig_dateutc.utc
-    radout['date'] = orig_dateutc.date
-    radout['utc'] = orig_dateutc.utc
+    # filter to middle hour of 3h interval
+    tbout_all = c.Tb.ix[c.Tb.index.hour == int(fn.hour)]
+    radout_all = c.abs_radiance.ix[c.abs_radiance.index.hour == int(fn.hour)]
     
-    tbmolten = pd.melt(tbout, id_vars=['date','utc'], value_vars=range(1,22))
-    radmolten = pd.melt(radout, id_vars=['date','utc'], value_vars=range(1,22))
-    
-    # the melting process left funny columns names. repair.
-    tbmolten.columns = ['date','utc','det','tb']
-    radmolten.columns = ['date','utc','det','radiance']
-    
-    data_out = tbmolten.merge(rdrout, on=['date','utc','det'])
-    data_out = radmolten.merge(data_out, on=['date','utc','det'])
-    
-    print("Merged successfully. Writing out to csv now.")
-    # create filename
-    basename = fn.timestr + '_C' + str(rdr_channel) + '_' + str(mode) + '_RDR20.csv'
-    outfname = pjoin('/u/paige/maye/raid/rdr20_samples', basename)
+    args = [(fn,
+             l1a_channel,
+             rdr_channel, 
+             tbout_all, 
+             radout_all, 
+             rdrdf,
+             df.date,
+             df.utc) for l1a_channel,rdr_channel in zip(l1a_channels,rdr_channels)]
 
-    # don't write out the meaningless integer index
-    data_out.to_csv(outfname, index=False)
-               
+    # for arg in args:
+    #     process_one_channel(arg)
+    pool2 = Pool(4)
+    pool2.map(process_one_channel, args)
+    
+    pool2.close()
+    pool2.join()
+    
+    print("Finished", fn.timestr)
 
 def usage():
-    print("\nUsage: {0} timestr L1A_channel mode cpus\n".format(sys.argv[0]),
+    print("\nUsage: {0} timestr mode cpus\n".format(sys.argv[0]),
 """\nWhen using 'test' as second parameter, a list of found filenames using the timestr
 of parameter 1 will be printed out.""")
     sys.exit()
@@ -93,22 +156,27 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         usage()
     timestr = sys.argv[1]
-    l1a_channel = sys.argv[2]
     fnames = glob.glob(os.path.join(fu.l1adatapath, timestr + '*_L1A.TAB'))
     fnames.sort()
     if sys.argv[2] == 'test':
         pprint.pprint(fnames)
         sys.exit()
 
-    mode = sys.argv[3]
-    cpus = sys.argv[4]
+    mode = sys.argv[2]
+    cpus = sys.argv[3]
 
-    rdr_channel = calib.Calibrator.mcs_div_mapping[l1a_channel]
+    # find outpaths that are done
+    fnames_done = os.listdir(fu.get_month_sample_path_from_mode(mode))
+    timestrs_done = [fu.FileName(i).timestr for i in fnames_done]
+    fnames_todo = [i for i in fnames if timestrs_done.count(fu.FileName(i).timestr) < 7]
     
     # create input tuple to have pool.map only 1 parameter to provide
-    list_of_input_tuples = [(i, l1a_channel, rdr_channel, mode) for i in fnames]
+    list_of_input_tuples = [(i, mode) for i in fnames_todo]
 
-    pool = Pool(int(cpus))
+    pool = mypool.MyPool(int(cpus))
     pool.map(main, list_of_input_tuples)
+    
+    pool.close()
+    pool.join()
     
     
