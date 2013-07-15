@@ -33,6 +33,11 @@ rdrdatapath = os.path.join(datapath,'rdr_data')
 ### Tools for data output to tables
 ###
 
+
+def get_month_sample_path_from_mode(mode):
+    return os.path.join(datapath, 'rdr20_month_samples', mode)
+    
+    
 def read_dlre_fmt():
     with open(os.path.join(datapath, 'dlre_rdr.fmt')) as f:
         lines = f.readlines()
