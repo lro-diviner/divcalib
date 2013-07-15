@@ -592,7 +592,6 @@ class Calibrator(object):
             # for calibration to have the central hour ROI calibrated correctly only and written
             # out.But this means to ensure that the calib times don't use less than 240 either.u
             if len(df) < 240:
-                print(len(df))
                 return
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             if cb.kind == 'ST':
