@@ -1,4 +1,8 @@
-from collections import OrderedDict
+#!/usr/bin/env python
+from __future__ import division, print_function
+from diviner import file_utils as fu
+import os
+import sys
 
 # example data line, lined up with above header line:
 header = '#        date,            utc,             jdate, orbit, sundist,   sunlat,    sunlon,             sclk,     sclat,     sclon,       scrad,       scalt,  el_cmd,  az_cmd,   af, orientlat, orientlon, c, det,    vlookx,    vlooky,    vlookz,   radiance,       tb,      clat,      clon,     cemis,   csunzen,   csunazi, cloctime,    cphase,  roi, o, v, i, m, q, p, e, z, t, h, d, n, s, a, b'
@@ -224,7 +228,7 @@ def write_rdr20_file(timestr, ch):
                       (29,'cloctime','{:8.1f}'),
                      ]
 
-    subformat_allnans = [
+    subformat_nan = [
                       (22,'radiance','{:10.1f}'),
                       (23,'tb','{:8.1f}'),
                       (24,'clat','{:9.1f}'),
@@ -257,9 +261,11 @@ def write_rdr20_file(timestr, ch):
     fmts_nan         = [i[2] for i in format_nan]
     
     # read in old RDR
+    print("Reading old RDR file.")
     rdr = fu.RDRReader('/u/paige/maye/rdr_data/'+timestr+'_RDR.TAB.zip')
     df = rdr.read_df(do_parse_times=False)
-
+    print("Done reading.")
+    
     ### adapt to new format
     # drop the old quality flags
     df = df.drop(['qca','qge','qmi'],axis=1)
@@ -273,18 +279,19 @@ def write_rdr20_file(timestr, ch):
         df[flag] = 0
     
     # filter for the channel requested:
-    df_ch = df[df.c==ch]
+    df_ch = df[df.c==int(ch)]
     
     # fill the nan values of your tb and radiance calculations with -9999.0
     df_ch.fillna(-9999.0, inplace=True)
     
     # create channel id:
-    chid = 'C' + int(ch)
+    chid = 'C' + ch
     
     # open file and start write-loop
-    f = open(os.path.join(outpath, timestr + '_' + chid + '_RDR.TAB','w')
+    f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'),'w')
 
     # header defined above, globally for this file.
+    print("Starting the write-out.")
     f.write(header+'\r\n')
     for i,data in enumerate(df_ch.values):
         if all(data[22:30] < -5000):
@@ -301,21 +308,21 @@ def write_rdr20_file(timestr, ch):
             fmt = fmts_nominal
         # uncaught case, raise exception to notify user!
         else:
-            print i # which line
-            print data # print whole row
-            print "af:",data[14] # point out af status, might help to understand
+            print(i) # which line
+            print(data) # print whole row
+            print("af:",data[14]) # point out af status, might help to understand
             for j,item in enumerate(data[22:30]):
-                print j+22, item
+                print(j+22, item)
             raise Exception
         f.write(', '.join(fmt).format(*data)+'\r\n')
     f.close()
-
+    print("Done writing.")
 
 def usage():
-    print "Usage: {0} timestr ch"
+    print("Usage: {0} timestr ch"
     "timestr is used to identify which RDR file to read."
     "ch is the digital number 1..9 to identify for which channel to create the RDR\n"
-    "output file."
+    "output file.")
     sys.exit()
     
 
