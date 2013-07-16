@@ -370,7 +370,7 @@ def get_div247_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div247/div247.des'
     else:
-        despath = '/raid1/u/paige/maye/src/diviner/div247.des'
+        despath = '/u/paige/maye/src/diviner/div247.des'
     return parse_descriptor(despath)
 
 
@@ -378,7 +378,7 @@ def get_div38_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div38/div38.des'
     else:
-        despath = '/u/paige/maye/raid/div38/div38.des'
+        despath = os.path.join(codepath,'data/div38.des')
     return parse_descriptor(despath)
 
 ###
