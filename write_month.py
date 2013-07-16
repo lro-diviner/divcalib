@@ -96,13 +96,18 @@ def main(input_tuple):
     rad_corr = True
     skipsamples = True
     calfitting_order=1
+    new_rad_corr = True
     if mode == 'no_rad_corr':
         rad_corr = False
+    if mode == 'rad_corr_old':
+        new_rad_corr = False
     elif mode == 'no_skip':
         skipsamples = False
     elif mode.startswith('calfit'):
         calfitting_order = int(mode[-1])
     elif mode == 'nominal':
+        # means: rad_corr done with new coeff's and local linear fitting and 16
+        # skipped samples
         pass
     else:
         print("Unrecognized calibration mode requested.")
@@ -110,7 +115,8 @@ def main(input_tuple):
         
     c = calib.Calibrator(df, do_rad_corr=rad_corr, 
                              skipsamples=skipsamples,
-                             calfitting_order=calfitting_order)
+                             calfitting_order=calfitting_order,
+                             new_rad_corr=new_rad_corr)
     
     c.calibrate()
     
