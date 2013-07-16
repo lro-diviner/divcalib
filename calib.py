@@ -234,16 +234,24 @@ class RadianceCorrection(object):
     
     This is the equivalent class to RConvertTable class in JPL's code.
     """
-    def __init__(self):
+    def __init__(self, new_corr=True):
         super(RadianceCorrection, self).__init__()
         # excelfile = pd.io.parsers.ExcelFile(os.path.join(fu.codepath,
         #                                                  'data',
         #                                                  'Rn_vs_Rn_interp_coefficients.xlsx'))
-        excelfile = pd.io.excel.ExcelFile(os.path.join(fu.codepath,
+        self.excelfile = pd.io.excel.ExcelFile(os.path.join(fu.codepath,
                                                  'data',
-                                                 'Rn_vs_Rn_interp_coefficients.xlsx'))
-        shname = excelfile.sheet_names[0]
-        df = excelfile.parse(shname, skiprows=[0,1],index_col=0,header=None)
+                                                 'Rn_vs_Rn_interp_coefficients_new.xlsx'))
+        # the delivered new excel file has both the old and new coeffcients on two
+        # different worksheets inside the file.
+        # the old correction coefficients are on sheet_names[0], the new ones on
+        # sheet_names[1]
+        if new_corr:
+            sheet_index = 1
+        else:
+            sheet_index = 0
+        shname = self.excelfile.sheet_names[1]
+        df = self.excelfile.parse(shname, skiprows=[0,1],index_col=0,header=None)
         df.index.name = ""
         df.columns = thermal_detectors
         self.df = df
@@ -391,7 +399,8 @@ class Calibrator(object):
                            single_rbb=True, skipsamples=True,
                            do_the_bug=False, do_rad_corr=True,
                            do_negative_corr=False,
-                           calfitting_order=1):
+                           calfitting_order=1,
+                           new_rad_corr=True):
         self.df = df
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
@@ -433,12 +442,12 @@ class Calibrator(object):
         self.rbbtable = RBBTable()
         
         # radiance non-linearity correction
-        self.radcorr = RadianceCorrection()
+        self.radcorr = RadianceCorrection(new_corr=new_rad_corr)
         
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.read_pickle(os.path.join(fu.codepath,
-                                                          'data',
-                                                          'Normalized_to_Absolute_Radiance.df'))
+                                                  'data',
+                                                  'Normalized_to_Absolute_Radiance.df'))
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = thermal_channels
     
