@@ -4,6 +4,7 @@ from diviner.divtweet import * # imports api handle
 import os, glob, sys
 from diviner import file_utils as fu
 import time
+import platform
 
 def get_percent_done(timestr, mode):
     """check how many files have been processed and tweet status regularly.
@@ -27,8 +28,9 @@ def get_percent_done(timestr, mode):
 def main(timestr, mode, sleeptime):
     while True:
         percent_done = get_percent_done(timestr, mode)
-        api.update_status("[luna4] {0:5.1f} % of the production of '{1}'"
-                          " samples for {2} done.".format(percent_done, mode, timestr))
+        api.update_status("[{3}] {0:5.1f} % of the production of '{1}'"
+                          " samples for {2} done.".format(percent_done, mode, timestr,
+                                                  platform.node().split('.')[0]))
         time.sleep(float(sleeptime))
         if percent_done > 99.9:
             break
