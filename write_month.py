@@ -172,10 +172,13 @@ if __name__ == '__main__':
     cpus = sys.argv[3]
 
     # find outpaths that are done
-    fnames_done = os.listdir(fu.get_month_sample_path_from_mode(mode))
-    timestrs_done = [fu.FileName(i).timestr for i in fnames_done]
-    fnames_todo = [i for i in fnames if timestrs_done.count(fu.FileName(i).timestr) < 7]
-    
+    try:
+        fnames_done = os.listdir(fu.get_month_sample_path_from_mode(mode))
+        timestrs_done = [fu.FileName(i).timestr for i in fnames_done]
+        fnames_todo = [i for i in fnames if timestrs_done.count(fu.FileName(i).timestr) < 7]
+    except OSError:
+        fnames_todo = fnames
+        
     # create input tuple to have pool.map only 1 parameter to provide
     list_of_input_tuples = [(i, mode) for i in fnames_todo]
 
