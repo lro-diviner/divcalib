@@ -250,7 +250,7 @@ class RadianceCorrection(object):
             sheet_index = 1
         else:
             sheet_index = 0
-        shname = self.excelfile.sheet_names[1]
+        shname = self.excelfile.sheet_names[sheet_index]
         df = self.excelfile.parse(shname, skiprows=[0,1],index_col=0,header=None)
         df.index.name = ""
         df.columns = thermal_detectors
