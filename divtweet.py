@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import tweepy
 import sys
+import platform
 
 consumer_key='JnYy8IjOAthUtSEQmXYeg'
 consumer_secret='ORmxgR56WH2IhvJ8p3BbB3BGnulAhFVMyUM98zhUc'
@@ -11,6 +12,8 @@ auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_secret)
 api = tweepy.API(auth)
 
+def tweet_machine(txt):
+    api.update_status("{0} {1}".format(platform.node().split('.')[0], txt))
 
 if __name__ == "__main__":
     text = " ".join(sys.argv[1:])

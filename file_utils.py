@@ -25,8 +25,8 @@ else:
     kernelpath = '/raid1/maye/kernels'
     codepath = '/u/paige/maye/src/diviner'
 
-l1adatapath = os.path.join(datapath,'l1a_data')
-rdrdatapath = os.path.join(datapath,'rdr_data')
+l1adatapath = '/raid1/u/marks/feidata/DIV:opsL1A/data'
+rdrdatapath = '/raid1/u/marks/feidata/DIV:opsRdr/data'
 
 
 ###
@@ -189,7 +189,7 @@ def get_rdr_headers(fname):
 
 class RDRReader(object):
     """RDRs are usually zipped, so this wrapper takes care of that."""
-    datapath = os.path.join(datapath, 'rdr_data')
+    datapath = rdrdatapath
     
     @classmethod
     def from_timestr(cls, timestr):
@@ -642,7 +642,7 @@ class DivXDataPump(object):
 
 
 class L1ADataPump(DivXDataPump):
-    datapath = os.path.join(datapath, 'l1a_data')
+    datapath = l1adatapath
     
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
