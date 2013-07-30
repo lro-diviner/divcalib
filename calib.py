@@ -736,14 +736,3 @@ class Calibrator(object):
                                              self.mcs_div_mapping[channel])
                 self.Tb[cdet] = pd.Series(temps,index=self.Tb.index)
         logging.info("Calculated brightness temperatures.")
-
-
-#    counts = node.counts
-#    offset = (tmnearest.offset_left_SV + tmnearest.offset_right_SV)/2.0
-#    gain = tmnearest.gain
-#    radiance = (counts - offset) * gain
-   # radiance = rconverttable.convertR(radiance, chan, det)
-   # tb = rbbtable.TB(radiance, chan, det)
-   # radiance *= config.CalRadConstant(chan)
-   #
-    
