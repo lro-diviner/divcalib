@@ -28,12 +28,11 @@ def process_fname(fname):
 
 def store_channel_csv_to_h5(args):
     mode, ch = args
-    root = '/u/paige/maye/raid/rdr20_month_samples/'
-    dirname = pjoin(root,mode)
+    dirname = fu.get_month_sample_path_from_mode(mode)
     searchpath = pjoin(dirname, '*_C'+str(ch)+'_*.csv')
     fnames = glob.glob(searchpath)
     if not fnames:
-        print("No files found.")
+        print("No files found with searchpath\n",searchpath)
         return
     storepath = pjoin(dirname, 'C'+str(ch)+'.h5')
     store = pd.HDFStore(storepath)
@@ -58,5 +57,5 @@ if __name__ == '__main__':
     
     mode = sys.argv[1]
     pool = Pool(4)
-    args = [(mode, i) for i in range(3,9)]
+    args = [(mode, i) for i in range(3,10)]
     pool.map(store_channel_csv_to_h5, args)
