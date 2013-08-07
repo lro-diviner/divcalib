@@ -655,6 +655,9 @@ class L1ADataPump(DivXDataPump):
         define_sdtype(df)
         return df
         
+    def process_one_file(self, f):
+        return read_l1a_data(f)
+        
     def get_3_hour_block(self, fname):
         fnobj = FileName(fname)
         self.fnobj = fnobj
