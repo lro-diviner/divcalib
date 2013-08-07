@@ -7,26 +7,29 @@ from diviner import calib
 import pandas as pd
 from diviner import file_utils as fu
 from datetime import timedelta
-
+import os
 rcParams['figure.figsize'] = (14, 10)
 
 
 class HotOrbits(object):
     """docstring for HotOrbits"""
-    savepath = '/Users/maye/Dropbox/DDocuments/DIVINER/calib/hot_orbits/jpl_meeting/'
-
+    savepath = os.path.join(fu.outpath,'hot_orbits')
+        
     def __init__(self, ch2study, df, title_prefix='', rad_corr=True, 
-                 do_negative_corr=False):
+                 new_rad_corr=False, folder=''):
         super(HotOrbits, self).__init__()
         self.ch2study = ch2study
         self.df = df
+        self.savepath = os.path.join(self.savepath, folder)
+        if not os.path.exists(self.savepath):
+            os.path.makedirs(self.savepath)
         self.title_prefix = title_prefix
         self.rad_corr = rad_corr
-        self.do_negative_corr = do_negative_corr
+        self.new_rad_corr = new_rad_corr
         
         # my calibration
         c = calib.Calibrator(df, do_rad_corr=rad_corr, 
-                                 do_negative_corr=do_negative_corr)
+                                 new_rad_corr=new_rad_corr)
         c.calibrate()
         self.c = c
         
@@ -176,7 +179,7 @@ class HotOrbitsDivData(HotOrbits):
 ch2study = 'a5'
 
 # get L1A data
-timestr = '20110402'
+timestr = '20100402'
 offset = 4
 pump = fu.Div247DataPump(timestr)
 df = pump.get_n_hours_from_t(6, offset)
@@ -186,8 +189,8 @@ hotorbits_uncorr = HotOrbits(ch2study, df, timestr + str(offset), rad_corr=False
 hotorbits_negcorr = HotOrbits(ch2study, df, timestr + str(offset), rad_corr=True,
                               do_negative_corr=True)
                         
-detectors = ['a3','a4','a5','a6','b1','b2','b3']
-# detectors = ['b3']
+# detectors = ['a3','a4','a5','a6','b1','b2','b3']
+detectors = ['b3']
 for ch in detectors:
     print("Doing", ch)
     hotorbits_corr.set_ch2study(ch)
