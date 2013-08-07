@@ -8,6 +8,7 @@ import pandas as pd
 from diviner import file_utils as fu
 from datetime import timedelta
 import os
+
 rcParams['figure.figsize'] = (14, 10)
 
 
@@ -58,18 +59,18 @@ class HotOrbits(object):
         ax.legend()
         ax.set_ylabel('Tb [K]')
         ax.set_xlabel('Time [UTC]')
-        # ax.set_ylim(ymin=-100,ymax=400)
+        ax.set_ylim(ymin=-100, ymax=400)
         corr_string = self.get_corr_string()
-        titlestr = '{0} Tb Det 01 11 21 _ {1}'.format(self.ch2study, corr_string)
+        titlestr = '{0} Tb Det 01 11 21 {1}'.format(self.ch2study, corr_string)
         ax.set_title(' '.join([self.title_prefix, titlestr]))
-        savestring = self.savepath + '_'.join(titlestr.split()) + '.png' 
+        savestring = os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png')
         print(savestring)
         fig.savefig(savestring, dpi=200)
 
     def get_save_string(self):
         corr_string = self.get_corr_string()
-        titlestr = '{0} Tb Det 01 11 21 _ {1}'.format(self.ch2study, corr_string)
-        savestring = self.savepath + '_'.join(titlestr.split()) + '.png'
+        titlestr = '{0} Tb Det 01 11 21 {1}'.format(self.ch2study, corr_string)
+        savestring = os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png')
         return savestring
 
     def plot_raw(self, ):
@@ -94,15 +95,15 @@ class HotOrbits(object):
         title(' '.join([self.title_prefix, titlestr]))
         ylabel('Counts')
         xlabel('Time [UTC')
-        savefig(self.savepath + '_'.join(titlestr.split()) + '.png')
+        savefig(os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png'))
     
         
     def get_corr_string(self):
         if self.rad_corr:
-            if self.do_negative_corr:
-                corr_string = 'INV_corrected'
+            if self.new_rad_corr:
+                corr_string = 'new_correction'
             else:
-                corr_string = 'corrected'
+                corr_string = 'old_corrections'
         else:
             corr_string = 'uncorrected'
         return corr_string
@@ -125,13 +126,13 @@ class HotOrbits(object):
         else:
             df.plot(ax=ax)
         ax.legend(ncol=5,loc='lower right')
-        # ax.set_ylim(ymin=-80,ymax=60)
+        ax.set_ylim(ymin=-80,ymax=80)
 
         corr_string = self.get_corr_string()
         titlestr = self.ch2study + \
             ' Tb Deviations from {0} detector sides sorted_{1}'.format(kind, corr_string)
         ax.set_title(' '.join([self.title_prefix, titlestr]))
-        savestring = self.savepath + '_'.join(titlestr.split()) + '.png'
+        savestring = os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png')
         print(savestring)
         fig.savefig(savestring, dpi=200)
             
@@ -141,7 +142,7 @@ class HotOrbits(object):
         colorbar(orientation='horizontal')
         titlestr = self.ch2study + ' channel image plot'
         title(' '.join([self.title_prefix, titlestr]))
-        savefig(self.savepath + '_'.join(titlestr.split()) + '.png')
+        savefig(os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png'))
         
     def plot_max_deviation_det(self):
         figure()
@@ -150,18 +151,18 @@ class HotOrbits(object):
         ylabel('Detector number')
         tstr = 'Which detector shows the largest deviation from the median'
         title(' '.join([self.title_prefix,tstr]))
-        savefig(self.savepath + '_'.join(tstr.split()) + '.png')
+        savefig(os.path.join(self.savepath, '_'.join(tstr.split()) + '.png'))
         
     def plot_kde(self):
         self.Tb.plot(kind='kde')
         legend()
         tstr = 'Detector KDEs'
         title(' '.join([self.title_prefix, tstr]))
-        savefig(self.savepath + '_'.join(tstr.split()) + '.png')
+        savefig(os.path.join(self.savepath + '_'.join(tstr.split()) + '.png'))
         
     def plot_gains_interp(self):
         self.c.gains_interp.plot(style='*')
-        savefig(self.savepath + 'gains_interp.png')
+        savefig(os.path.join(self.savepath + 'gains_interp.png'))
 
 class HotOrbitsDivData(HotOrbits):
     def __init__(self, ch2study, Tb, title_prefix=""):
@@ -169,14 +170,14 @@ class HotOrbitsDivData(HotOrbits):
         self.Tb = Tb
         self.chmedian = Tb.apply(lambda x: x - x.median(), axis=1)
         self.chmean = Tb.apply(lambda x: x - x.mean(), axis=1)
-        self.savepath = self.savepath + 'divdata_'
+        self.savepath = os.path.join(self.savepath, 'divdata_')
         self.title_prefix = title_prefix
 ####
 ### start of script
 ####
 
 # Channel to study:
-ch2study = 'a5'
+ch2study = 'b3'
 
 # get L1A data
 timestr = '20100402'
@@ -184,10 +185,12 @@ offset = 4
 pump = fu.Div247DataPump(timestr)
 df = pump.get_n_hours_from_t(6, offset)
 
-hotorbits_corr = HotOrbits(ch2study, df, timestr + str(offset), rad_corr=True)
-hotorbits_uncorr = HotOrbits(ch2study, df, timestr + str(offset), rad_corr=False)
-hotorbits_negcorr = HotOrbits(ch2study, df, timestr + str(offset), rad_corr=True,
-                              do_negative_corr=True)
+hotorbits_corr = HotOrbits(ch2study, df, timestr + str(offset), 
+                           rad_corr=True, new_rad_corr=True)
+hotorbits_uncorr = HotOrbits(ch2study, df, timestr + str(offset), 
+                           rad_corr=False, new_rad_corr=False)
+hotorbits_oldcorr = HotOrbits(ch2study, df, timestr + str(offset),
+                              rad_corr=True, new_rad_corr=False)
                         
 # detectors = ['a3','a4','a5','a6','b1','b2','b3']
 detectors = ['b3']
@@ -195,15 +198,15 @@ for ch in detectors:
     print("Doing", ch)
     hotorbits_corr.set_ch2study(ch)
     hotorbits_uncorr.set_ch2study(ch)
-    hotorbits_negcorr.set_ch2study(ch)
+    hotorbits_oldcorr.set_ch2study(ch)
     hotorbits_corr.plot_detectors()
     hotorbits_uncorr.plot_detectors()
-    hotorbits_negcorr.plot_detectors()
+    hotorbits_oldcorr.plot_detectors()
 # hotorbits.plot_raw()
 # hotorbits.imshow()
     hotorbits_corr.plot_lips(kind='mean', separate=True)
     hotorbits_uncorr.plot_lips(kind='mean', separate=True)
-    hotorbits_negcorr.plot_lips(kind='mean', separate=True)
+    hotorbits_oldcorr.plot_lips(kind='mean', separate=True)
     
 # hotorbits.plot_max_deviation_det()
 # hotorbits.plot_kde()
