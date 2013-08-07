@@ -8,6 +8,10 @@ from os.path import join as pjoin
 import pprint
 from multiprocessing import Pool
 from diviner.divtweet import tweet_machine
+import numpy as np
+from numpy.random import randn
+import subprocess
+import time
 
 rdr_datapath = '/u/paige/maye/raid/rdr_data'
 hdf_path = '/u/paige/maye/raid/hdf_rdr'
@@ -35,27 +39,69 @@ def store_channel_csv_to_h5(args):
         print("No files found with searchpath\n",searchpath)
         return
     storepath = pjoin(dirname, 'C'+str(ch)+'.h5')
-    store = pd.HDFStore(storepath)
+    store = pd.HDFStore(storepath,'w')
     for i,fname in enumerate(fnames):
         print(100*i/len(fnames))
-        if i % 50 == 0:
+        if i % 100 == 0:
             tweet_machine("C{0} conversion to HDF, {1:g}"
                           " % done.".format(ch, 100*i/len(fnames)))
         df = pd.io.parsers.read_csv(fname)
         if len(df) == 0: continue
-        store.append('df', df, data_columns=['clat','clon','cloctime'])
+        store.append('df', df, data_columns=['clat','clon','cloctime'], index=False)
     store.close()
     print("C{0} done.".format(ch))
 
 
-if __name__ == '__main__':
-    # timestr = sys.argv[1]
-    # 
-    # fnames = glob.glob(pjoin(rdr_datapath,timestr+'*TAB.zip'))
-    # 
-    # pprint.pprint(fnames)
-    
-    mode = sys.argv[1]
+def manage_store_channel():
+    mode, chstart, chend = sys.argv[1:4]
     pool = Pool(4)
-    args = [(mode, i) for i in range(3,10)]
+    args = [(mode, i) for i in range(int(chstart),int(chend)+1)]
     pool.map(store_channel_csv_to_h5, args)
+        
+
+def test_production_speeds(ncols=2):
+    store = pd.HDFStore('test.h5','w')
+    for i in range(2):
+        df = pd.DataFrame(randn(1e6,ncols), columns=list('ABCDEFG')[:ncols])
+        store.append('df',df, data_columns=['B'], index=False)# index=False)
+    store.create_table_index('df', columns=['B'], kind='full')
+    store.close()
+    subprocess.call('ptrepack --chunkshape=auto --sortby=B -o test.h5 test_sorted.h5'.split())
+
+
+def create_full_indexes(args):
+    mode, chno = args
+    dirname = fu.get_month_sample_path_from_mode(mode)
+    path = pjoin(dirname, 'C'+str(chno)+'.h5')
+    store = pd.HDFStore(path)
+    store.create_table_index('df', columns=['clat'], kind='full')
+    store.close()
+    
+    
+def manage_create_full_indexes():
+    mode, chstart, chend = sys.argv[1:4]
+    pool = Pool(4)
+    args = [(mode, i) for i in range(int(chstart), int(chend) + 1)]
+    pool.map(create_full_indexes, args)
+    
+    
+def ptrepack_all(args):
+    mode, chno = args
+    dirname = fu.get_month_sample_path_from_mode(mode)
+    fname_root = pjoin(dirname, 'C'+str(chno))
+    infile = fname_root + '.h5'
+    outfile = fname_root + '_sorted.h5'
+    cmd = ['ptrepack','--chunkshape=auto','--sortby=clat','--propindexes',
+            infile, outfile]
+    subprocess.call(cmd)
+    
+    
+def manage_ptrepack():
+    mode, chstart, chend = sys.argv[1:4]
+    pool = Pool(4)
+    args = [(mode, i) for i in range(int(chstart), int(chend) + 1)]
+    pool.map(ptrepack_all, args)
+    
+    
+if __name__ == '__main__':
+    manage_ptrepack()
