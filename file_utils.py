@@ -20,13 +20,13 @@ if sys.platform == 'darwin':
     kernelpath = '/Users/maye/data/spice/diviner'
     codepath = '/Users/maye/Dropbox/src/diviner'
 else:
-    datapath = '/raid1/maye'
-    outpath = '/raid1/maye/rdr_out'
-    kernelpath = '/raid1/maye/kernels'
+    datapath = '/luna4/maye'
+    outpath = '/luna4/maye/rdr_out'
+    kernelpath = '/luna4/maye/kernels'
     codepath = '/u/paige/maye/src/diviner'
 
-l1adatapath = '/raid1/u/marks/feidata/DIV:opsL1A/data'
-rdrdatapath = '/raid1/u/marks/feidata/DIV:opsRdr/data'
+l1adatapath = '/luna4/u/marks/feidata/DIV:opsL1A/data'
+rdrdatapath = '/luna4/u/marks/feidata/DIV:opsRdr/data'
 
 
 ###
@@ -144,7 +144,6 @@ class FileName(object):
 #### Tools for parsing text files of data
 ####
 
-
 def split_by_n(seq, n):
     while seq:
         yield seq[:n]
@@ -171,6 +170,23 @@ def parse_header_line(line):
     else:
         newline = line.split()
     return [i.strip().lower() for i in newline]
+
+
+class L1AHeader(object):
+    headerstring = "Q, DATE, UTC, SCLK, SOUNDING, FROM_PKT, PKT_COUNT, SAFING, SAFED, FREEZING, FROZEN, ROLLING, DUMPING, MOVING, TEMP_FAULT,   SC_TIME_SECS,   SC_TIME_SUBS, TICKS_PKT_START, TICKS_AT_SC_TIME, OST_INDEX, EST_INDEX, SST_INDEX, LAST_AZ_CMD, LAST_EL_CMD, FPA_TEMP, FPB_TEMP, BAFFLE_A_TEMP, BAFFLE_B_TEMP, BB_1_TEMP, OBA_1_TEMP, ERROR_TIME, ERROR_ID,  ERROR_DETAIL , ERROR_COUNT, COMMANDS_RECEIVED, COMMANDS_EXECUTED, COMMANDS_REJECTED,    LAST_COMMAND_REC ,      CMD,  REQ_ID , LAST_TIME_COMMAND, LAST_EQX_PREDICTION, HYBRID_TEMP, FPA_TEMP_CYC, FPB_TEMP_CYC, BAFFLE_A_TEMP_CYC, BAFFLE_B_TEMP_CYC, OBA_1_TEMP_CYC, OBA_2_TEMP, BB_1_TEMP_CYC, BB_2_TEMP, SOLAR_TARGET_TEMP, YOKE_TEMP, EL_ACTUATOR_TEMP, AZ_ACTUATOR_TEMP,  MIN_15V, PLU_15V, SOLAR_BASE_TEMP, PLU_5V, "\
+    "A1_01, A1_02, A1_03, A1_04, A1_05, A1_06, A1_07, A1_08, A1_09, A1_10, A1_11, A1_12, A1_13, A1_14, A1_15, A1_16, A1_17, A1_18, A1_19, A1_20, A1_21, A2_01, A2_02, A2_03, A2_04, A2_05, A2_06, A2_07, A2_08, A2_09, A2_10, A2_11, A2_12, A2_13, A2_14, A2_15, A2_16, A2_17, A2_18, A2_19, A2_20, A2_21, A3_01, A3_02, A3_03, A3_04, A3_05, A3_06, A3_07, A3_08, A3_09, A3_10, A3_11, A3_12, A3_13, A3_14, A3_15, A3_16, A3_17, A3_18, A3_19, A3_20, A3_21, A4_01, A4_02, A4_03, A4_04, A4_05, A4_06, A4_07, A4_08, A4_09, A4_10, A4_11, A4_12, A4_13, A4_14, A4_15, A4_16, A4_17, A4_18, A4_19, A4_20, A4_21, A5_01, A5_02, A5_03, A5_04, A5_05, A5_06, A5_07, A5_08, A5_09, A5_10, A5_11, A5_12, A5_13, A5_14, A5_15, A5_16, A5_17, A5_18, A5_19, A5_20, A5_21, A6_01, A6_02, A6_03, A6_04, A6_05, A6_06, A6_07, A6_08, A6_09, A6_10, A6_11, A6_12, A6_13, A6_14, A6_15, A6_16, A6_17, A6_18, A6_19, A6_20, A6_21, B1_01, B1_02, B1_03, B1_04, B1_05, B1_06, B1_07, B1_08, B1_09, B1_10, B1_11, B1_12, B1_13, B1_14, B1_15, B1_16, B1_17, B1_18, B1_19, B1_20, B1_21, B2_01, B2_02, B2_03, B2_04, B2_05, B2_06, B2_07, B2_08, B2_09, B2_10, B2_11, B2_12, B2_13, B2_14, B2_15, B2_16, B2_17, B2_18, B2_19, B2_20, B2_21, B3_01, B3_02, B3_03, B3_04, B3_05, B3_06, B3_07, B3_08, B3_09, B3_10, B3_11, B3_12, B3_13, B3_14, B3_15, B3_16, B3_17, B3_18, B3_19, B3_20, B3_21"
+
+    # beware: parse_header_line converts to lower case!
+    columns = parse_header_line(headerstring)
+
+    tel1cols = ["a{0}_{1}".format(i, str(j).zfill(2)) for i in range(1,7) for j in range(1,22)]
+    tel2cols = ['b{0}_{1}'.format(i, str(j).zfill(2)) for i in range(1,4) for j in range(1,22)]
+
+    datacols = tel1cols + tel2cols
+
+
+    metadatacols = list(set(columns) - set(datacols))
+    metadatacols.sort()
 
 
 def get_rdr_headers(fname):
@@ -243,14 +259,6 @@ class RDRReader(object):
             yield zfile.open(zfile.namelist()[0])
                                              
 
-def get_l1a_headers(fname):
-    with open(fname) as f:
-        for _ in range(6):
-            f.readline()
-        headers = parse_header_line(f.readline())
-    return headers
-
-
 def parse_times(df):
     format = '%d-%b-%Y %H:%M:%S.%f'
 
@@ -275,9 +283,8 @@ def parse_times(df):
     
 
 def read_l1a_data(fname, nrows=None):
-    headers = get_l1a_headers(fname)
     df = pd.io.parsers.read_csv(fname,
-                                names=headers,
+                                names=L1AHeader.columns,
                                 na_values='-9999',
                                 skiprows=8,
                                 skipinitialspace=True)
@@ -429,7 +436,7 @@ def folder_to_df(folder, top_end=None, verbose=False):
 
 def get_storename(folder):
     path = os.path.realpath(folder)
-    dirname = '/raid1/maye/data/h5_div247'
+    dirname = '/luna4/maye/data/h5_div247'
     basename = os.path.basename(path)
     storename = os.path.join(dirname, basename + '.h5')
     return storename
@@ -478,7 +485,7 @@ def folder_to_store(folder):
 class DataPump(object):
     """class to provide Diviner data in different ways."""
     rec_dtype, keys = get_div247_dtypes()
-    datapath = '/raid1/maye/data/div247/'
+    datapath = '/luna4/maye/data/div247/'
 
     def __init__(self, fname_pattern=None, timestr=None, fnames_only=False):
         self.fnames_only = fnames_only
@@ -568,14 +575,17 @@ class DivXDataPump(object):
         self.time = dt.strptime(timestr,
                                 self.timestr_parser[len(timestr)])
         self.fnames = self.find_fnames()
-        if len(self.fnames) == 0:
-            print("No files found.")
         self.fnames.sort()
 
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
-        return glob.glob(os.path.join(self.datapath, self.timestr[:6],
-                                      self.timestr + '*'))
+        searchpath = os.path.join(self.datapath, self.timestr[:6], self.timestr + '*')
+        fnames = glob.glob(searchpath)
+        if not fnames:
+            print("No files found. Searched like this:\n")
+            print(searchpath)
+        fnames.sort()
+        return fnames
 
     def gen_open(self):
         for fname in self.fnames:
@@ -607,13 +617,6 @@ class DivXDataPump(object):
         define_sdtype(df)
         return df
 
-    def get_n_hours(self, n):
-        #broken
-        print("Broken!!!")
-        return
-        df = pd.concat(self.gen_dataframes(n))
-        return self.clean_final_df(df)
-
     def get_n_hours_from_t(self, n, t):
         "t in hours, n = how many hours."
         start_time = self.time + timedelta(hours=t)
@@ -628,17 +631,29 @@ class DivXDataPump(object):
         df = pd.concat(l)
         return self.clean_final_df(df)
 
-    def read_hour(self, hour):
-        pass
 
-    def add_next_hour(self):
-        pass
+class Div247DataPump(DivXDataPump):
+    "Class to stream div247 data."
+    datapath = os.path.join(datapath, "div247")
+    rec_dtype, keys = get_div247_dtypes()
+    
+    def clean_final_df(self, df_in):
+        """Declare NaN value and pad nan data for some."""
+        df = index_by_time(df_in)
+        df[df == -9999.0] = np.nan
+        df.last_el_cmd.replace(np.nan, inplace=True)
+        df.last_az_cmd.replace(np.nan, inplace=True)
+        df.moving.replace(np.nan, inplace=True)
+        define_sdtype(df)
+        return df
+        
 
-    def get_one_hour(self):
-        print("Broken!!")
-        return
-        for df in self.gen_dataframes():
-            yield self.clean_final_df(df)
+class Div38DataPump(DivXDataPump):
+    datapath = os.path.join(datapath, 'div38')
+    rec_dtype, keys = get_div38_dtypes()
+
+    def find_fnames(self):
+        return glob.glob(os.path.join(self.datapath, self.timestr + '*'))
 
 
 class L1ADataPump(DivXDataPump):
@@ -672,26 +687,3 @@ class L1ADataPump(DivXDataPump):
         df = read_l1a_data(self.fnames[0])
         return self.clean_final_df(df) 
                                     
-
-class Div247DataPump(DivXDataPump):
-    "Class to stream div247 data."
-    datapath = os.path.join(datapath, "div247")
-    rec_dtype, keys = get_div247_dtypes()
-    
-    def clean_final_df(self, df_in):
-        """Declare NaN value and pad nan data for some."""
-        df = index_by_time(df_in)
-        df[df == -9999.0] = np.nan
-        df.last_el_cmd.replace(np.nan, inplace=True)
-        df.last_az_cmd.replace(np.nan, inplace=True)
-        df.moving.replace(np.nan, inplace=True)
-        define_sdtype(df)
-        return df
-        
-
-class Div38DataPump(DivXDataPump):
-    datapath = os.path.join(datapath, 'div38')
-    rec_dtype, keys = get_div38_dtypes()
-
-    def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.timestr + '*'))
