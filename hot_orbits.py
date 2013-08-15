@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # <nbformat>3.0</nbformat>
 from __future__ import division, print_function
@@ -16,14 +17,13 @@ class HotOrbits(object):
     """docstring for HotOrbits"""
     savepath = os.path.join(fu.outpath,'hot_orbits')
         
-    def __init__(self, ch2study, df, title_prefix='', rad_corr=True, 
+    def __init__(self, df, title_prefix='', rad_corr=True, 
                  new_rad_corr=False, folder=''):
         super(HotOrbits, self).__init__()
-        self.ch2study = ch2study
         self.df = df
         self.savepath = os.path.join(self.savepath, folder)
         if not os.path.exists(self.savepath):
-            os.path.makedirs(self.savepath)
+            os.makedirs(self.savepath)
         self.title_prefix = title_prefix
         self.rad_corr = rad_corr
         self.new_rad_corr = new_rad_corr
@@ -59,7 +59,7 @@ class HotOrbits(object):
         ax.legend()
         ax.set_ylabel('Tb [K]')
         ax.set_xlabel('Time [UTC]')
-        ax.set_ylim(ymin=-100, ymax=400)
+        ax.set_ylim(ymin=-100, ymax=450)
         corr_string = self.get_corr_string()
         titlestr = '{0} Tb Det 01 11 21 {1}'.format(self.ch2study, corr_string)
         ax.set_title(' '.join([self.title_prefix, titlestr]))
@@ -122,7 +122,7 @@ class HotOrbits(object):
                 df[i].plot(style='r', ax=ax)
             for i in range(12, 22):
                 df[i].plot(style='g', ax=ax)
-            df[21].plot(style='k', ax=ax)
+            df[20].plot(style='k', ax=ax)
         else:
             df.plot(ax=ax)
         ax.legend(ncol=5,loc='lower right')
@@ -176,41 +176,33 @@ class HotOrbitsDivData(HotOrbits):
 ### start of script
 ####
 
-# Channel to study:
-ch2study = 'b3'
-
 # get L1A data
-timestr = '20100402'
+timestr = '20091002'
 offset = 4
 pump = fu.Div247DataPump(timestr)
 df = pump.get_n_hours_from_t(6, offset)
 
-hotorbits_corr = HotOrbits(ch2study, df, timestr + str(offset), 
-                           rad_corr=True, new_rad_corr=True)
-hotorbits_uncorr = HotOrbits(ch2study, df, timestr + str(offset), 
-                           rad_corr=False, new_rad_corr=False)
-hotorbits_oldcorr = HotOrbits(ch2study, df, timestr + str(offset),
-                              rad_corr=True, new_rad_corr=False)
+objects = []
+objects.append(HotOrbits(df, timestr + str(offset), 
+                           rad_corr=True, new_rad_corr=True, folder=timestr))
+objects.append(HotOrbits(df, timestr + str(offset), 
+                           rad_corr=False, new_rad_corr=False, folder=timestr))
+objects.append(HotOrbits(df, timestr + str(offset),
+                              rad_corr=True, new_rad_corr=False, folder=timestr))
                         
 # detectors = ['a3','a4','a5','a6','b1','b2','b3']
 detectors = ['b3']
 for ch in detectors:
-    print("Doing", ch)
-    hotorbits_corr.set_ch2study(ch)
-    hotorbits_uncorr.set_ch2study(ch)
-    hotorbits_oldcorr.set_ch2study(ch)
-    hotorbits_corr.plot_detectors()
-    hotorbits_uncorr.plot_detectors()
-    hotorbits_oldcorr.plot_detectors()
+    print("\nDoing", ch)
+    for obj in objects:
+        obj.set_ch2study(ch)
+        obj.plot_detectors()
+        obj.plot_lips(kind='mean', separate=True)
+
 # hotorbits.plot_raw()
-# hotorbits.imshow()
-    hotorbits_corr.plot_lips(kind='mean', separate=True)
-    hotorbits_uncorr.plot_lips(kind='mean', separate=True)
-    hotorbits_oldcorr.plot_lips(kind='mean', separate=True)
-    
+# hotorbits.imshow()    
 # hotorbits.plot_max_deviation_det()
 # hotorbits.plot_kde()
-
 # hotorbits.plot_gains_interp()
 
 # statistics for each channel
@@ -218,7 +210,6 @@ for ch in detectors:
 
 # or this simple statistic?
 # Tb.std()
-
 
 # divdata = pd.io.parsers.read_csv('/Users/maye/data/diviner/hot_orbit_ch9.txt', sep=r'\s*', names=['year', 'month', 'date', 'hour', 'minute', 'second', 'det', 'tb', 'qca'])
 # 
