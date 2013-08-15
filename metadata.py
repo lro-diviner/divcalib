@@ -46,7 +46,11 @@ if __name__ == '__main__':
 #     print("Usage: {0} timestr".format(sys.argv[0]))
 #     sys.exit()
 
-    year = '2010'
+    try:
+        year = sys.argv[1]
+    except IndexError:
+        print("Usage: {0} year(yyyy)".format(sys.argv[0]))
+        sys.exit()
     months = range(1,13)
     for month in months:
         timestr = year + str(month).zfill(2)

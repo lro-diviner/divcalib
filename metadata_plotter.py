@@ -8,21 +8,33 @@ import sys
 from diviner import file_utils as fu
 import pandas as pd
 
+basedir = pjoin(fu.outpath, 'metadata')
 
 def resampler(year):
-    basedir = pjoin(fu.outpath, 'metadata')
-
     fnames = glob.glob(pjoin(basedir, year+'??.h5'))
     fnames.sort()
+    l = []
     for fname in fnames:
         print("Reading {0}".format(fname))
         basename = os.path.basename(fname)
         store_key = os.path.splitext(basename)[0]
-        store_fname = pjoin(basedir, str(year) + '.h5')
         store = pd.HDFStore(fname)
-        store.select('df').resample('1d', kind='period').to_hdf(store_fname, store_key)
+        l.append(store.select('df').resample('1d', kind='period'))
         store.close()
-        
+
+    df = pd.concat(l)
+    store_fname = pjoin(basedir, str(year) + '_daily_means.h5')
+    df.to_hdf(store_fname, 'df')
+    
+def get_all_df(colname):
+    years = range(2009,2014)
+    l = []
+    for year in years:
+        store = pd.HDFStore(pjoin(basedir, str(year)+'_daily_means.h5'))
+        l.append(store['df'])
+        store.close()
+    return pd.concat(l)
+
     
 if __name__ == '__main__':
     try:
