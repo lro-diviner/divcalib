@@ -634,7 +634,7 @@ class DivXDataPump(object):
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
-    datapath = os.path.join(datapath, "div247")
+    datapath = "/luna1/marks/div247"
     rec_dtype, keys = get_div247_dtypes()
     
     def clean_final_df(self, df_in):
