@@ -265,26 +265,12 @@ class RDRReader(object):
                                              
 
 def parse_times(df):
-    format = '%d-%b-%Y %H:%M:%S.%f'
-
-    parse = lambda x: dt.strptime(x, format)
-    date_utc = df.date + ' ' + df.utc
-    time = date_utc.map(parse)
-
-    df.set_index(time, inplace=True)
-    # dropped date and utc before, but i think it's simpler
-    # to just keep it
-    # return df.drop(['date','utc'], axis=1)
-    return df
-
-# this is currently broken so i take it out for now.    
-# def parse_times(df):
-#     format = format='%d-%b-%Y %H:%M:%S.%f'
-#     # this is buggy, but was faster. replace it when fixed.
-#     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
-#     
-#     df.set_index(times, inplace=True)
-#     return df.drop(['date','utc'], axis=1)
+    format = format='%d-%b-%Y %H:%M:%S.%f'
+    # this is buggy, but was faster. replace it when fixed.
+    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+    
+    df.set_index(times, inplace=True)
+    return df.drop(['date','utc'], axis=1)
     
 
 def read_l1a_data(fname, nrows=None):
