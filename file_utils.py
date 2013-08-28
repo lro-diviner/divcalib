@@ -37,43 +37,6 @@ rdrdatapath = '/luna4/u/marks/feidata/DIV:opsRdr/data'
 def get_month_sample_path_from_mode(mode):
     return os.path.join(datapath, 'rdr20_month_samples', mode)
     
-    
-def read_dlre_fmt():
-    with open(os.path.join(datapath, 'dlre_rdr.fmt')) as f:
-        lines = f.readlines()
-    
-    def parse_string(s):
-        s = s[:-2]
-        return int(s[s.find('=')+2:])
-    
-    bytes = []
-    start_bytes = []
-    for line in lines:
-        if 'BYTES' in line:
-            bytes.append(parse_string(line))
-        elif 'START_BYTE' in line:
-            start_bytes.append(parse_string(line)-1)
-    
-    return start_bytes, bytes
-    
-    
-def prepare_write(Tb):
-    Tb['year'] = Tb.index.year
-    Tb['month'] = Tb.index.month
-    Tb['day'] = Tb.index.day
-    Tb['hour'] = Tb.index.hour
-    Tb['minute'] = Tb.index.minute
-    
-    dtimes = Tb.index.to_pydatetime()
-    
-    
-    Tb['second'] = ['.'.join([str(dt.second),str(dt.microsecond)]) for dt in dtimes]
-    cols = Tb.columns
-    time_cols = cols[-6:]
-    dets = cols[:-6]
-    new_cols = pd.Index(time_cols.tolist() + dets.tolist())
-    return Tb.reindex(columns=new_cols)
-
 
 class FileName(object):
     """Managing class for file name attributes """
@@ -391,8 +354,6 @@ def read_rdrplus(fpath, nrows):
 
     return pd.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
                                       skiprows=1, nrows=nrows)
-
-
 
 
 def fname_to_df(fname, rec_dtype, keys):
