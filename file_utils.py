@@ -662,6 +662,7 @@ class L1ADataPump(DivXDataPump):
         datapath = '/Users/maye/data/diviner/l1a_data'
     
     this_ext = '_L1A.TAB'
+    
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
                                       self.timestr + '*_L1A.TAB'))
@@ -680,9 +681,9 @@ class L1ADataPump(DivXDataPump):
         fnobj = FileName(fname)
         self.fnobj = fnobj
         l = []
-        l.append(read_l1a_data(fnobj.get_previous_hour_fname()))
+        l.append(read_l1a_data(fnobj.previous_fname))
         l.append(read_l1a_data(fnobj.fname))
-        l.append(read_l1a_data(fnobj.get_next_hour_fname()))
+        l.append(read_l1a_data(fnobj.next_fname))
         df = pd.concat(l)
         return self.clean_final_df(df)
             
