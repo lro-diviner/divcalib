@@ -601,9 +601,7 @@ class Div247DataPump(DivXDataPump):
         """Declare NaN value and pad nan data for some."""
         df = index_by_time(df_in)
         df[df == -9999.0] = np.nan
-        df.last_el_cmd.replace(np.nan, inplace=True)
-        df.last_az_cmd.replace(np.nan, inplace=True)
-        df.moving.replace(np.nan, inplace=True)
+        df = prepare_data(df)
         define_sdtype(df)
         return df
         
@@ -628,12 +626,13 @@ class L1ADataPump(DivXDataPump):
         return glob.glob(os.path.join(self.datapath,
                                       self.timestr + '*_L1A.TAB'))
     
-    def clean_final_df(self,df):
-        df.last_el_cmd.replace(np.nan, inplace=True)
-        df.last_az_cmd.replace(np.nan, inplace=True)
-        df.moving.replace(np.nan, inplace=True)
+    def clean_final_df(self, df):
+        df = prepare_data(df)
         define_sdtype(df)
         return df
+        
+    def has_calib(self, df):
+        df = self.clean_final_df(df)
         
     def process_one_file(self, f):
         return read_l1a_data(f)
