@@ -81,9 +81,10 @@ class FileName(object):
         super(FileName, self).__init__()
         self.basename = os.path.basename(fname)
         self.dirname = os.path.dirname(fname)
-        self.timestr= self.basename.split('_')[0]
+        self.file_id, self.ext = os.path.splitext(self.basename)
+        self.timestr= self.file_id.split('_')[0]
         # save everything after the first '_' as rest
-        self.rest = self.basename[self.basename.find('_'):]
+        self.rest = self.basename[len(self.timestr):]
         # split of the time elements
         self.year = self.timestr[:4]
         self.month = self.timestr[4:6]
@@ -103,36 +104,40 @@ class FileName(object):
         self.time = dt.strptime(self.timestr, format)
         self.format = format
     
-    def get_previous_hour_dtime(self):
+    @property
+    def previous_dtime(self):
         return self.time - timedelta(hours=1)
         
-    def get_previous_hour(self):
-        dtime = self.get_previous_hour_dtime()
-        return dtime.strftime(self.format)
+    @property
+    def previous_timestr(self):
+        return self.previous_dtime.strftime(self.format)
         
-    def get_previous_hour_fname(self):
-        dtime = self.get_previous_hour_dtime()
-        timestr = dtime.strftime(self.format)
+    @property
+    def previous_fname(self):
+        timestr = self.previous_dtime.strftime(self.format)
         return os.path.join(self.dirname, timestr + self.rest)
         
     def set_previous_hour(self):
-        newtime = self.get_previous_hour_dtime()
-        self.time = newtime
-        self.timestr = newtime.strftime(self.format)
+        self.time = self.previous_dtime
+        self.timestr = self.time.strftime(self.format)
         return self.fname
         
-    def get_next_hour_dtime(self):
+    @property
+    def next_dtime(self):
         return self.time + timedelta(hours=1)
         
-    def get_next_hour_fname(self):
-        dtime = self.get_next_hour_dtime()
-        timestr = dtime.strftime(self.format)
+    @property
+    def next_timestr(self):
+        return self.next_dtime.strftime(self.format)
+        
+    @property
+    def next_fname(self):
+        timestr = self.next_dtime.strftime(self.format)
         return os.path.join(self.dirname, timestr + self.rest)
         
     def set_next_hour(self):
-        newtime = self.get_next_hour_dtime()
-        self.time = newtime
-        self.timestr = newtime.strftime(self.format)
+        self.time = self.next_dtime
+        self.timestr = self.time.strftime(self.format)
         return self.fname
         
     @property
