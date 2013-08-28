@@ -565,6 +565,9 @@ class DivXDataPump(object):
     timestr_parser = {4: '%Y', 6: '%Y%m',
                       8: '%Y%m%d', 10: '%Y%m%d%H'}
 
+    #overwrite in child class!!
+    this_ext = '...'
+    
     def __init__(self, timestr):
         """timestr is of format yyyymm[dd[hh]], used directly by glob.
 
@@ -594,7 +597,7 @@ class DivXDataPump(object):
             yield open(fname)
 
     def get_fname_from_time(self, time):
-        return time.strftime("%Y%m%d%H.div247")
+        return time.strftime("%Y%m%d%H"+ self.this_ext)
 
     def process_one_file(self, f):
         data = np.fromfile(f, dtype=self.rec_dtype)
@@ -634,8 +637,13 @@ class DivXDataPump(object):
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
-    datapath = "/luna1/marks/div247"
+    if sys.platform != 'darwin':
+        datapath = "/luna1/marks/div247"
+    else:
+        datapath = "/Users/maye/data/diviner/div247"
     rec_dtype, keys = get_div247_dtypes()
+    
+    this_ext = '.div247'
     
     def clean_final_df(self, df_in):
         """Declare NaN value and pad nan data for some."""
@@ -651,14 +659,18 @@ class Div247DataPump(DivXDataPump):
 class Div38DataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'div38')
     rec_dtype, keys = get_div38_dtypes()
-
+    this_ext = '.div38'
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath, self.timestr + '*'))
 
 
 class L1ADataPump(DivXDataPump):
-    datapath = l1adatapath
+    if sys.platform != 'darwin':
+        datapath = l1adatapath
+    else:
+        datapath = '/Users/maye/data/diviner/l1a_data'
     
+    this_ext = '_L1A.TAB'
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
                                       self.timestr + '*_L1A.TAB'))
