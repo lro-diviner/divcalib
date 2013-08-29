@@ -10,6 +10,7 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 from diviner.data_prep import define_sdtype, prepare_data, index_by_time
+from collections import deque
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -37,43 +38,6 @@ rdrdatapath = '/luna4/u/marks/feidata/DIV:opsRdr/data'
 def get_month_sample_path_from_mode(mode):
     return os.path.join(datapath, 'rdr20_month_samples', mode)
     
-    
-def read_dlre_fmt():
-    with open(os.path.join(datapath, 'dlre_rdr.fmt')) as f:
-        lines = f.readlines()
-    
-    def parse_string(s):
-        s = s[:-2]
-        return int(s[s.find('=')+2:])
-    
-    bytes = []
-    start_bytes = []
-    for line in lines:
-        if 'BYTES' in line:
-            bytes.append(parse_string(line))
-        elif 'START_BYTE' in line:
-            start_bytes.append(parse_string(line)-1)
-    
-    return start_bytes, bytes
-    
-    
-def prepare_write(Tb):
-    Tb['year'] = Tb.index.year
-    Tb['month'] = Tb.index.month
-    Tb['day'] = Tb.index.day
-    Tb['hour'] = Tb.index.hour
-    Tb['minute'] = Tb.index.minute
-    
-    dtimes = Tb.index.to_pydatetime()
-    
-    
-    Tb['second'] = ['.'.join([str(dt.second),str(dt.microsecond)]) for dt in dtimes]
-    cols = Tb.columns
-    time_cols = cols[-6:]
-    dets = cols[:-6]
-    new_cols = pd.Index(time_cols.tolist() + dets.tolist())
-    return Tb.reindex(columns=new_cols)
-
 
 class FileName(object):
     """Managing class for file name attributes """
@@ -81,9 +45,10 @@ class FileName(object):
         super(FileName, self).__init__()
         self.basename = os.path.basename(fname)
         self.dirname = os.path.dirname(fname)
-        self.timestr= self.basename.split('_')[0]
+        self.file_id, self.ext = os.path.splitext(self.basename)
+        self.timestr= self.file_id.split('_')[0]
         # save everything after the first '_' as rest
-        self.rest = self.basename[self.basename.find('_'):]
+        self.rest = self.basename[len(self.timestr):]
         # split of the time elements
         self.year = self.timestr[:4]
         self.month = self.timestr[4:6]
@@ -103,36 +68,40 @@ class FileName(object):
         self.time = dt.strptime(self.timestr, format)
         self.format = format
     
-    def get_previous_hour_dtime(self):
+    @property
+    def previous_dtime(self):
         return self.time - timedelta(hours=1)
         
-    def get_previous_hour(self):
-        dtime = self.get_previous_hour_dtime()
-        return dtime.strftime(self.format)
+    @property
+    def previous_timestr(self):
+        return self.previous_dtime.strftime(self.format)
         
-    def get_previous_hour_fname(self):
-        dtime = self.get_previous_hour_dtime()
-        timestr = dtime.strftime(self.format)
+    @property
+    def previous_fname(self):
+        timestr = self.previous_dtime.strftime(self.format)
         return os.path.join(self.dirname, timestr + self.rest)
         
     def set_previous_hour(self):
-        newtime = self.get_previous_hour_dtime()
-        self.time = newtime
-        self.timestr = newtime.strftime(self.format)
+        self.time = self.previous_dtime
+        self.timestr = self.time.strftime(self.format)
         return self.fname
         
-    def get_next_hour_dtime(self):
+    @property
+    def next_dtime(self):
         return self.time + timedelta(hours=1)
         
-    def get_next_hour_fname(self):
-        dtime = self.get_next_hour_dtime()
-        timestr = dtime.strftime(self.format)
+    @property
+    def next_timestr(self):
+        return self.next_dtime.strftime(self.format)
+        
+    @property
+    def next_fname(self):
+        timestr = self.next_dtime.strftime(self.format)
         return os.path.join(self.dirname, timestr + self.rest)
         
     def set_next_hour(self):
-        newtime = self.get_next_hour_dtime()
-        self.time = newtime
-        self.timestr = newtime.strftime(self.format)
+        self.time = self.next_dtime
+        self.timestr = self.time.strftime(self.format)
         return self.fname
         
     @property
@@ -260,26 +229,12 @@ class RDRReader(object):
                                              
 
 def parse_times(df):
-    format = '%d-%b-%Y %H:%M:%S.%f'
-
-    parse = lambda x: dt.strptime(x, format)
-    date_utc = df.date + ' ' + df.utc
-    time = date_utc.map(parse)
-
-    df.set_index(time, inplace=True)
-    # dropped date and utc before, but i think it's simpler
-    # to just keep it
-    # return df.drop(['date','utc'], axis=1)
-    return df
-
-# this is currently broken so i take it out for now.    
-# def parse_times(df):
-#     format = format='%d-%b-%Y %H:%M:%S.%f'
-#     # this is buggy, but was faster. replace it when fixed.
-#     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
-#     
-#     df.set_index(times, inplace=True)
-#     return df.drop(['date','utc'], axis=1)
+    format = format='%d-%b-%Y %H:%M:%S.%f'
+    # this is buggy, but was faster. replace it when fixed.
+    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+    
+    df.set_index(times, inplace=True)
+    return df.drop(['date','utc'], axis=1)
     
 
 def read_l1a_data(fname, nrows=None):
@@ -400,8 +355,6 @@ def read_rdrplus(fpath, nrows):
 
     return pd.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
                                       skiprows=1, nrows=nrows)
-
-
 
 
 def fname_to_df(fname, rec_dtype, keys):
@@ -565,6 +518,9 @@ class DivXDataPump(object):
     timestr_parser = {4: '%Y', 6: '%Y%m',
                       8: '%Y%m%d', 10: '%Y%m%d%H'}
 
+    #overwrite in child class!!
+    this_ext = '...'
+    
     def __init__(self, timestr):
         """timestr is of format yyyymm[dd[hh]], used directly by glob.
 
@@ -575,6 +531,7 @@ class DivXDataPump(object):
         self.time = dt.strptime(timestr,
                                 self.timestr_parser[len(timestr)])
         self.fnames = self.find_fnames()
+        self.fname = FileName(self.fnames[0])
         self.fnames.sort()
 
     def find_fnames(self):
@@ -594,7 +551,7 @@ class DivXDataPump(object):
             yield open(fname)
 
     def get_fname_from_time(self, time):
-        return time.strftime("%Y%m%d%H.div247")
+        return time.strftime("%Y%m%d%H"+ self.this_ext)
 
     def process_one_file(self, f):
         data = np.fromfile(f, dtype=self.rec_dtype)
@@ -634,16 +591,19 @@ class DivXDataPump(object):
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
-    datapath = "/luna1/marks/div247"
+    if sys.platform != 'darwin':
+        datapath = "/luna1/marks/div247"
+    else:
+        datapath = "/Users/maye/data/diviner/div247"
     rec_dtype, keys = get_div247_dtypes()
+    
+    this_ext = '.div247'
     
     def clean_final_df(self, df_in):
         """Declare NaN value and pad nan data for some."""
         df = index_by_time(df_in)
         df[df == -9999.0] = np.nan
-        df.last_el_cmd.replace(np.nan, inplace=True)
-        df.last_az_cmd.replace(np.nan, inplace=True)
-        df.moving.replace(np.nan, inplace=True)
+        df = prepare_data(df)
         define_sdtype(df)
         return df
         
@@ -651,25 +611,125 @@ class Div247DataPump(DivXDataPump):
 class Div38DataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'div38')
     rec_dtype, keys = get_div38_dtypes()
-
+    this_ext = '.div38'
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath, self.timestr + '*'))
 
 
+class L1ADataFile(object):
+    if sys.platform != 'darwin':
+        datapath = l1adatapath
+    else:
+        datapath = '/Users/maye/data/diviner/l1a_data'
+    
+    this_ext = '_L1A.TAB'
+    
+    @classmethod
+    def from_timestr(cls, timestr):
+        "Globbing for matching files to timestr and opening first one."
+        fnames = glob.glob(os.path.join(cls.datapath,
+                                        timestr + '*' + cls.this_ext))
+        return cls(fname=fnames[0])
+    
+    def __init__(self, fname):
+        self.fname = fname
+        self.fn_handler = FileName(fname)
+        self.header = L1AHeader()
+        
+    def parse_tab(self, fname=None):
+        if not fname:
+            fname = self.fname
+        self.df = pd.io.parsers.read_csv(fname,
+                                    names=self.header.columns,
+                                    na_values='-9999',
+                                    skiprows=8,
+                                    skipinitialspace=True)
+        
+    def parse_times(self):
+        self.df = parse_times(self.df)
+        
+    def clean(self):
+        df = prepare_data(self.df)
+        define_sdtype(df)
+        self.df = df
+        
+    def open_dirty(self):
+        self.parse_tab()
+        self.parse_times()
+        return self.df
+        
+    def open(self):
+        self.parse_tab()
+        self.parse_times()
+        self.clean()
+        return self.df
+
+
+def get_clean_l1a(timestr):
+    l1afile = L1ADataFile.from_timestr(timestr)
+    return l1afile.open()
+
+
+def get_dirty_l1a(timestr):
+    l1afile = L1ADataFile.from_timestr(timestr)
+    return l1afile.open_dirty()
+
+
+def get_raw_l1a(timestr):
+    l1afile = L1ADataFile.from_timestr(timestr)
+    l1afile.parse_tab()
+    return l1afile.df
+
+        
+def open_and_accumulate(fname):
+    """One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
+     to be unique! Each cleaning operation starts the numbering from 1 again!
+     """
+    centerfile = L1ADataFile(fname)
+    dataframes = deque()
+    dataframes.append(centerfile.open())
+    # append previous hours until calib blocks found
+    # start with center file:
+    fn_handler = FileName(fname)
+    while True:
+        fn_handler.set_previous_hour()
+        f = L1ADataFile(fn_handler.fname)
+        print("Appending {0} on the left.".format(fn_handler.timestr))
+        dataframes.appendleft(f.open_dirty())
+        if any(f.open().is_calib):
+            break
+    # append next hours until calib blocks found
+    # go back to center file name
+    fn_handler = FileName(fname)
+    while True:
+        fn_handler.set_next_hour()
+        f = L1ADataFile(fn_handler.fname)
+        print("Appending {0} on the right.".format(fn_handler.timestr))
+        dataframes.append(f.open_dirty())
+        if any(f.open().is_calib):
+            break
+    df = prepare_data(pd.concat(list(dataframes)))
+    define_sdtype(df)
+    return df
+    
+
 class L1ADataPump(DivXDataPump):
-    datapath = l1adatapath
+    if sys.platform != 'darwin':
+        datapath = l1adatapath
+    else:
+        datapath = '/Users/maye/data/diviner/l1a_data'
+    
+    this_ext = '_L1A.TAB'
     
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*_L1A.TAB'))
+                                      self.timestr + '*' + self.this_ext))
     
-    def clean_final_df(self,df):
-        df.last_el_cmd.replace(np.nan, inplace=True)
-        df.last_az_cmd.replace(np.nan, inplace=True)
-        df.moving.replace(np.nan, inplace=True)
+    def clean_final_df(self, df):
+        df = prepare_data(df)
         define_sdtype(df)
         return df
-        
+                
     def process_one_file(self, f):
         return read_l1a_data(f)
         
@@ -677,9 +737,9 @@ class L1ADataPump(DivXDataPump):
         fnobj = FileName(fname)
         self.fnobj = fnobj
         l = []
-        l.append(read_l1a_data(fnobj.get_previous_hour_fname()))
+        l.append(read_l1a_data(fnobj.previous_fname))
         l.append(read_l1a_data(fnobj.fname))
-        l.append(read_l1a_data(fnobj.get_next_hour_fname()))
+        l.append(read_l1a_data(fnobj.next_fname))
         df = pd.concat(l)
         return self.clean_final_df(df)
             

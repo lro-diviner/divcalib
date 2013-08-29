@@ -63,7 +63,7 @@ def prepare_data(df_in):
 
 
 def get_sv_selector(df):
-    "Create dataframe selecotr for pointing limits of divconstants 'c' file"
+    "Create dataframe selector for pointing limits of divconstants 'c' file"
     return (df.last_az_cmd >= c.SV_AZ_MIN) & \
            (df.last_az_cmd <= c.SV_AZ_MAX) & \
            (df.last_el_cmd >= c.SV_EL_MIN) & \
@@ -71,7 +71,7 @@ def get_sv_selector(df):
 
 
 def get_bb_selector(df):
-    "Create dataframe selecotr for pointing limits of divconstants 'c' file"
+    "Create dataframe selector for pointing limits of divconstants 'c' file"
     return (df.last_az_cmd >= c.BB_AZ_MIN) & \
            (df.last_az_cmd <= c.BB_AZ_MAX) & \
            (df.last_el_cmd >= c.BB_EL_MIN) & \
@@ -79,7 +79,7 @@ def get_bb_selector(df):
 
 
 def get_st_selector(df):
-    "Create dataframe selecotr for pointing limits of divconstants 'c' file"
+    "Create dataframe selector for pointing limits of divconstants 'c' file"
     return (df.last_az_cmd >= c.ST_AZ_MIN) & \
            (df.last_az_cmd <= c.ST_AZ_MAX) & \
            (df.last_el_cmd >= c.ST_EL_MIN) & \
