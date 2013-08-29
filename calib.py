@@ -336,7 +336,7 @@ class Calibrator(object):
         # to control if RBB are just determined for 1 mean bb temp (JPL's method) 
         #or for all bbtemps of a bbview
         # I have confirmed in tests that the results differ negligibly (2e-16 rads)
-        # and the JPL method is better in speed
+        # and the JPL method (single_rbb=True) is better in speed
         self.single_rbb = single_rbb
         # to control if some of the first samples of views are being skipped
         self.skipsamples = skipsamples
