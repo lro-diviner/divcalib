@@ -617,6 +617,20 @@ class Div38DataPump(DivXDataPump):
 
 
 class L1ADataFile(object):
+    if sys.platform != 'darwin':
+        datapath = l1adatapath
+    else:
+        datapath = '/Users/maye/data/diviner/l1a_data'
+    
+    this_ext = '_L1A.TAB'
+    
+    @classmethod
+    def from_timestr(cls, timestr):
+        "Globbing for matching files to timestr and opening first one."
+        fnames = glob.glob(os.path.join(cls.datapath,
+                                        timestr + '*' + cls.this_ext))
+        return cls(fname=fnames[0])
+    
     def __init__(self, fname):
         self.fname = fname
         self.fn_handler = FileName(fname)
@@ -649,7 +663,23 @@ class L1ADataFile(object):
         self.parse_times()
         self.clean()
         return self.df
-        
+
+
+def get_clean_l1a(timestr):
+    l1afile = L1ADataFile.from_timestr(timestr)
+    return l1afile.open()
+
+
+def get_dirty_l1a(timestr):
+    l1afile = L1ADataFile.from_timestr(timestr)
+    return l1afile.open_dirty()
+
+
+def get_raw_l1a(timestr):
+    l1afile = L1ADataFile.from_timestr(timestr)
+    l1afile.parse_tab()
+    return l1afile.df
+
         
 def open_and_accumulate(fname):
     """One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
@@ -693,7 +723,7 @@ class L1ADataPump(DivXDataPump):
     
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*_L1A.TAB'))
+                                      self.timestr + '*' + self.this_ext))
     
     def clean_final_df(self, df):
         df = prepare_data(df)
