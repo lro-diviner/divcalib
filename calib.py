@@ -523,7 +523,7 @@ class Calibrator(object):
             # if the df has less than 240 samples, then part of the calblock are cut off.
             # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
             # for calibration to have the central hour ROI calibrated correctly only and written
-            # out.But this means to ensure that the calib times don't use less than 240 either.u
+            # out.But this means to ensure that the calib times don't use less than 240 either.
             if len(df) < 240:
                 return
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
@@ -661,7 +661,10 @@ class Calibrator(object):
         """
         
         ### create filter here for the kind of data to calibrate !!
-        sdata = self.df[self.df.sdtype==0]
+        # before, I was only producing science data for non-calibblock data. now I do for all
+        # as it was done like that before.
+        # sdata = self.df[self.df.sdtype==0]
+        sdata = self.df
         
         # only work with real data, filter out meta-data
         sdata = get_data_columns(sdata)
