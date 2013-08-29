@@ -281,33 +281,6 @@ class CalBlock(object):
         elif self.kind == 'ST':
             return self.df[self.df.is_stview]
              
-        
-class View(object):
-    def __init__(self, df, type, skip_samples=0):
-        self.df = df[df['is_'+type+'view']]
-        self.skip_samples=skip_samples
-    
-    def mean(self):
-        return self.df[self.skip_samples:].mean()
-        
-
-class SpaceView(View):
-    """docstring for SpaceView"""
-    def __init__(self, df, skip_samples=0):
-        super(SpaceView, self).__init__(df, 'space', skip_samples)
-
-
-class BBView(View):
-    """docstring for BBView"""
-    def __init__(self, df, skip_samples=0):
-        super(BBView, self).__init__(df, 'bb', skip_samples)
-
-
-class STView(View):
-    """docstring for STView"""
-    def __init__(self, df, skip_samples=0):
-        super(STView, self).__init__(df, 'st', skip_samples)
-
                             
 class Calibrator(object):
     """currently set up to work with a 'wide' dataframe.
