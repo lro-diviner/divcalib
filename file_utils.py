@@ -10,6 +10,7 @@ import os
 from datetime import timedelta
 from datetime import datetime as dt
 from diviner.data_prep import define_sdtype, prepare_data, index_by_time
+from collections import deque
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -530,6 +531,7 @@ class DivXDataPump(object):
         self.time = dt.strptime(timestr,
                                 self.timestr_parser[len(timestr)])
         self.fnames = self.find_fnames()
+        self.fname = FileName(self.fnames[0])
         self.fnames.sort()
 
     def find_fnames(self):
@@ -614,6 +616,73 @@ class Div38DataPump(DivXDataPump):
         return glob.glob(os.path.join(self.datapath, self.timestr + '*'))
 
 
+class L1ADataFile(object):
+    def __init__(self, fname):
+        self.fname = fname
+        self.fn_handler = FileName(fname)
+        self.header = L1AHeader()
+        
+    def parse_tab(self, fname=None):
+        if not fname:
+            fname = self.fname
+        self.df = pd.io.parsers.read_csv(fname,
+                                    names=self.header.columns,
+                                    na_values='-9999',
+                                    skiprows=8,
+                                    skipinitialspace=True)
+        
+    def parse_times(self):
+        self.df = parse_times(self.df)
+        
+    def clean(self):
+        df = prepare_data(self.df)
+        define_sdtype(df)
+        self.df = df
+        
+    def open_dirty(self):
+        self.parse_tab()
+        self.parse_times()
+        return self.df
+        
+    def open(self):
+        self.parse_tab()
+        self.parse_times()
+        self.clean()
+        return self.df
+        
+        
+def open_and_accumulate(fname):
+    """One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
+     to be unique! Each cleaning operation starts the numbering from 1 again!
+     """
+    centerfile = L1ADataFile(fname)
+    dataframes = deque()
+    dataframes.append(centerfile.open())
+    # append previous hours until calib blocks found
+    # start with center file:
+    fn_handler = FileName(fname)
+    while True:
+        fn_handler.set_previous_hour()
+        f = L1ADataFile(fn_handler.fname)
+        print("Appending {0} on the left.".format(fn_handler.timestr))
+        dataframes.appendleft(f.open_dirty())
+        if any(f.open().is_calib):
+            break
+    # append next hours until calib blocks found
+    # go back to center file name
+    fn_handler = FileName(fname)
+    while True:
+        fn_handler.set_next_hour()
+        f = L1ADataFile(fn_handler.fname)
+        print("Appending {0} on the right.".format(fn_handler.timestr))
+        dataframes.append(f.open_dirty())
+        if any(f.open().is_calib):
+            break
+    df = prepare_data(pd.concat(list(dataframes)))
+    define_sdtype(df)
+    return df
+    
+
 class L1ADataPump(DivXDataPump):
     if sys.platform != 'darwin':
         datapath = l1adatapath
@@ -630,10 +699,7 @@ class L1ADataPump(DivXDataPump):
         df = prepare_data(df)
         define_sdtype(df)
         return df
-        
-    def has_calib(self, df):
-        df = self.clean_final_df(df)
-        
+                
     def process_one_file(self, f):
         return read_l1a_data(f)
         
