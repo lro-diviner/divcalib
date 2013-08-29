@@ -122,7 +122,7 @@ def main(input_tuple):
     
     print("\nFinished calibrating.")
     
-    print("Reading old RDR now for",fn.timestr)
+    print("Reading old RDR for",fn.timestr)
     rdr = fu.RDRReader.from_timestr(fn.timestr)
     # don't parse times for speed reasons
     rdrdf = rdr.read_df(do_parse_times=False)
@@ -174,8 +174,10 @@ if __name__ == '__main__':
     # find outpaths that are done
     try:
         fnames_done = os.listdir(fu.get_month_sample_path_from_mode(mode))
-        timestrs_done = [fu.FileName(i).timestr for i in fnames_done]
-        fnames_todo = [i for i in fnames if timestrs_done.count(fu.FileName(i).timestr) < 7]
+        timestrs_done = [fu.FileName(fname).timestr for fname in fnames_done]
+        # < 7 means, if not all channels 3..9 (=7) are done yet, it's considered a TODO
+        fnames_todo = \
+           [fname for fname in fnames if timestrs_done.count(fu.FileName(fname).timestr) < 7]
     except OSError:
         fnames_todo = fnames
         
