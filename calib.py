@@ -241,7 +241,7 @@ class CalBlock(object):
         return get_mean_time(self.center_data, self.skip_samples)
 
     @property
-    def offsets(self):
+    def mean_offsets(self):
         """Determine offsets for each available spacelook.
 
         At initialisation, this object receives the number of samples to skip.
@@ -251,6 +251,19 @@ class CalBlock(object):
         mean_spaceviews = self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
         # then return mean value of these 2 labels, detectors as index.
         return mean_spaceviews.mean()
+
+    @property
+    def mean_bbcounts(self):
+        """Determine mean counts for black-body views.
+
+        At init, this object receives skip_samples, used here.
+        """
+        bbviews = get_data_columns(self.df[self.df.is_bbview])
+        return bbviews[self.skip_samples:].mean()
+
+    @property
+    def snr(self):
+        return np.abs(self.mean_offsets - self.mean_bbcounts)
 
     @property
     def sv_stds(self):
