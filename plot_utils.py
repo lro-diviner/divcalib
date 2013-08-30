@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from matplotlib.pylab import gcf,title, subplots, figure
-from mpl_toolkits.mplot3d import axes3d
 import matplotlib.animation as animation
 import numpy as np
 import sys
@@ -11,13 +10,13 @@ import pandas as pd
 def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
 
-    
+
 def plot_calib_block(df, label, id, det='a6_11', **kwargs):
     """Plot one designated calibration block.
-    
+
     Parameters:
     -----------
-    
+
     df:     pandas Dataframe that has the block labels defined to use as filter.
     label:  one of 'calib','bb','sv','st'
     id:     number of block label to be plotted
@@ -40,7 +39,7 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
 
 def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
     """plot the data for each det in det_list for all channels.
-    
+
     Parameters:
         df          pandas DataFrame
         det_list    list of detector numbers between 1..21
@@ -63,7 +62,7 @@ def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
         axis.set_title('Channel {0}'.format(ch+6))
         axis.legend(loc='best')
 
-   
+
 def create_plot_pointings(azim_start=-60,
                           azim_min=-80,
                           azim_max=-40,
@@ -79,9 +78,9 @@ def create_plot_pointings(azim_start=-60,
     elevs_up = range(elev_min, elev_start)
     elevs = elevs_down + elevs_up
     # return pointing tuples
-    return zip(elevs, azis)    
-    
- 
+    return zip(elevs, azis)
+
+
 def plot3d_animation(df_in):
     df = df_in.resample('1min')
     Z = df.values.T
@@ -89,18 +88,18 @@ def plot3d_animation(df_in):
     y = np.arange(21)
     X, Y = np.meshgrid(x, y)
     pointings = create_plot_pointings()
-    
+
     def update_pointing(pointing):
         ax.view_init(*pointing)
-    
+
     fig = figure(figsize=(10,8))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_wireframe(X, Y, Z, rstride=5, cstride=5)
-    
-    view_ani = animation.FuncAnimation(fig, update_pointing, pointings,
+
+    animation.FuncAnimation(fig, update_pointing, pointings,
                                        interval=100, repeat_delay=2000)
-                                       
-    
+
+
 class ProgressBar:
     def __init__(self, iterations):
         self.iterations = iterations
