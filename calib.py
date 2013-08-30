@@ -208,19 +208,25 @@ class CalBlock(object):
     OUT:
         via several class methods
     """
+
+    # class members
+    kinds = ['sv','bb','st']
+
     def __init__(self, df, skip_samples=0):
         self.df = df
         self.number = df.calib_block_labels[0]
         self.skip_samples = skip_samples
-        self.sv_labels = self.get_unique_labels('sv')
-        self.bb_labels = self.get_unique_labels('bb')
-        self.st_labels = self.get_unique_labels('st')
+        for kind in self.kinds:
+            setattr(self, kind+'_labels', self.get_unique_labels(kind))
         self.spaceviews = get_data_columns(df[df.is_spaceview])
-        self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
+        self.sv_grouped = self.spaceviews.groupby(df.sv_block_labels)
 
-    def get_unique_labels(self,view):
+    def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
         return np.sort(labels[labels > 0])
+
+    def get_label_times(self):
+        pass
 
     @property
     def mean_time(self):
