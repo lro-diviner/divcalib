@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from matplotlib.pylab import gcf,title, subplots, figure
+from matplotlib.pylab import gcf,title, subplots, figure, gca
 import matplotlib.animation as animation
+from matplotlib.ticker import ScalarFormatter
 import numpy as np
 import sys
 import pandas as pd
 
+y_formatter = ScalarFormatter(useOffset=False)
 
 def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
@@ -33,8 +35,24 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
         if len(timeseries) > 0:
             # add to dataframe, cut off 'is_' from name (nicer for plot)
             df_to_plot[sel[3:]] = timeseries
-    df_to_plot.plot(style='.', **kwargs)
+    ax = df_to_plot.plot(style='.', **kwargs)
+    ax.yaxis.set_major_formatter(y_formatter)
     title(det)
+
+
+def plot_all_calib_blocks(df):
+    calib_ids = df.calib_block_labels.unique().tolist()
+    # remove the 0 entry if if'ts there.
+    try:
+        calib_ids.remove(0)
+    except ValueError:
+        pass
+    length = len(calib_ids)
+    if not length%2 == 0:
+        length += 1
+    fig, axes = subplots(length/2, 2)
+    for i, id in enumerate(calib_ids):
+        plot_calib_block(df, 'calib', id, ax=axes.flatten()[i])
 
 
 def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
