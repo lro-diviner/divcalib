@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from matplotlib.pylab import gcf,title, subplots, figure, gca
+from matplotlib.pylab import gcf,title, subplots, figure
 import matplotlib.animation as animation
 from matplotlib.ticker import ScalarFormatter
 import numpy as np
@@ -40,19 +40,19 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
     title(det)
 
 
-def plot_all_calib_blocks(df):
+def plot_all_calib_blocks(df, **kwargs):
     calib_ids = df.calib_block_labels.unique().tolist()
-    # remove the 0 entry if if'ts there.
-    try:
-        calib_ids.remove(0)
-    except ValueError:
-        pass
+    for calid in calib_ids[:]:
+        if not any(df[df.calib_block_labels == calid]['is_calib']):
+            calib_ids.remove(calid)
     length = len(calib_ids)
     if not length%2 == 0:
         length += 1
     fig, axes = subplots(length/2, 2)
-    for i, id in enumerate(calib_ids):
-        plot_calib_block(df, 'calib', id, ax=axes.flatten()[i])
+    for i, calid in enumerate(calib_ids):
+        if not any(df[df.calib_block_labels == calid]['is_calib']):
+            continue
+        plot_calib_block(df, 'calib', calid, ax=axes.flatten()[i], **kwargs)
 
 
 def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
