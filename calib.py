@@ -220,13 +220,18 @@ class CalBlock(object):
             setattr(self, kind+'_labels', self.get_unique_labels(kind))
         self.spaceviews = get_data_columns(df[df.is_spaceview])
         self.sv_grouped = self.spaceviews.groupby(df.sv_block_labels)
+        self.get_label_times()
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
         return np.sort(labels[labels > 0])
 
     def get_label_times(self):
-        pass
+        self.sv_mean_times = pd.DataFrame(index=self.sv_labels)
+        values = []
+        for svlabel in self.sv_labels:
+            values.append(get_mean_time(self.df[self.df.sv_block_labels == svlabel]))
+        self.sv_mean_times['times'] = values
 
     @property
     def mean_time(self):
