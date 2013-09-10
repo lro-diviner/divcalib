@@ -122,7 +122,7 @@ def main(input_tuple):
     
     print("\nFinished calibrating.")
     
-    print("Reading old RDR now for",fn.timestr)
+    print("Reading old RDR for",fn.timestr)
     rdr = fu.RDRReader.from_timestr(fn.timestr)
     # don't parse times for speed reasons
     rdrdf = rdr.read_df(do_parse_times=False)

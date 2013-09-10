@@ -12,7 +12,7 @@ def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
 
     
-def plot_calib_block(df,label,id,det='a6_11'):
+def plot_calib_block(df, label, id, det='a6_11', **kwargs):
     """Plot one designated calibration block.
     
     Parameters:
@@ -34,7 +34,7 @@ def plot_calib_block(df,label,id,det='a6_11'):
         if len(timeseries) > 0:
             # add to dataframe, cut off 'is_' from name (nicer for plot)
             df_to_plot[sel[3:]] = timeseries
-    df_to_plot.plot(style='.')
+    df_to_plot.plot(style='.', **kwargs)
     title(det)
 
 
