@@ -18,7 +18,6 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
 
     Parameters:
     -----------
-
     df:     pandas Dataframe that has the block labels defined to use as filter.
     label:  one of 'calib','bb','sv','st'
     id:     number of block label to be plotted
@@ -37,13 +36,15 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
             df_to_plot[sel[3:]] = timeseries
     ax = df_to_plot.plot(style='.', **kwargs)
     ax.yaxis.set_major_formatter(y_formatter)
-    title(det)
+    ax.set_title(det)
 
 
 def plot_all_calib_blocks(df, **kwargs):
     calib_ids = df.calib_block_labels.unique().tolist()
+    # check if the calib block has actually calibration data
     for calid in calib_ids[:]:
         if not any(df[df.calib_block_labels == calid]['is_calib']):
+            print("Calib block {0} has no caldata.".format(calid))
             calib_ids.remove(calid)
     length = len(calib_ids)
     if not length%2 == 0:
@@ -53,6 +54,7 @@ def plot_all_calib_blocks(df, **kwargs):
         if not any(df[df.calib_block_labels == calid]['is_calib']):
             continue
         plot_calib_block(df, 'calib', calid, ax=axes.flatten()[i], **kwargs)
+    fig.suptitle("Cal-Blocks {0}".format(calib_ids))
 
 
 def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
