@@ -13,7 +13,7 @@ def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
 
 
-def plot_calib_block(df, label, id, det='a6_11', **kwargs):
+def plot_calib_block(df, label, id, det='a6_11', limits=None, **kwargs):
     """Plot one designated calibration block.
 
     Parameters:
@@ -37,6 +37,8 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
     ax = df_to_plot.plot(style='.', **kwargs)
     ax.yaxis.set_major_formatter(y_formatter)
     ax.set_title(det)
+    if limits:
+        ax.set_ylim(limits)
 
 
 def plot_all_calib_blocks(df, **kwargs):
