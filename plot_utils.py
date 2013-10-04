@@ -11,8 +11,7 @@ import pandas as pd
 def save_to_www(fname, **kwargs):
     gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
 
-    
-def plot_calib_block(df, label, id, det='a6_11', **kwargs):
+def plot_calib_block(df, label, id, det='a6_11', limits=None, **kwargs):
     """Plot one designated calibration block.
     
     Parameters:
@@ -34,8 +33,29 @@ def plot_calib_block(df, label, id, det='a6_11', **kwargs):
         if len(timeseries) > 0:
             # add to dataframe, cut off 'is_' from name (nicer for plot)
             df_to_plot[sel[3:]] = timeseries
-    df_to_plot.plot(style='.', **kwargs)
-    title(det)
+    ax = df_to_plot.plot(style='.', **kwargs)
+    ax.yaxis.set_major_formatter(y_formatter)
+    ax.set_title(det)
+    if limits:
+        ax.set_ylim(limits)
+
+
+def plot_all_calib_blocks(df, **kwargs):
+    calib_ids = df.calib_block_labels.unique().tolist()
+    # check if the calib block has actually calibration data
+    for calid in calib_ids[:]:
+        if not any(df[df.calib_block_labels == calid]['is_calib']):
+            print("Calib block {0} has no caldata.".format(calid))
+            calib_ids.remove(calid)
+    length = len(calib_ids)
+    if not length%2 == 0:
+        length += 1
+    fig, axes = subplots(length/2, 2)
+    for i, calid in enumerate(calib_ids):
+        if not any(df[df.calib_block_labels == calid]['is_calib']):
+            continue
+        plot_calib_block(df, 'calib', calid, ax=axes.flatten()[i], **kwargs)
+    fig.suptitle("Cal-Blocks {0}".format(calib_ids))
 
 
 def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
