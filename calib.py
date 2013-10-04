@@ -224,7 +224,10 @@ class CalBlock(object):
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
-        return np.sort(labels[labels > 0])
+        # kick out the 0 label for non-calib data
+        labels = labels[labels > 0]
+        # if empty return None
+        return np.sort(labels) if labels.tolist() else None
 
     def get_label_times(self):
         self.sv_mean_times = pd.DataFrame(index=self.sv_labels)
@@ -289,25 +292,29 @@ class CalBlock(object):
         Possible kinds: 'BB', 'ST', 'BOTH'
         """
         # more than 1 kind?
-        if (self.st_labels.size + self.bb_labels.size) > 1:
-            return 'BOTH'
-        elif self.st_labels.size > 0:
-            return 'ST'
-        elif self.bb_labels.size > 0:
+        if self.st_labels is not None:
+            if self.bb_labels is not None:
+                return 'BOTH'
+            else:
+                return 'ST'
+        elif self.bb_labels is not None:
             return 'BB'
         else:
             return None
 
     @property
     def center_data(self):
-        if self.kind == 'BOTH':
-            # for the lack of a better definition, if this calib block both
-            # contains ST and BB data, I take both as 'center_data'
-            return self.df[(self.df.is_stview) | (self.df.is_bbview)]
-        elif self.kind == 'BB':
-            return self.df[self.df.is_bbview]
-        elif self.kind == 'ST':
-            return self.df[self.df.is_stview]
+        # return only bbview for now, no visual calib yet
+        return self.df[self.df.is_bbview]
+        #if self.kind == 'BOTH':
+        #    # for the lack of a better definition, if this calib block both
+        #    # contains ST and BB data, I take both as 'center_data'
+        #    return self.df[(self.df.is_stview) | (self.df.is_bbview)]
+        #elif self.kind == 'BB':
+        #    return self.df[self.df.is_bbview]
+        #elif self.kind == 'ST':
+        #    return self.df[self.df.is_stview]
+
 
 
 class Calibrator(object):
@@ -325,7 +332,8 @@ class Calibrator(object):
                            do_rad_corr=True,
                            do_negative_corr=False,
                            calfitting_order=1,
-                           new_rad_corr=True):
+                           new_rad_corr=True,
+                           new_offsets=False):
         self.df = df
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
@@ -352,6 +360,9 @@ class Calibrator(object):
 
         # control if radiance should be corrected
         self.do_rad_corr = do_rad_corr
+
+        # which offsets to do:
+        self.new_offsets = new_offsets
 
         # subtract the radiance correction instead of adding
         self.do_negative_corr = do_negative_corr
@@ -510,56 +521,60 @@ class Calibrator(object):
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
 
+    def get_mean_time(self, df_in):
+        df = df_in[self.SV_NUM_SKIP_SAMPLE:]
+        t1 = df.index[0]
+        t2 = df.index[-1]
+        t = t1 + (t2 - t1) // 2
+        return t
+
     def calc_offsets(self):
 
-        ##
-        ### currently stviews are included here, but in calc_calib_times not!!
-        ##
+        # filter down to spaceviews and data columns (leave out meta-data)
+        spaceviews = get_data_columns(self.df[self.df.is_spaceview])
+        if self.new_offsets:
 
-        def process_calblock(df):
-            # if the df has less than 240 samples, then part of the calblock are cut off.
-            # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
-            # for calibration to have the central hour ROI calibrated correctly only and written
-            # out.But this means to ensure that the calib times don't use less than 240 either.
-            if len(df) < 240:
-                return
-            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
-            if cb.kind == 'ST':
-                return
-            return cb.offsets
+            grouped = spaceviews.groupby(self.df.sv_block_labels)
+            # change here for the aggregation method
+            offsets = grouped.agg(self.skipped_mean, self.SV_NUM_SKIP_SAMPLE)
 
-        ###
-        # change here for method of means!!
-        # the current method aggregates just 1 value for the whole calibration block
-        ###
-        offsets = get_data_columns(self.calgrouped.agg(process_calblock)).dropna()
+            # take any detector's data to determine the mean time
+            offset_times = grouped.a3_11.agg(self.get_mean_time)
 
-        # # set the times as index for this dataframe of offsets
-        offsets.index = self.calib_times
+            # # set the times as index for this dataframe of offsets
+            offsets.index = offset_times
 
-        self.offsets = offsets
+            # drop the empty entry for the non-spaceview with label = 0
+            self.offsets = offsets.dropna()
+
+        else:
+
+            def get_offsets(df):
+                cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
+                return cb.mean_offsets
+            # groupby calib blocks here, not spaceviews
+            offsets = get_data_columns(self.calgrouped.agg(get_offsets))
+            offset_times = self.calgrouped.a3_11.agg(self.get_mean_time)
+            offsets.index = offset_times
+            self.offsets = get_data_columns(offsets)
 
     def calc_CBB(self):
-        # kick out moving data and get only bbviews
-        bbviews = self.df[self.df.is_bbview]
-
-        # get only the science data columns
-        bbviews_counts = get_data_columns(bbviews)
+        # kick out moving data and get only bbviews and only data channels
+        bbviews = get_data_columns(self.df[self.df.is_bbview])
 
         # group by calibration block label
         # does bbview ever happen more than once in one calib
         # block?
-        grouped = bbviews_counts.groupby(self.df.calib_block_labels)
+        grouped = bbviews.groupby(self.df.calib_block_labels)
 
         ###
         # change here for the aggregation method
         ###
         bbcounts = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
 
-        # reindex for the available calib times:
-        bbcounts = bbcounts.reindex(self.calib_times.index)
+        bbtimes = grouped.a3_11.agg(get_mean_time, self.BBV_NUM_SKIP_SAMPLE)
         # set the times as index for this dataframe of bbcounts
-        bbcounts.index = self.bbcal_times
+        bbcounts.index = bbtimes
 
         self.CBB = bbcounts
 
@@ -589,10 +604,12 @@ class Calibrator(object):
         bbviews_temps = self.df[self.df.is_bbview][T_cols]
         grouped = bbviews_temps.groupby(self.df.calib_block_labels)
         bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
+
         # in case one of the calib block labels was dropped for a reason while
         # calculating the calib_times, I drop it here, too, by only taking the
         # calib_block_labels that are in the index of self.calib_times
         bbtemps = bbtemps.reindex(self.calib_times.index)
+
         # now the sizes have to match , after the above reindexing
         bbtemps.index = self.bbcal_times
 
@@ -648,25 +665,21 @@ class Calibrator(object):
 
     def interpolate_caldata(self):
         """Interpolated the offsets and gains all over the dataframe.
-
-        This is needed AFTER the gain calculation, when applying the offsets and
-        gains to all data.
         """
 
         ### create filter here for the kind of data to calibrate !!
         # before, I was only producing science data for non-calibblock data. now I do for all
         # as it was done like that before.
         # sdata = self.df[self.df.sdtype==0]
-        sdata = self.df
-
-        # only work with real data, filter out meta-data
-        sdata = get_data_columns(sdata)
+        # also, filter for only detector columns
+        sdata = get_data_columns(self.df)
 
         # times are converted to float64 for the interpolation routine
-
         # the target where we want to interpolate for
         all_times = sdata.index.values.astype('float64')
 
+        # offset times to floats
+        offset_times = self.offsets.index.values.astype('float64')
         # these are the times as defined by above calc_calib_times
         cal_times = self.calib_times.values.astype('float64')
 
@@ -683,12 +696,12 @@ class Calibrator(object):
         for i,det in enumerate(detectors):
             progressbar.animate(i+1)
             # change k for the kind of fit you want
-            s_offset = Spline(cal_times, self.offsets[det], s=0.0, k=self.calfitting_order)
-            s_gain   = Spline(cal_times, self.gains[det], s=0.0, k=self.calfitting_order)
+            s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
+            #s_gain   = Spline(cal_times, self.gains[det], s=0.0, k=self.calfitting_order)
             col_offset = s_offset(all_times)
-            col_gain   = s_gain(all_times)
+            #col_gain   = s_gain(all_times)
             offsets_interp[det] = col_offset
-            gains_interp[det]   = col_gain
+            #gains_interp[det]   = col_gain
 
         self.sdata = sdata
         self.offsets_interp = offsets_interp
