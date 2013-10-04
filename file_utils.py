@@ -186,14 +186,14 @@ class GroundCalibFile(file):
                 self.headers = parse_header_line(line)
                 return
 
-    def read_data(self, nrows=None):
+    def read_data(self, nrows=None, times=True):
         self.seek(0)
         df = pd.io.parsers.read_csv(self,
                                     skiprows=self.skip+1,
                                     skipinitialspace=True,
                                     names=self.headers,
                                     nrows=nrows)
-        return parse_times(df)
+        return parse_times(df) if times else df
 
 
 
