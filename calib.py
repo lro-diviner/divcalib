@@ -623,9 +623,9 @@ class Calibrator(object):
         self.gains = gains
 
     def interpolate_caldata(self):
-        """Interpolated the offsets and gains all over the dataframe.
+        """Interpolate the offsets and gains all over the dataframe.
 
-        This is needed AFTER the gain calculation, when applying the offsets and
+        This is needed AFTER the gain calculation, for applying the offsets and
         gains to all data.
         """
 
