@@ -124,9 +124,9 @@ class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
     def __init__(self):
         super(RBBTable, self).__init__()
-        self.df = pd.read_pickle(os.path.join(fu.codepath,
+        self.df = pd.read_hdf(os.path.join(fu.codepath,
                                        'data',
-                                       'T_to_Normalized_Radiance.df'))
+                                       't_to_norm_rad.hdf'))
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
