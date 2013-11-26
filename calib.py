@@ -694,7 +694,7 @@ class Calibrator(object):
         for channel in thermal_channels:
             # this filter catches all detectors for the current channel
             abs_radiance[abs_radiance.filter(regex=channel+'_').columns] *= \
-                self.norm_to_abs_converter.get_value(2,channel)
+                self.norm_to_abs_converter.get_value(2, channel)
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
         logging.info('Calculated radiances.')
@@ -704,11 +704,11 @@ class Calibrator(object):
         pbar = ProgressBar(147)
         i=0
         for channel in thermal_channels:
-            for det in range(1,22):
+            for det in range(1, 22):
                 i+=1
                 pbar.animate(i)
                 cdet = channel + '_' + str(det).zfill(2)
                 temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
                                              self.mcs_div_mapping[channel])
-                self.Tb[cdet] = pd.Series(temps,index=self.Tb.index)
+                self.Tb[cdet] = pd.Series(temps, index=self.Tb.index)
         logging.info("Calculated brightness temperatures.")
