@@ -139,7 +139,7 @@ class RBBTable(object):
         # (it's now a relation and not a function anymore). This makes the Spline interpolator
         # ignore the negative part which I cannot afford.
         # The work-around is to interpolate from T -3 to 3 (which are impossibly close to 0
-        # anyway for channels 3-5), ignoring the all 0 values for T in [-2..2]
+        # anyway for channels 3-5), ignoring all 0 values for T in [-2..2]
         sliced = self.df.ix[abs(self.df.index) > 2]
         for ch in range(3, 10):
             # store the Spline interpolators in dictionary, 1 per channel
