@@ -13,7 +13,11 @@ logging.basicConfig(filename='calib.log', level=logging.INFO)
 
 channels = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']
 thermal_channels = channels[2:]
+tel_A_channels = channels[:6]
+tel_B_channels = channels[6:]
 detectors = [i + '_' + str(j).zfill(2) for i in channels for j in range(1, 22)]
+tel_A_detectors = [det for det in detectors if det.startswith('a')]
+tel_B_detectors = [det for det in detectors if det.startswith('b')]
 thermal_detectors = detectors[-147:]
 
 
