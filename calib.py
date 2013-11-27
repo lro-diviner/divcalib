@@ -13,7 +13,11 @@ logging.basicConfig(filename='calib.log', level=logging.INFO)
 
 channels = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']
 thermal_channels = channels[2:]
+tel_A_channels = channels[:6]
+tel_B_channels = channels[6:]
 detectors = [i + '_' + str(j).zfill(2) for i in channels for j in range(1, 22)]
+tel_A_detectors = [det for det in detectors if det.startswith('a')]
+tel_B_detectors = [det for det in detectors if det.startswith('b')]
 thermal_detectors = detectors[-147:]
 
 
@@ -124,9 +128,9 @@ class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
     def __init__(self):
         super(RBBTable, self).__init__()
-        self.df = pd.read_pickle(os.path.join(fu.codepath,
+        self.df = pd.read_hdf(os.path.join(fu.codepath,
                                        'data',
-                                       'T_to_Normalized_Radiance.df'))
+                                       't_to_norm_rad.hdf'))
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
@@ -135,7 +139,7 @@ class RBBTable(object):
         # (it's now a relation and not a function anymore). This makes the Spline interpolator
         # ignore the negative part which I cannot afford.
         # The work-around is to interpolate from T -3 to 3 (which are impossibly close to 0
-        # anyway for channels 3-5), ignoring the all 0 values for T in [-2..2]
+        # anyway for channels 3-5), ignoring all 0 values for T in [-2..2]
         sliced = self.df.ix[abs(self.df.index) > 2]
         for ch in range(3, 10):
             # store the Spline interpolators in dictionary, 1 per channel
@@ -623,9 +627,9 @@ class Calibrator(object):
         self.gains = gains
 
     def interpolate_caldata(self):
-        """Interpolated the offsets and gains all over the dataframe.
+        """Interpolate the offsets and gains all over the dataframe.
 
-        This is needed AFTER the gain calculation, when applying the offsets and
+        This is needed AFTER the gain calculation, for applying the offsets and
         gains to all data.
         """
 
@@ -690,7 +694,7 @@ class Calibrator(object):
         for channel in thermal_channels:
             # this filter catches all detectors for the current channel
             abs_radiance[abs_radiance.filter(regex=channel+'_').columns] *= \
-                self.norm_to_abs_converter.get_value(2,channel)
+                self.norm_to_abs_converter.get_value(2, channel)
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
         logging.info('Calculated radiances.')
@@ -700,11 +704,11 @@ class Calibrator(object):
         pbar = ProgressBar(147)
         i=0
         for channel in thermal_channels:
-            for det in range(1,22):
+            for det in range(1, 22):
                 i+=1
                 pbar.animate(i)
                 cdet = channel + '_' + str(det).zfill(2)
                 temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
                                              self.mcs_div_mapping[channel])
-                self.Tb[cdet] = pd.Series(temps,index=self.Tb.index)
+                self.Tb[cdet] = pd.Series(temps, index=self.Tb.index)
         logging.info("Calculated brightness temperatures.")
