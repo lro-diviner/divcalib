@@ -41,3 +41,8 @@ playing\ around.ipynb
 *.log
 .ipynb_checkpoints
 
+*.out
+*.pdf
+*.aux
+*.toc
+*.orig
