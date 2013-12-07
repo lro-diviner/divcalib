@@ -37,18 +37,18 @@ def generate_date_index(dataframe):
 
 def index_by_time(df, drop_dates=True):
     "must return a new df because the use of drop"
-    newdf = df.set_index(generate_date_index(df))
+    df.index = generate_date_index(df)
     # force 3-digit precision on time stamp
     # newdf.index = (pd.Series(newdf.index)).map(format_time)
     if drop_dates:
         try:
             cols_to_drop = ['year', 'month', 'date',
                             'hour', 'minute', 'second']
-            newdf = newdf.drop(cols_to_drop, axis=1)
+            df.drop(cols_to_drop, axis=1, inplace=True)
         except ValueError:
             cols_to_drop = ['yyyy', 'mm', 'dd', 'hh', 'mn', 'ss']
-            newdf = newdf.drop(cols_to_drop, axis=1)
-    return newdf
+            df.drop(cols_to_drop, axis=1, inplace=True)
+    return df
 
 
 def prepare_data(df_in):
