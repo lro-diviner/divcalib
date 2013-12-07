@@ -137,8 +137,9 @@ class RBBTable(object):
     def __init__(self):
         super(RBBTable, self).__init__()
         self.df = pd.read_hdf(os.path.join(fu.codepath,
-                                       'data',
-                                       't_to_norm_rad.hdf'))
+                                           'data',
+                                           't_to_norm_rad.hdf'),
+                              'df')
         self.table_temps = self.df.index.values.astype('float')
         self.t2rad = {}
         self.rad2t = {}
