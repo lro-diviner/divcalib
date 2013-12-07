@@ -34,7 +34,7 @@ def plot_calib_block(df, label, id, det='a6_11', limits=None, **kwargs):
             # add to dataframe, cut off 'is_' from name (nicer for plot)
             df_to_plot[sel[3:]] = timeseries
     ax = df_to_plot.plot(style='.', **kwargs)
-    ax.yaxis.set_major_formatter(y_formatter)
+    # ax.yaxis.set_major_formatter(y_formatter)
     ax.set_title(det)
     if limits:
         ax.set_ylim(limits)
