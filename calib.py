@@ -323,6 +323,8 @@ class Calibrator(object):
                        'a4': 4, 'a5': 5, 'a6': 6,
                        'b1': 7, 'b2': 8, 'b3': 9}
 
+    # temperature - radiance converter table
+    rbbtable = RBBTable()
     def __init__(self, df, do_bbtimes=True, pad_bbtemps=False,
                            single_rbb=True, skipsamples=True,
                            do_rad_corr=True,
@@ -361,9 +363,6 @@ class Calibrator(object):
 
         # degree of order for the fitting of calibration data
         self.calfitting_order = calfitting_order
-
-        # temperature - radiance converter table
-        self.rbbtable = RBBTable()
 
         # radiance non-linearity correction
         self.radcorr = RadianceCorrection(new_corr=new_rad_corr)
