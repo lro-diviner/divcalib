@@ -288,6 +288,20 @@ class CalBlock(object):
             return None
 
     @property
+    def bb_time(self):
+        if self.kind == 'ST':
+            raise WrongTypeError('BB', self.kind)
+        bbdata = self.df[self.df.is_bbview]
+        return get_mean_time(bbdata, self.skip_samples)
+
+    @property
+    def st_time(self):
+        if self.kind == 'BB':
+            raise WrongTypeError('ST', self.kind)
+        bbdata = self.df[self.df.is_stview]
+        return get_mean_time(bbdata, self.skip_samples)
+                
+    @property
     def center_data(self):
         if self.kind == 'BOTH':
             # for the lack of a better definition, if this calib block both
