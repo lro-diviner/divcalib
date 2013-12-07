@@ -255,7 +255,10 @@ class RDRReader(object):
 
 def parse_times(df):
     format = format='%d-%b-%Y %H:%M:%S.%f'
-    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f')
+    # I don't need to round the seconds here because the df.utc data has 
+    # already a 3-digit millisecond string: '19:00:00.793'
+    times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f',
+                           utc=True)
     df.set_index(times, inplace=True)
     return df.drop(['date','utc'], axis=1)
 
