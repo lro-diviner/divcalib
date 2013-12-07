@@ -236,24 +236,15 @@ class CalBlock(object):
         return np.sort(labels[labels > 0])
 
     @property
-    def mean_time(self):
-        """Use module function to calculate the mean value of the center data.
-
-        The center_data dataframe is determined from the kind of this calibblock.
-        For an ST block, it's the stview data, BB -> is_bbview respectively.
-        """
-        # being strict here: if CalBlock is too short, return nothing
-        if len(self.df) < 240:
-            return
-        return get_mean_time(self.center_data, self.skip_samples)
-
-    @property
     def offsets(self):
         """Determine offsets for each available spacelook.
 
         At initialisation, this object receives the number of samples to skip.
         This number is used here for the offset calculation
         """
+        if any(self.sv_grouped.size() < 80):
+            logging.info("CalBlock at {0} has a spaceview shorter "
+                         "than 80 entries.".format(self.mean_time))
         # first, mean values of each spaceview, with skipped removed:
         mean_spaceviews = self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
         # then return mean value of these 2 labels, detectors as index.
@@ -300,7 +291,22 @@ class CalBlock(object):
             raise WrongTypeError('ST', self.kind)
         bbdata = self.df[self.df.is_stview]
         return get_mean_time(bbdata, self.skip_samples)
+          
                 
+    @property
+    def mean_time(self):
+        if self.kind == 'ST':
+            return self.st_time
+        elif self.kind == 'BB':
+            return self.bb_time
+        elif self.kind == 'BOTH':
+            t1 = self.st_time
+            t2 = self.bb_time
+            if t2 > t1:
+                return t1 + (t2 - t1) // 2
+            else:
+                return t2 + (t1 - t2) // 2
+            
     @property
     def center_data(self):
         if self.kind == 'BOTH':
