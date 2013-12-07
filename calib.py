@@ -54,13 +54,21 @@ class NoOfViewsError(DivCalibError):
 
 class UnknownMethodError(DivCalibError):
     def __init__(self, method, location):
-        self.method
-        self.location
+        self.method = method
+        self.location = location
     def __str__(self):
         return "Method {0} not defined here. ({1})".format(self.method,
                                                            self.location)
 
-
+class WrongTypeError(DivCalibError):
+    def __init__(self, type_required, type_current):
+        self.type_required = type_required
+        self.type_current = type_current
+    def __str__(self):
+        return "Wrong type {0} for requested operation. Need {1}".format(self.type_current,
+                                                                        self.type_required)
+                                                                        
+                                                                        
 def get_calib_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb','st']."
     try:
