@@ -500,8 +500,6 @@ class Calibrator(object):
     def calc_calib_times(self):
 
         def process_calblock(df):
-            if len(df) < 240:
-                return
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             if cb.kind == "ST":
                 return
@@ -529,8 +527,6 @@ class Calibrator(object):
             # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
             # for calibration to have the central hour ROI calibrated correctly only and written
             # out.But this means to ensure that the calib times don't use less than 240 either.
-            if len(df) < 240:
-                return
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             if cb.kind == 'ST':
                 return
