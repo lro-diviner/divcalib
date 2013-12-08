@@ -503,7 +503,7 @@ class Calibrator(object):
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             if cb.kind == "ST":
                 return
-            return cb.mean_time
+            return cb.bb_time
 
         # if above just returns, it has a None value, dropping them here:
         self.calib_times = self.calgrouped.apply(process_calblock).dropna()
