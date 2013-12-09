@@ -225,9 +225,8 @@ class CalBlock(object):
         self.df = df
         self.number = df.calib_block_labels[0]
         self.skip_samples = skip_samples
-        self.sv_labels = self.get_unique_labels('sv')
-        self.bb_labels = self.get_unique_labels('bb')
-        self.st_labels = self.get_unique_labels('st')
+        for kind in ['sv', 'bb', 'st']:
+            setattr(self, kind + '_labels', self.get_unique_labels(kind))
         self.spaceviews = get_data_columns(df[df.is_spaceview])
         self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
 
