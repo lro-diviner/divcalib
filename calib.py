@@ -241,6 +241,9 @@ class CalBlock(object):
         At initialisation, this object receives the number of samples to skip.
         This number is used here for the offset calculation
         """
+        if len(self.sv_labels) == 3 and self.kind == 'BOTH':
+            leftcb, rightcb = self.split_sv_st()
+            
         if any(self.sv_grouped.size() < 80):
             logging.info("CalBlock at {0} has a spaceview shorter "
                          "than 80 entries.".format(self.mean_time))
