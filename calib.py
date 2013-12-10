@@ -520,6 +520,11 @@ class Calibrator(object):
 
     def calc_offsets(self):
 
+        def get_offset_times_from_calblock(df):
+            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
+            return cb.mean_time
+        
+        times = self.calgrouped.apply(get_offset_times_from_calblock)
         ##
         ### currently stviews are included here, but in calc_calib_times not!!
         ##
@@ -539,12 +544,8 @@ class Calibrator(object):
         ###
         offsets = get_data_columns(self.calgrouped.agg(get_offsets_from_calblock))
 
-        def get_offset_times_from_calblock(df):
-            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
-            return cb.mean_time
-        
         # # set the times as index for this dataframe of offsets
-        offsets.index = self.calgrouped.agg(get_offset_times_from_calblock)
+        offsets.index = times
 
         self.offsets = offsets
 
