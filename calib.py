@@ -402,7 +402,7 @@ class Calibrator(object):
         ### CALIBRATION BLOCK TIME STAMPS
         #####
         # determine calibration block mean time stamps
-        self.calc_calib_times()
+        # self.calc_calib_times()
 
         #####
         ### RADIANCES FROM TABLE
@@ -566,10 +566,8 @@ class Calibrator(object):
         ###
         bbcounts = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
 
-        # reindex for the available calib times:
-        bbcounts = bbcounts.reindex(self.calib_times.index)
         # set the times as index for this dataframe of bbcounts
-        bbcounts.index = self.bbcal_times
+        bbcounts.index = self.bbtemps.index
 
         self.CBB = bbcounts
 
@@ -602,12 +600,19 @@ class Calibrator(object):
         # in case one of the calib block labels was dropped for a reason while
         # calculating the calib_times, I drop it here, too, by only taking the
         # calib_block_labels that are in the index of self.calib_times
-        bbtemps = bbtemps.reindex(self.calib_times.index)
+        # bbtemps = bbtemps.reindex(self.calib_times.index)
         # now the sizes have to match , after the above reindexing
-        bbtemps.index = self.bbcal_times
-
+        def get_bb_times(grp):
+            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
+            return cb.bb_time
+            
+        filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind == 'BB')
+        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
+        bbtemps.index = bbcal_times
+        self.bbtemps = bbtemps
+        
         # here the end product is already an RBB value per calib time
-        self.RBB = pd.DataFrame(index=self.bbcal_times)
+        self.RBB = pd.DataFrame(index=bbcal_times)
 
         self.lookup_radiances_for_thermal_channels(bbtemps, self.RBB)
         if return_values:
@@ -651,7 +656,12 @@ class Calibrator(object):
         numerator = -1 * self.RBB
 
         # note how we are calculating only for thermal channels !!
-        denominator = get_thermal_detectors(self.offsets) - \
+        
+        # we need to restrict the offsets for the times where the CalBlock is
+        # a BB block, as only then we can calculate a gain.
+        offsets = self.offsets.ix[self.bbtemps.index]
+        
+        denominator = get_thermal_detectors(offsets) - \
                         get_thermal_detectors(self.CBB)
         gains = numerator / denominator
         self.gains = gains
@@ -678,8 +688,9 @@ class Calibrator(object):
         all_times = sdata.index.values.astype('float64')
 
         # these are the times as defined by above calc_calib_times
-        cal_times = self.calib_times.values.astype('float64')
-
+        offset_times = self.offsets.index.values.astype('float64')
+        bbcal_times = self.bbtemps.index.values.astype('float64')
+        
         # create 2 new pd.DataFrames to hold the interpolated gains and offsets
         offsets_interp = pd.DataFrame(index=sdata.index)
         gains_interp   = pd.DataFrame(index=sdata.index)
@@ -693,8 +704,8 @@ class Calibrator(object):
         for i,det in enumerate(detectors):
             progressbar.animate(i+1)
             # change k for the kind of fit you want
-            s_offset = Spline(cal_times, self.offsets[det], s=0.0, k=self.calfitting_order)
-            s_gain   = Spline(cal_times, self.gains[det], s=0.0, k=self.calfitting_order)
+            s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
+            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, k=self.calfitting_order)
             col_offset = s_offset(all_times)
             col_gain   = s_gain(all_times)
             offsets_interp[det] = col_offset
