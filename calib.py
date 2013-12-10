@@ -590,29 +590,36 @@ class Calibrator(object):
                 col_name = channel + '_' + str(i).zfill(2)
                 store[col_name] = channel_rbbs
 
-    def calc_one_RBB(self, return_values=False):
-        """Calculate like JPL only one RBB value for a mean BB temperature. """
-        # procedure same as calib_cbb
+    def get_bbtemps_grouped(self):
         T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
         bbviews_temps = self.df[self.df.is_bbview][T_cols]
         grouped = bbviews_temps.groupby(self.df.calib_block_labels)
+        return grouped
+    
+    def get_bbcal_times(self):
+        def get_bb_times(grp):
+            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
+            return cb.bb_time
+            
+        filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind != 'ST')
+        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
+        return bbcal_times
+        
+    def calc_one_RBB(self, return_values=False):
+        """Calculate like JPL only one RBB value for a mean BB temperature. """
+        # procedure same as calib_cbb
+        grouped = self.get_bbtemps_grouped()
         bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
         # in case one of the calib block labels was dropped for a reason while
         # calculating the calib_times, I drop it here, too, by only taking the
         # calib_block_labels that are in the index of self.calib_times
         # bbtemps = bbtemps.reindex(self.calib_times.index)
         # now the sizes have to match , after the above reindexing
-        def get_bb_times(grp):
-            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
-            return cb.bb_time
-            
-        filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind == 'BB')
-        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
-        bbtemps.index = bbcal_times
+        bbtemps.index = self.get_bbcal_times()
         self.bbtemps = bbtemps
         
         # here the end product is already an RBB value per calib time
-        self.RBB = pd.DataFrame(index=bbcal_times)
+        self.RBB = pd.DataFrame(index=bbtemps.index)
 
         self.lookup_radiances_for_thermal_channels(bbtemps, self.RBB)
         if return_values:
