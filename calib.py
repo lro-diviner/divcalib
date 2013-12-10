@@ -524,24 +524,27 @@ class Calibrator(object):
         ### currently stviews are included here, but in calc_calib_times not!!
         ##
 
-        def process_calblock(df):
+        def get_offsets_from_calblock(df):
             # if the df has less than 240 samples, then part of the calblock are cut off.
             # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
             # for calibration to have the central hour ROI calibrated correctly only and written
             # out.But this means to ensure that the calib times don't use less than 240 either.
+            # TODO: Mark if offsets come from ST views?
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
-            if cb.kind == 'ST':
-                return
             return cb.offsets
 
         ###
         # change here for method of means!!
         # the current method aggregates just 1 value for the whole calibration block
         ###
-        offsets = get_data_columns(self.calgrouped.agg(process_calblock)).dropna()
+        offsets = get_data_columns(self.calgrouped.agg(get_offsets_from_calblock))
 
+        def get_offset_times_from_calblock(df):
+            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
+            return cb.mean_time
+        
         # # set the times as index for this dataframe of offsets
-        offsets.index = self.calib_times
+        offsets.index = self.calgrouped.agg(get_offset_times_from_calblock)
 
         self.offsets = offsets
 
