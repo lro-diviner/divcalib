@@ -684,18 +684,12 @@ class Calibrator(object):
         # get a list of columns for the thermal detectors only
         detectors = get_thermal_detectors(self.offsets).columns
 
-        # just for printing out progress
-        progressbar = ProgressBar(len(detectors))
-
         for i,det in enumerate(detectors):
-            progressbar.animate(i+1)
             # change k for the kind of fit you want
             s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
             s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, k=self.calfitting_order)
-            col_offset = s_offset(all_times)
-            col_gain   = s_gain(all_times)
-            offsets_interp[det] = col_offset
-            gains_interp[det]   = col_gain
+            offsets_interp[det] = s_offset(all_times)
+            gains_interp[det]   = s_gain(all_times)
 
         self.sdata = sdata
         self.offsets_interp = offsets_interp
@@ -728,12 +722,12 @@ class Calibrator(object):
 
     def calc_tb(self):
         self.Tb = pd.DataFrame(index=self.abs_radiance.index)
-        pbar = ProgressBar(147)
+        pbar = ProgressBar(len(thermal_channels))
         i=0
         for channel in thermal_channels:
+            i+=1
+            pbar.animate(i)
             for det in range(1, 22):
-                i+=1
-                pbar.animate(i)
                 cdet = channel + '_' + str(det).zfill(2)
                 temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
                                              self.mcs_div_mapping[channel])
