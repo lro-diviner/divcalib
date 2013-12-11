@@ -223,7 +223,6 @@ class CalBlock(object):
     """
     def __init__(self, df, skip_samples=0):
         self.df = df
-        self.number = df.calib_block_labels[0]
         self.skip_samples = skip_samples
         for kind in ['sv', 'bb', 'st']:
             setattr(self, kind + '_labels', self.get_unique_labels(kind))
