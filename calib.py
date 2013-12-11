@@ -380,7 +380,7 @@ class Calibrator(object):
         self.norm_to_abs_converter.columns = thermal_channels
 
     def call_up_to(self, wanted):
-        keys =['bbtemps rbb offsets cbb gain caldata rads tb'.split()
+        keys = 'bbtemps rbb offsets cbb gain caldata rads tb'.split()
         methods =  {'bbtemps':self.interpolate_bb_temps,
                    'rbb':self.calc_one_RBB,
                    'offsets':self.calc_offsets,
@@ -690,7 +690,7 @@ class Calibrator(object):
         # the target where we want to interpolate for
         all_times = sdata.index.values.astype('float64')
 
-        # these are the times as defined by above calc_calib_times
+        # these are the times as defined by above offset and bbcal methods
         offset_times = self.offsets.index.values.astype('float64')
         bbcal_times = self.bbtemps.index.values.astype('float64')
 
@@ -739,14 +739,10 @@ class Calibrator(object):
 
     def calc_tb(self):
         self.Tb = pd.DataFrame(index=self.abs_radiance.index)
-        pbar = ProgressBar(len(thermal_channels))
-        i=0
+        container = []
         for channel in thermal_channels:
-            i+=1
-            pbar.animate(i)
-            for det in range(1, 22):
-                cdet = channel + '_' + str(det).zfill(2)
-                temps = self.rbbtable.get_tb(self.norm_radiance[cdet],
-                                             self.mcs_div_mapping[channel])
-                self.Tb[cdet] = pd.Series(temps, index=self.Tb.index)
+            tbch = self.norm_radiance.filter(regex=channel+'_').apply(self.rbbtable.get_tb,
+                                                        args=(self.mcs_div_mapping[channel],))
+            container.append(tbch)
+        self.Tb = pd.concat(container, axis=1)
         logging.debug("Calculated brightness temperatures.")
