@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
+from collections import OrderedDict
 from plot_utils import ProgressBar
 import logging
 from numpy import poly1d
@@ -377,6 +378,20 @@ class Calibrator(object):
                                                   'Normalized_to_Absolute_Radiance.df'))
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = thermal_channels
+
+    def call_up_to(self, wanted):
+        methods = OrderedDict('bbtemps':self.interpolate_bb_temps,
+                   'rbb':self.calc_one_RBB,
+                   'offsets':self.calc_offsets,
+                   'cbb':self.calc_CBB,
+                   'gain':self.calc_gain,
+                   'caldata':self.interpolate_caldata,
+                   'rads':self.calc_radiances,
+                   'tb':self.calc_tb)
+        for key, method in methods.iteritems():
+            method()
+            if key == wanted:
+                break
 
     def calibrate(self):
 
