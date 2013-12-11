@@ -2,6 +2,7 @@
 import pandas as pd
 from diviner import file_utils as fu, data_prep as dp, calib, plot_utils as pu
 import numpy as np
+from multiprocessing import Pool
 
 root = "/raid1/maye/coldregions/"
 
@@ -33,8 +34,11 @@ def get_tb_from_timestr(t):
     c.calibrate()
     return c.Tb
 
+region = sps[0]
 
-def process_one_timestring(region_now, newtb):
+def process_one_timestring(t):
+    region_now = region[region.filetimestr == t]
+    newtb = get_tb_from_timestr(t)
     dets = region_now.det.unique()
     container = []
     for det in dets:
@@ -44,22 +48,14 @@ def process_one_timestring(region_now, newtb):
         container.append(joined.rename(columns= lambda x: 'newtb' if x.startswith('b3_') \
                                                                     else x))
     newregion = pd.concat(container)
-    return newregion
+    newregion.to_hdf(root + 'tstring_'+t+'.h5','df')
 
 
-def process_one_region(region):
-    timestrings = region.filetimestr.unique()
-    container = []
-    for i,t in enumerate(timestrings):
-        print
-	print t
-	print i, 'of', len(timestrings)
-        tb = get_tb_from_timestr(t)
-        region_now = region[region.filetimestr == t]
-        container.append(process_one_timestring(region_now, tb))
-    return pd.concat(container)
 
+timestrings = region.filetimestr.unique()
+p = Pool(10)
+p.map(process_one_timestring, timestrings)
 
-for sp, region in zip(sps,'1 3 5'.split()):
-    newsp = process_one_region(sp)
-    newsp.to_hdf(root + 'region_sp_newtb_added.h5', 'sp' + region)
+# for sp, region in zip(sps,'1 3 5'.split()):
+#     newsp = process_one_region(sp)
+#     newsp.to_hdf(root + 'region_sp_newtb_added.h5', 'sp' + region)
