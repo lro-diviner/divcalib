@@ -380,16 +380,18 @@ class Calibrator(object):
         self.norm_to_abs_converter.columns = thermal_channels
 
     def call_up_to(self, wanted):
-        methods = OrderedDict('bbtemps':self.interpolate_bb_temps,
+        keys =['bbtemps rbb offsets cbb gain caldata rads tb'.split()
+        methods =  {'bbtemps':self.interpolate_bb_temps,
                    'rbb':self.calc_one_RBB,
                    'offsets':self.calc_offsets,
                    'cbb':self.calc_CBB,
                    'gain':self.calc_gain,
                    'caldata':self.interpolate_caldata,
                    'rads':self.calc_radiances,
-                   'tb':self.calc_tb)
-        for key, method in methods.iteritems():
-            method()
+                   'tb':self.calc_tb}
+
+        for key in keys:
+            methods[key]()
             if key == wanted:
                 break
 
