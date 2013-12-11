@@ -67,8 +67,8 @@ class WrongTypeError(DivCalibError):
     def __str__(self):
         return "Wrong type {0} for requested operation. Need {1}".format(self.type_current,
                                                                         self.type_required)
-                                                                        
-                                                                        
+
+
 def get_calib_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb','st']."
     try:
@@ -289,8 +289,8 @@ class CalBlock(object):
             raise WrongTypeError('ST', self.kind)
         bbdata = self.df[self.df.is_stview]
         return get_mean_time(bbdata, self.skip_samples)
-          
-                
+
+
     @property
     def mean_time(self):
         if self.kind == 'ST':
@@ -304,7 +304,7 @@ class CalBlock(object):
                 return t1 + (t2 - t1) // 2
             else:
                 return t2 + (t1 - t2) // 2
-            
+
     @property
     def center_data(self):
         if self.kind == 'BOTH':
@@ -493,13 +493,13 @@ class Calibrator(object):
         return df[num_to_skip:].mean()
 
     def calc_offset_times(self):
-        
+
         def get_offset_times_from_calblock(df):
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             return cb.mean_time
-        
+
         return self.calgrouped.apply(get_offset_times_from_calblock)
-        
+
     def calc_offsets_helper(self):
         def get_offsets_from_calblock(df):
             # if the df has less than 240 samples, then part of the calblock are cut off.
@@ -517,11 +517,11 @@ class Calibrator(object):
         # offsets = filtered.groupby('calib_block_labels').agg(get_offsets_from_calblock)
         # return offsets
         return get_data_columns(self.calgrouped.agg(get_offsets_from_calblock))
-        
+
     def calc_offsets(self):
 
         offsets = self.calc_offsets_helper()
-        
+
         # # set the times as index for this dataframe of offsets
         offsets.index = self.calc_offset_times()
 
@@ -573,17 +573,17 @@ class Calibrator(object):
         bbviews_temps = self.df[self.df.is_bbview][T_cols]
         grouped = bbviews_temps.groupby(self.df.calib_block_labels)
         return grouped
-    
+
     def get_bbcal_times(self):
         def get_bb_times(grp):
             cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
             return cb.bb_time
-            
+
         grouped = self.df[self.df.is_bbview].groupby(self.df.calib_block_labels)
         filtered = grouped.filter(lambda x: CalBlock(x).kind != 'ST')
         bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
         return bbcal_times
-        
+
     def calc_one_RBB(self, return_values=False):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
         # procedure same as calib_cbb
@@ -596,7 +596,7 @@ class Calibrator(object):
         # now the sizes have to match , after the above reindexing
         bbtemps.index = self.get_bbcal_times()
         self.bbtemps = bbtemps
-        
+
         # here the end product is already an RBB value per calib time
         self.RBB = pd.DataFrame(index=bbtemps.index)
 
@@ -642,11 +642,11 @@ class Calibrator(object):
         numerator = -1 * self.RBB
 
         # note how we are calculating only for thermal channels !!
-        
+
         # we need to restrict the offsets for the times where the CalBlock is
         # a BB block, as only then we can calculate a gain.
         offsets = self.offsets.ix[self.bbtemps.index]
-        
+
         denominator = get_thermal_detectors(offsets) - \
                         get_thermal_detectors(self.CBB)
         gains = numerator / denominator
@@ -676,7 +676,7 @@ class Calibrator(object):
         # these are the times as defined by above calc_calib_times
         offset_times = self.offsets.index.values.astype('float64')
         bbcal_times = self.bbtemps.index.values.astype('float64')
-        
+
         # create 2 new pd.DataFrames to hold the interpolated gains and offsets
         offsets_interp = pd.DataFrame(index=sdata.index)
         gains_interp   = pd.DataFrame(index=sdata.index)
