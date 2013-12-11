@@ -579,7 +579,8 @@ class Calibrator(object):
             cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
             return cb.bb_time
             
-        filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind != 'ST')
+        grouped = self.df[self.df.is_bbview].groupby(self.df.calib_block_labels)
+        filtered = grouped.filter(lambda x: CalBlock(x).kind != 'ST')
         bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
         return bbcal_times
         
