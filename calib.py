@@ -241,9 +241,6 @@ class CalBlock(object):
         At initialisation, this object receives the number of samples to skip.
         This number is used here for the offset calculation
         """
-        if len(self.sv_labels) == 3 and self.kind == 'BOTH':
-            leftcb, rightcb = self.split_sv_st()
-            
         if any(self.sv_grouped.size() < 80):
             logging.info("CalBlock at {0} has a spaceview shorter "
                          "than 80 entries.".format(self.mean_time))
@@ -256,13 +253,13 @@ class CalBlock(object):
     def sv_stds(self):
         return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
 
-    def get_offsets(self, kind='both'):
-        """Provide offsets for method as required.
-        IN:
-            offset_kind. If set to 'both', both sides will be used to determine
-                the offset, 'left' and 'right' do the alternative, respectively.
-        """
-        print("Not implemented.")
+    # def get_offsets(self, kind='both'):
+    #     """Provide offsets for method as required.
+    #     IN:
+    #         offset_kind. If set to 'both', both sides will be used to determine
+    #             the offset, 'left' and 'right' do the alternative, respectively.
+    #     """
+    #     print("Not implemented.")
 
     @property
     def kind(self):
@@ -399,12 +396,6 @@ class Calibrator(object):
             self.interpolate_bb_temps()
 
         #####
-        ### CALIBRATION BLOCK TIME STAMPS
-        #####
-        # determine calibration block mean time stamps
-        # self.calc_calib_times()
-
-        #####
         ### RADIANCES FROM TABLE
         #####
         if self.single_rbb:
@@ -499,36 +490,18 @@ class Calibrator(object):
             # get new temperatures at all_times
             df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
 
-    def calc_calib_times(self):
-
-        def process_calblock(df):
-            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
-            if cb.kind == "ST":
-                return
-            return cb.bb_time
-
-        # if above just returns, it has a None value, dropping them here:
-        self.calib_times = self.calgrouped.apply(process_calblock).dropna()
-
-        # the times used for bb calculations are currently called bbcal_times.
-        # currently, i don't see the need for them to be different, but that might
-        # change in the future.
-        self.bbcal_times = self.calib_times
-
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
 
-    def calc_offsets(self):
-
+    def calc_offset_times(self):
+        
         def get_offset_times_from_calblock(df):
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             return cb.mean_time
         
-        times = self.calgrouped.apply(get_offset_times_from_calblock)
-        ##
-        ### currently stviews are included here, but in calc_calib_times not!!
-        ##
-
+        return self.calgrouped.apply(get_offset_times_from_calblock)
+        
+    def calc_offsets_helper(self):
         def get_offsets_from_calblock(df):
             # if the df has less than 240 samples, then part of the calblock are cut off.
             # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
@@ -537,15 +510,21 @@ class Calibrator(object):
             # TODO: Mark if offsets come from ST views?
             cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
             return cb.offsets
-
         ###
         # change here for method of means!!
         # the current method aggregates just 1 value for the whole calibration block
         ###
-        offsets = get_data_columns(self.calgrouped.agg(get_offsets_from_calblock))
+        # filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind == 'BB')
+        # offsets = filtered.groupby('calib_block_labels').agg(get_offsets_from_calblock)
+        # return offsets
+        return get_data_columns(self.calgrouped.agg(get_offsets_from_calblock))
+        
+    def calc_offsets(self):
 
+        offsets = self.calc_offsets_helper()
+        
         # # set the times as index for this dataframe of offsets
-        offsets.index = times
+        offsets.index = self.calc_offset_times()
 
         self.offsets = offsets
 
