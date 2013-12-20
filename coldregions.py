@@ -28,12 +28,12 @@ for df in sps:
     df['filetimestr'] = df.index.map(get_l1a_timestring)
 
 
-def get_tb_from_timestr(t):
+def get_column_from_timestr(t, col):
     l1a = fu.L1ADataFile.from_timestr(t)
     df = fu.open_and_accumulate(l1a.fname)
     c = calib.Calibrator(df)
     c.calibrate()
-    return c.Tb
+    return c[col]
 
 region = sps[0]
 
@@ -45,7 +45,7 @@ def process_one_timestring(t):
     print t
     region_now = region[region.filetimestr == t]
     try:
-        newtb = get_tb_from_timestr(t)
+        newrad = get_col_from_timestr(t, 'norm_radiance')
     except TypeError:
         print "Got TypeError for", t
         return
@@ -60,8 +60,8 @@ def process_one_timestring(t):
     for det in dets:
         detstr = 'b3_' + str(det).zfill(2)
         subdf = region_now[region_now.det == det]
-        joined = subdf.join(newtb[detstr], how='inner')
-        container.append(joined.rename(columns= lambda x: 'newtb' if x.startswith('b3_') \
+        joined = subdf.join(newrad[detstr], how='inner')
+        container.append(joined.rename(columns= lambda x: 'newrad' if x.startswith('b3_') \
                                                                     else x))
     newregion = pd.concat(container)
     newregion.to_hdf(root + 'tstring_'+t+'.h5','df')
