@@ -32,11 +32,11 @@ def process_one_timestring(t):
         print("Got TypeError for", t)
         return
     except calib.MeanTimeCalcError:
-    	print("Caught MeanTimeCalcError. Skipping", t)
+        print("Caught MeanTimeCalcError. Skipping", t)
         return
     except:
         print("Caught unknown error. Skipping", t)
-	    return
+        return
     dets = region_now.det.unique()
     container = []
     for det in dets:
