@@ -67,11 +67,12 @@ def process_one_timestring(t):
     newregion.to_hdf(root + 'tstring_'+t+'.h5','df')
 
 
+if __name__ == '__main__':
+    timestrings = region.filetimestr.unique()
+    p = Pool(12)
+    p.map(process_one_timestring, timestrings)
 
-timestrings = region.filetimestr.unique()
-p = Pool(12)
-p.map(process_one_timestring, timestrings)
+    # for sp, region in zip(sps,'1 3 5'.split()):
+    #     newsp = process_one_region(sp)
+    #     newsp.to_hdf(root + 'region_sp_newtb_added.h5', 'sp' + region)
 
-# for sp, region in zip(sps,'1 3 5'.split()):
-#     newsp = process_one_region(sp)
-#     newsp.to_hdf(root + 'region_sp_newtb_added.h5', 'sp' + region)
