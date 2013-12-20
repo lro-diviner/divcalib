@@ -69,6 +69,12 @@ class WrongTypeError(DivCalibError):
         return "Wrong type {0} for requested operation. Need {1}".format(self.type_current,
                                                                         self.type_required)
 
+class MeanTimeCalcError(DivCalibError):
+    def __init__(self, t):
+	self.t = t
+    def __str__(self):
+	return "Problem calculating mean time at hour {}".format(self.t)
+
 
 def get_calib_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb','st']."
@@ -105,6 +111,7 @@ def get_mean_time(df_in, skipsamples=0):
         print "Problem with calculating mean time."
         logging.warning('Index not found in get_mean_time. '
                         'Length of df: {0}'.format(len(df.index)))
+	raise MeanTimeCalcError('unknown') 
         return np.nan
     t = t1 + (t2 - t1) // 2
     return t
