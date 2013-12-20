@@ -4,28 +4,11 @@ from diviner import file_utils as fu, data_prep as dp, calib, plot_utils as pu
 import numpy as np
 from multiprocessing import Pool
 import os
-
-root = "/raid1/maye/coldregions/"
-
-sps = []
-for region in '1 3 5'.split():
-    fname = root + 'region_sp' + region + '_9.txt'
-    sps.append(pd.read_csv(fname, sep='\s*'))
-
+import sys
 
 def get_l1a_timestring(val):
     dt = val.to_pydatetime()
     return dt.strftime("%Y%m%d%H")
-
-for df in sps:
-    df.second = np.round(df.second * 1000) / 1000
-    for col in ['year', 'month','date','hour','minute','det']:
-        df[col] = df[col].astype('int')
-    for col in ['year', 'month','date','hour','minute','second']:
-        df[col] = df[col].astype('string')
-    df.index = pd.to_datetime(df.year + '-' + df.month + '-' + df.date + ' ' +
-               df.hour + ':' + df.minute + ':' + df.second, utc=True)
-    df['filetimestr'] = df.index.map(get_l1a_timestring)
 
 
 def get_column_from_timestr(t, col):
@@ -34,8 +17,6 @@ def get_column_from_timestr(t, col):
     c = calib.Calibrator(df)
     c.calibrate()
     return c[col]
-
-region = sps[0]
 
 def process_one_timestring(t):
     savename = root + 'tstring_'+t+'.h5'
@@ -68,6 +49,26 @@ def process_one_timestring(t):
 
 
 if __name__ == '__main__':
+    root = "/raid1/maye/coldregions/"
+
+    sps = []
+    for region in '1 3 5'.split():
+        fname = root + 'region_sp' + region + '_9.txt'
+        sps.append(pd.read_csv(fname, sep='\s*'))
+
+    for df in sps:
+        df.second = np.round(df.second * 1000) / 1000
+        for col in ['year', 'month','date','hour','minute','det']:
+            df[col] = df[col].astype('int')
+        for col in ['year', 'month','date','hour','minute','second']:
+            df[col] = df[col].astype('string')
+        df.index = pd.to_datetime(df.year + '-' + df.month + '-' + df.date + ' ' +
+                   df.hour + ':' + df.minute + ':' + df.second, utc=True)
+        df['filetimestr'] = df.index.map(get_l1a_timestring)
+
+    # pick region via argv, like so: python coldregions.py 0 [or 1, or 2]
+    region = sps[int(sys.argv[1])]
+    
     timestrings = region.filetimestr.unique()
     p = Pool(12)
     p.map(process_one_timestring, timestrings)
