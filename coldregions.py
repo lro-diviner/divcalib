@@ -3,6 +3,7 @@ import pandas as pd
 from diviner import file_utils as fu, data_prep as dp, calib, plot_utils as pu
 import numpy as np
 from multiprocessing import Pool
+import os
 
 root = "/raid1/maye/coldregions/"
 
@@ -37,8 +38,23 @@ def get_tb_from_timestr(t):
 region = sps[0]
 
 def process_one_timestring(t):
+    savename = root + 'tstring_'+t+'.h5'
+    if os.path.exists(savename):
+        print "Skipping",t
+        return
+    print t
     region_now = region[region.filetimestr == t]
-    newtb = get_tb_from_timestr(t)
+    try:
+        newtb = get_tb_from_timestr(t)
+    except TypeError:
+        print "Got TypeError for", t
+        return
+    except calib.MeanTimeCalcError:
+	print "Caught MeanTimeCalcError. Skipping",t
+        return
+    except:
+        print "Caught unknown error. Skipping", t
+	return
     dets = region_now.det.unique()
     container = []
     for det in dets:
@@ -53,7 +69,7 @@ def process_one_timestring(t):
 
 
 timestrings = region.filetimestr.unique()
-p = Pool(10)
+p = Pool(12)
 p.map(process_one_timestring, timestrings)
 
 # for sp, region in zip(sps,'1 3 5'.split()):
