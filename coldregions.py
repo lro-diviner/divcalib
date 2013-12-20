@@ -16,7 +16,7 @@ def get_column_from_timestr(t, col):
     df = fu.open_and_accumulate(l1a.fname)
     c = calib.Calibrator(df)
     c.calibrate()
-    return c[col]
+    return getattr(c, col)
 
 def process_one_timestring(t):
     savename = root + 'tstring_'+t+'.h5'
