@@ -42,8 +42,8 @@ def process_one_timestring(t):
         detstr = 'b3_' + str(det).zfill(2)
         subdf = region_now[region_now.det == det]
         joined = subdf.join(newrad[detstr], how='inner')
-        container.append(joined.rename(columns= lambda x: 'newrad' if x.startswith('b3_') \
-                                                                    else x))
+        container.append(joined.rename(
+                    columns=lambda x: 'newrad' if x.startswith('b3_') else x))
     newregion = pd.concat(container)
     newregion.to_hdf(root + 'tstring_'+t+'.h5','df')
 
