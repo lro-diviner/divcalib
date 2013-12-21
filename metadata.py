@@ -75,5 +75,30 @@ def divmetadata():
         divtweet.tweet_machine("Metadata for month {0} finished.".format(month))
 
 
+def resampler(year):
+    fnames = glob.glob(pjoin(savedir, year + '??.h5'))
+    fnames.sort()
+    l = []
+    for fname in fnames:
+        print("Reading {0}".format(fname))
+        basename = os.path.basename(fname)
+        l.append(pd.read_hdf(fname, 'df').resample('1d', kind='period'))
+
+    df = pd.concat(l)
+    hdf_fname = pjoin(savedir, str(year) + '_daily_means.h5')
+    df.to_hdf(hdf_fname, 'df')
+
+
+def get_all_df(colname):
+    years = range(2009, 2014)
+    l = []
+    for year in years:
+        store = pd.HDFStore(pjoin(savedir, str(year) + '_daily_means.h5'))
+        l.append(store['df'])
+        store.close()
+    return pd.concat(l)
+
+
+
 if __name__ == '__main__':
     divmetadata()
