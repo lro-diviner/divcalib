@@ -7,9 +7,10 @@ import os
 from diviner import divtweet
 from subprocess import call
 
-savedir = os.path.join(fu.outpath,'metadata')
+savedir = os.path.join(fu.outpath, 'metadata')
 if not os.path.exists(savedir):
     os.makedirs(savedir)
+
 
 def collect_data(pump):
     frames = []
@@ -21,6 +22,7 @@ def collect_data(pump):
     df = pd.concat(frames)
     return df
 
+
 def produce_store_file(timestr):
     pump = fu.Div247DataPump(timestr)
     print("Found {0} files.".format(len(pump.fnames)))
@@ -28,16 +30,17 @@ def produce_store_file(timestr):
     if len(pump.fnames) == 0:
         return
 
-    store = pd.HDFStore(os.path.join(savedir, timestr+'.h5'),'w')
+    savepath = os.path.join(savedir, timestr+'.h5')
+
     df = collect_data(pump)
-    
+
     print("Polishing...")
     final = pump.clean_final_df(df)
     print("Writing to store...")
-    store.append('df', final)
-    store.close()
+    final.to_hdf(savepath, 'df')
     print("Done.")
-    
+
+
 def produce_store_file_main():
     try:
         year = sys.argv[1]
@@ -50,7 +53,8 @@ def produce_store_file_main():
         divtweet.tweet_machine("Producing metadata for {0}".format(timestr))
         print("Producing", timestr)
         produce_store_file(timestr)
-    
+
+
 def divmetadata():
     if len(sys.argv) < 3:
         print("Usage: {0} month_start month_end [YYYYMM]".format(sys.argv[0]))
@@ -64,12 +68,12 @@ def divmetadata():
         print("Producing metadata for month {0}".format(month))
         ts = month.to_timestamp()
         cmd_base = 'divdata daterange={0}'.format(ts.strftime('%Y%m '))
-        outfname = os.path.join(savedir, 
+        outfname = os.path.join(savedir,
                                 '{0}_divmetadata.csv'.format(ts.strftime('%Y%m')))
         cmd = cmd_base + cmd_middle + outfname
         call(cmd, shell=True)
         divtweet.tweet_machine("Metadata for month {0} finished.".format(month))
 
+
 if __name__ == '__main__':
     divmetadata()
-    
