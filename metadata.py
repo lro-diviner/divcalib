@@ -87,6 +87,7 @@ def resampler(year):
     df = pd.concat(l)
     hdf_fname = pjoin(savedir, str(year) + '_daily_means.h5')
     df.to_hdf(hdf_fname, 'df')
+    print("Created {}.".format(hdf_fname))
 
 
 def get_all_df(colname):
