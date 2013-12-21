@@ -77,21 +77,29 @@ def divmetadata():
         divtweet.tweet_machine("Metadata for month {0} finished.".format(month))
 
 
-def resampler(year):
+def resampler(year, interval):
+    """Resample the full resolution metadata files of year <year> down to <interval>.
+    
+    <interval> can be format strings like '1d' for downsampling to days, '1h' for hours,
+    '1min' for minutes, etc.
+    <year> can be given as string or int.
+    """
     fnames = glob.glob(pjoin(savedir, str(year) + '??.h5'))
     fnames.sort()
     l = []
     for fname in fnames:
         print("Reading {0}".format(fname))
-        l.append(pd.read_hdf(fname, 'df').resample('1d', kind='period'))
+        l.append(pd.read_hdf(fname, 'df').resample(interval, kind='period'))
 
     df = pd.concat(l)
     hdf_fname = pjoin(savedir, str(year) + '_daily_means.h5')
     df.to_hdf(hdf_fname, 'df')
     print("Created {}.".format(hdf_fname))
+    divtweet.tweet_machine("Fininshed resampling {0} to {1}".format(year, interval))
 
 
-def get_all_df(colname):
+def get_all_df():
+    """Load all Diviner mission metadata daily means."""
     years = range(2009, 2014)
     l = []
     for year in years:
@@ -103,4 +111,17 @@ def get_all_df(colname):
 
 
 if __name__ == '__main__':
-    divmetadata()
+    try:
+        funcname = sys.argv[1]
+    except IndexError:
+        print("\nWhich function do you want? ['resampler', 'producemonth']")
+        sys.exit()
+    if funcname == 'resampler':
+        try:
+            resampler(*sys.argv[2:4])
+        except TypeError:
+            print("Provide <year> and <downsample> strings as input.")
+            sys.exit()
+    elif funcname == 'producemonth':
+        timestr = sys.argv[2]
+        produce_store_file(timestr)
