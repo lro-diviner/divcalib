@@ -6,6 +6,8 @@ import pandas as pd
 import os
 from diviner import divtweet
 from subprocess import call
+import glob
+from os.path import join as pjoin
 
 savedir = os.path.join(fu.outpath, 'metadata')
 if not os.path.exists(savedir):
@@ -76,12 +78,11 @@ def divmetadata():
 
 
 def resampler(year):
-    fnames = glob.glob(pjoin(savedir, year + '??.h5'))
+    fnames = glob.glob(pjoin(savedir, str(year) + '??.h5'))
     fnames.sort()
     l = []
     for fname in fnames:
         print("Reading {0}".format(fname))
-        basename = os.path.basename(fname)
         l.append(pd.read_hdf(fname, 'df').resample('1d', kind='period'))
 
     df = pd.concat(l)
