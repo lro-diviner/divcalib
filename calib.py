@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
@@ -107,7 +107,7 @@ def get_mean_time(df_in, skipsamples=0):
         t1 = df.index[0]
         t2 = df.index[-1]
     except IndexError:
-        print "Problem with calculating mean time."
+        print("Problem with calculating mean time.")
         logging.warning('Index not found in get_mean_time. '
                         'Length of df: {0}'.format(len(df.index)))
 	raise MeanTimeCalcError('unknown')
