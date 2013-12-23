@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
 import divconstants as c
-from collections import OrderedDict
-from plot_utils import ProgressBar
+#from plot_utils import ProgressBar
 import logging
 from numpy import poly1d
 import os
@@ -111,7 +110,7 @@ def get_mean_time(df_in, skipsamples=0):
         print "Problem with calculating mean time."
         logging.warning('Index not found in get_mean_time. '
                         'Length of df: {0}'.format(len(df.index)))
-	raise MeanTimeCalcError('unknown') 
+	raise MeanTimeCalcError('unknown')
         return np.nan
     t = t1 + (t2 - t1) // 2
     return t
