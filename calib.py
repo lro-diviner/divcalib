@@ -110,7 +110,7 @@ def get_mean_time(df_in, skipsamples=0):
         print("Problem with calculating mean time.")
         logging.warning('Index not found in get_mean_time. '
                         'Length of df: {0}'.format(len(df.index)))
-	raise MeanTimeCalcError('unknown') 
+	raise MeanTimeCalcError('unknown')
         return np.nan
     t = t1 + (t2 - t1) // 2
     return t
