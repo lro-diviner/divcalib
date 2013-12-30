@@ -422,6 +422,7 @@ class Calibrator(object):
         #####
         if self.single_rbb:
             # calculate only one radiance per mean BB temperature per calib block
+            # this is the same method as JPL does it, and it's slightly faster.
             self.calc_one_RBB()
         else:
             # look-up all radiances for all interpolated bb temperatures and then
@@ -515,41 +516,40 @@ class Calibrator(object):
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
 
-    def calc_offset_times(self):
-
-        def get_offset_times_from_calblock(df):
-            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
-            return cb.mean_time
-
-        return self.calgrouped.apply(get_offset_times_from_calblock)
-
-    def calc_offsets_helper(self):
-        def get_offsets_from_calblock(df):
-            # if the df has less than 240 samples, then part of the calblock are cut off.
-            # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
-            # for calibration to have the central hour ROI calibrated correctly only and written
-            # out.But this means to ensure that the calib times don't use less than 240 either.
-            # TODO: Mark if offsets come from ST views?
-            cb = CalBlock(df, self.SV_NUM_SKIP_SAMPLE)
-            return cb.offsets
-        ###
-        # change here for method of means!!
-        # the current method aggregates just 1 value for the whole calibration block
-        ###
-        # filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind == 'BB')
-        # offsets = filtered.groupby('calib_block_labels').agg(get_offsets_from_calblock)
-        # return offsets
-        return get_data_columns(self.calgrouped.agg(get_offsets_from_calblock))
+    # def calc_offsets_old(self):
+    # 
+    #     # if the df has less than 240 samples, then part of the calblock are cut off.
+    #     # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
+    #     # for calibration to have the central hour ROI calibrated correctly only and written
+    #     # out.But this means to ensure that the calib times don't use less than 240 either.
+    #     # TODO: Mark if offsets come from ST views?
+    # 
+    #     ###
+    #     # change here for method of means!!
+    #     # the current method aggregates just 1 value for the whole calibration block
+    #     ###
+    #     # filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind == 'BB')
+    #     # offsets = filtered.groupby('calib_block_labels').agg(get_offsets_from_calblock)
+    #     # return offsets
+    #     func = lambda x: CalBlock(x, self.SV_NUM_SKIP_SAMPLE).offsets
+    #     offsets = get_data_columns(self.calgrouped.agg(func))
+    # 
+    #     # # set the times as index for this dataframe of offsets
+    #     func = lambda x: CalBlock(x, self.SV_NUM_SKIP_SAMPLE).mean_time
+    #     offsets.index = self.calgrouped.apply(func)
+    # 
+    #     self.offsets = offsets
 
     def calc_offsets(self):
-
-        offsets = self.calc_offsets_helper()
-
-        # # set the times as index for this dataframe of offsets
-        offsets.index = self.calc_offset_times()
-
-        self.offsets = offsets
-
+        def get_offsets(group):
+            cb = CalBlock(group, self.SV_NUM_SKIP_SAMPLE)
+            newdf = pd.DataFrame(cb.offsets).T
+            newdf.index = [cb.mean_time]
+            return newdf
+            
+        grouped = self.caldata.groupby(self.df.calib_block_labels, as_index=False)
+        self.offsets = grouped.apply(get_offsets)
+            
     def calc_CBB(self):
         # kick out moving data and get only bbviews
         bbviews = self.df[self.df.is_bbview]
