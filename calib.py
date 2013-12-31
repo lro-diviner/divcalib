@@ -675,6 +675,45 @@ class Calibrator(object):
         gains = numerator / denominator
         self.gains = gains
 
+        
+    def interpolate_caldata_worker(self, offset_times, bbcal_times, all_times):
+
+        sdata = get_data_columns(self.df)
+
+        # create 2 new pd.DataFrames to hold the interpolated gains and offsets
+        offsets_interp = pd.DataFrame(index=sdata.index)
+        gains_interp   = pd.DataFrame(index=sdata.index)
+
+        for det in thermal_detectors:
+            # change k for the kind of fit you want
+            s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
+            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, k=self.calfitting_order)
+            offsets_interp[det] = s_offset(all_times)
+            gains_interp[det]   = s_gain(all_times)
+        
+        return offsets_interp, gains_interp
+        
+    def interpolate_caldata_worker2(self, offset_times, bbcal_times, all_times):
+        def do_spline(col, times):
+            return Spline(times, col, s=0.0, k=self.calfitting_order)(all_times)
+            
+        np_offsets = np.apply_along_axis(do_spline, 
+                                         0, 
+                                         self.offsets[thermal_detectors],
+                                         offset_times)
+                                         
+        offsets_interp = pd.DataFrame(np_offsets,
+                                      index=self.df.index,
+                                      columns=thermal_detectors)
+        np_gains = np.apply_along_axis(do_spline,
+                                       0,
+                                       self.gains[thermal_detectors],
+                                       bbcal_times)
+        gains_interp = pd.DataFrame(np_gains,
+                                    index=self.df.index,
+                                    columns=thermal_detectors)
+        return offsets_interp, gains_interp
+        
     def interpolate_caldata(self):
         """Interpolate the offsets and gains all over the dataframe.
 
@@ -699,20 +738,10 @@ class Calibrator(object):
         # these are the times as defined by above offset and bbcal methods
         offset_times = self.offsets.index.values.astype('float64')
         bbcal_times = self.bbtemps.index.values.astype('float64')
-
-        # create 2 new pd.DataFrames to hold the interpolated gains and offsets
-        offsets_interp = pd.DataFrame(index=sdata.index)
-        gains_interp   = pd.DataFrame(index=sdata.index)
-
-        # get a list of columns for the thermal detectors only
-        detectors = get_thermal_detectors(self.offsets).columns
-
-        for i,det in enumerate(detectors):
-            # change k for the kind of fit you want
-            s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
-            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, k=self.calfitting_order)
-            offsets_interp[det] = s_offset(all_times)
-            gains_interp[det]   = s_gain(all_times)
+        
+        offsets_interp, gains_interp = self.interpolate_caldata_worker2(offset_times, 
+                                                                       bbcal_times,
+                                                                       all_times)
 
         self.sdata = sdata
         self.offsets_interp = offsets_interp
