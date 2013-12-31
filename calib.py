@@ -280,6 +280,9 @@ class CalBlock(object):
             return 'ST'
         elif self.bb_labels.size > 0:
             return 'BB'
+        elif self.sv_labels.size > 0:
+            # this is required for the few runs that contain SV-only calibration views
+            return 'SV'
         else:
             return None
 
@@ -297,6 +300,10 @@ class CalBlock(object):
         bbdata = self.df[self.df.is_stview]
         return get_mean_time(bbdata, self.skip_samples)
 
+    @property
+    def sv_time(self):
+        svdata = self.df[self.df.is_spaceview]
+        return get_mean_time(svdata, self.skip_samples)
 
     @property
     def mean_time(self):
@@ -304,6 +311,8 @@ class CalBlock(object):
             return self.st_time
         elif self.kind == 'BB':
             return self.bb_time
+        elif self.kind == 'SV':
+            return self.sv_time
         elif self.kind == 'BOTH':
             t1 = self.st_time
             t2 = self.bb_time
