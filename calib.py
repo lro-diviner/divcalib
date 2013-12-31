@@ -274,7 +274,7 @@ class CalBlock(object):
         Possible kinds: 'BB', 'ST', 'BOTH'
         """
         # more than 1 kind?
-        if (self.st_labels.size + self.bb_labels.size) > 1:
+        if (self.st_labels.size > 0) and (self.bb_labels.size > 0):
             return 'BOTH'
         elif self.st_labels.size > 0:
             return 'ST'
