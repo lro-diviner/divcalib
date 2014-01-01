@@ -52,8 +52,6 @@ def plot_all_calib_blocks(df, **kwargs):
         length += 1
     fig, axes = subplots(length/2, 2)
     for i, calid in enumerate(calib_ids):
-        if not any(df[df.calib_block_labels == calid]['is_calib']):
-            continue
         plot_calib_block(df, 'calib', calid, ax=axes.flatten()[i], **kwargs)
     fig.suptitle("Cal-Blocks {0}".format(calib_ids))
 
