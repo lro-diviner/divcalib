@@ -29,16 +29,16 @@ class DivCalibError(Exception):
 class ViewLengthError(DivCalibError):
     """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
 
-    SV_LENGTH_TOTAL defined at top of this file.
+    SV/BBV/ST_LENGTH_TOTAL defined in divconstants.
     """
-    def __init__(self, view, value,value2):
+    def __init__(self, view, expected, received):
         self.view = view
-        self.value = value
-        self.value2 = value2
+        self.expected = expected
+        self.received = received
     def __str__(self):
-        return "Length of {0}-view not {1}."\
-                " Instead: ".format(self.view,
-                                    c.SV_LENGTH_TOTAL) + repr(self.value) + repr(self.value2)
+        return "Length of {0}-view not the expected {1}. Instead: {2}".format(self.view,
+                                                                              self.expected,
+                                                                              self.received)
 
 
 class NoOfViewsError(DivCalibError):
