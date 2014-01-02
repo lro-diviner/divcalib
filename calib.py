@@ -538,6 +538,41 @@ class Calibrator(object):
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
 
+    def lookup_radiances_for_thermal_channels(self, mapping_source, store):
+        # different mapping sources depending on if we lookup only for single
+        # values at calblock times or for all interpolated temperatures
+        # the caller of this function determines this by providing the mapping source
+        mapping = {'a': mapping_source['bb_1_temp_interp'],
+                   'b': mapping_source['bb_2_temp_interp']}
+
+        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
+        for channel in thermal_channels:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
+
+            #look up the radiances for this channel
+            RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
+            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
+            for i in range(1,22):
+                col_name = channel + '_' + str(i).zfill(2)
+                store[col_name] = channel_rbbs
+
+    def get_bbtemps_grouped(self):
+        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
+        bbviews_temps = self.df[self.df.is_bbview][T_cols]
+        grouped = bbviews_temps.groupby(self.df.calib_block_labels)
+        return grouped
+
+    def get_bbcal_times(self):
+        def get_bb_times(grp):
+            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
+            return cb.bb_time
+
+        grouped = self.df[self.df.is_bbview].groupby(self.df.calib_block_labels)
+        filtered = grouped.filter(lambda x: CalBlock(x).kind != 'ST')
+        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
+        return bbcal_times
+
     def calc_one_RBB(self, return_values=False):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
         # procedure same as calib_cbb
@@ -636,42 +671,6 @@ class Calibrator(object):
         bbcounts.index = self.bbtemps.index
 
         self.CBB = bbcounts
-
-    def lookup_radiances_for_thermal_channels(self, mapping_source, store):
-        # different mapping sources depending on if we lookup only for single
-        # values at calblock times or for all interpolated temperatures
-        # the caller of this function determines this by providing the mapping source
-        mapping = {'a': mapping_source['bb_1_temp_interp'],
-                   'b': mapping_source['bb_2_temp_interp']}
-
-        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
-        for channel in thermal_channels:
-            #link to the correct bb temps by checking first letter of channel
-            bbtemps = mapping[channel[0]]
-
-            #look up the radiances for this channel
-            RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
-            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
-            for i in range(1,22):
-                col_name = channel + '_' + str(i).zfill(2)
-                store[col_name] = channel_rbbs
-
-    def get_bbtemps_grouped(self):
-        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
-        bbviews_temps = self.df[self.df.is_bbview][T_cols]
-        grouped = bbviews_temps.groupby(self.df.calib_block_labels)
-        return grouped
-
-    def get_bbcal_times(self):
-        def get_bb_times(grp):
-            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
-            return cb.bb_time
-
-        grouped = self.df[self.df.is_bbview].groupby(self.df.calib_block_labels)
-        filtered = grouped.filter(lambda x: CalBlock(x).kind != 'ST')
-        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
-        return bbcal_times
-
 
     def calc_gain(self):
         """Calc gain.
