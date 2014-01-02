@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
-import divconstants as c
+import divconstants as config
 #from plot_utils import ProgressBar
 import logging
 from numpy import poly1d
@@ -367,9 +367,9 @@ class Calibrator(object):
         # to control if some of the first samples of views are being skipped
         self.skipsamples = skipsamples
         if skipsamples == True:
-            self.BBV_NUM_SKIP_SAMPLE = c.BBV_NUM_SKIP_SAMPLE
-            self.SV_NUM_SKIP_SAMPLE = c.SV_NUM_SKIP_SAMPLE
-            self.STV_NUM_SKIP_SAMPLE = c.STV_NUM_SKIP_SAMPLE
+            self.BBV_NUM_SKIP_SAMPLE = config.BBV_NUM_SKIP_SAMPLE
+            self.SV_NUM_SKIP_SAMPLE = config.SV_NUM_SKIP_SAMPLE
+            self.STV_NUM_SKIP_SAMPLE = config.STV_NUM_SKIP_SAMPLE
         else:
             self.BBV_NUM_SKIP_SAMPLE = 0
             self.SV_NUM_SKIP_SAMPLE = 0
