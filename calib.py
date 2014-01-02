@@ -563,8 +563,14 @@ class Calibrator(object):
     #     self.offsets = offsets
 
     def calc_offsets(self):
+        "Calculate the offsets via the spaceviews, using the CalBlock class."
+
         def get_offsets(group):
             cb = CalBlock(group, self.SV_NUM_SKIP_SAMPLE)
+            if len(group) <80:
+                logging.info("CalBlock at {0} has a spaceview"
+                             " shorter than 80 entries.".format(cb.mean_time))
+                return
             newdf = pd.DataFrame(cb.offsets).T
             newdf.index = [cb.mean_time]
             return newdf
