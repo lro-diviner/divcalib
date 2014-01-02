@@ -233,27 +233,40 @@ class CalBlock(object):
         self.skip_samples = skip_samples
         for kind in ['sv', 'bb', 'st']:
             setattr(self, kind + '_labels', self.get_unique_labels(kind))
-        self.spaceviews = get_data_columns(df[df.is_spaceview])
+        self.spaceviews = get_data_columns( df[ df.is_spaceview ] )
         self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
 
-    def get_unique_labels(self,view):
+    def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
         return np.sort(labels[labels > 0])
+
+    def check_length_get_mean(self, group):
+        if len(group) < 80:
+            return
+        if len(group) > 80:
+            logging.info("Calib view larger than 80 samples "
+                         "at {}".format(self.mean_time))
+        return group[self.skip_samples:].mean()
 
     @property
     def offsets(self):
         """Determine offsets for each available spacelook.
 
         At initialisation, this object receives the number of samples to skip.
-        This number is used here for the offset calculation
+        That number `self.skipsamples` is used here for the offset calculation.
         """
-        if any(self.sv_grouped.size() < 80):
-            logging.info("CalBlock at {0} has a spaceview shorter "
-                         "than 80 entries.".format(self.mean_time))
         # first, mean values of each spaceview, with skipped removed:
-        mean_spaceviews = self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
+        mean_spaceviews = self.sv_grouped.agg(self.check_length_get_mean)
         # then return mean value of these 2 labels, detectors as index.
         return mean_spaceviews.mean()
+
+    def get_mean_counts(self, view):
+        cond = 'is_' + view +'view'
+        try:
+            return get_data_columns(
+                    self.check_length_get_mean(self.df[self.df[cond]]))
+        except AttributeError:
+            return
 
     @property
     def sv_stds(self):
