@@ -577,20 +577,10 @@ class Calibrator(object):
                 col_name = channel + '_' + str(i).zfill(2)
                 store[col_name] = channel_rbbs
 
-    def get_bbtemps_grouped(self):
-        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
-        bbviews_temps = self.df[self.df.is_bbview][T_cols]
-        grouped = bbviews_temps.groupby(self.df.calib_block_labels)
-        return grouped
-
     def get_bbcal_times(self):
-        def get_bb_times(grp):
-            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
-            return cb.bb_time
-
-        grouped = self.df[self.df.is_bbview].groupby(self.df.calib_block_labels)
-        filtered = grouped.filter(lambda x: CalBlock(x).kind != 'ST')
-        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
+        grouped = self.caldata[self.caldata.is_bbview].groupby(self.df.bb_block_labels)
+        f = lambda x: CalBlock(x, self.BBV_NUM_SKIP_SAMPLE).bb_time
+        bbcal_times = grouped.apply(f)
         return bbcal_times
 
     def calc_one_RBB(self, return_values=False):
