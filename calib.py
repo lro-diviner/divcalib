@@ -721,8 +721,10 @@ class Calibrator(object):
 
         for det in thermal_detectors:
             # change k for the kind of fit you want
-            s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
-            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, k=self.calfitting_order)
+            s_offset = Spline(offset_times, self.offsets[det], s=0.0, 
+                              k=self.calfitting_order)
+            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, 
+                              k=self.calfitting_order)
             offsets_interp[det] = s_offset(all_times)
             gains_interp[det]   = s_gain(all_times)
         
