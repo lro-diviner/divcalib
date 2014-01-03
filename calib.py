@@ -288,37 +288,25 @@ class CalBlock(object):
         except AttributeError:
             return
 
+    def check_length_get_mean_time(self, view):
+        cond = 'is_' + view.lower() + 'view'
+        data = self.df[self.df[cond]]
+        limit = getattr(config, view.upper()+'_LENGTH')
+        if len(data) < limit:
+            return
+        if len(data) > limit:
+            logging.info("Calib view larger than {} samples "
+                         " at {}".format(limit, get_mean_time(data, 0)))
+        return get_mean_time(data, self.skip_samples)
+
     @property
-    def sv_stds(self):
-        return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
-
-    # def get_offsets(self, kind='both'):
-    #     """Provide offsets for method as required.
-    #     IN:
-    #         offset_kind. If set to 'both', both sides will be used to determine
-    #             the offset, 'left' and 'right' do the alternative, respectively.
-    #     """
-    #     print("Not implemented.")
+    def has_complete_spaceview(self):
+        return any(self.sv_grouped.size() >= config.SPACE_LENGTH)
 
     @property
-    def kind(self):
-        """Define kind of calblock depending on containing bbview, st or both.
-
-        Possible kinds: 'BB', 'ST', 'BOTH'
-        """
-        # more than 1 kind?
-        if (self.st_labels.size > 0) and (self.bb_labels.size > 0):
-            return 'BOTH'
-        elif self.st_labels.size > 0:
-            return 'ST'
-        elif self.bb_labels.size > 0:
-            return 'BB'
-        elif self.sv_labels.size > 0:
-            # this is required for the few runs that contain SV-only calibration views
-            return 'SV'
-        else:
-            return None
-
+    def has_complete_bbview(self):
+        return len(self.df[self.df.is_bbview]) >= config.BB_LENGTH
+        
     @property
     def bb_time(self):
         if self.kind == 'ST':
@@ -354,16 +342,28 @@ class CalBlock(object):
             else:
                 return t2 + (t1 - t2) // 2
 
-    @property
-    def center_data(self):
-        if self.kind == 'BOTH':
-            # for the lack of a better definition, if this calib block both
-            # contains ST and BB data, I take both as 'center_data'
-            return self.df[(self.df.is_stview) | (self.df.is_bbview)]
-        elif self.kind == 'BB':
-            return self.df[self.df.is_bbview]
-        elif self.kind == 'ST':
-            return self.df[self.df.is_stview]
+    # @property
+    # def center_data(self):
+    #     if self.kind == 'BOTH':
+    #         # for the lack of a better definition, if this calib block both
+    #         # contains ST and BB data, I take both as 'center_data'
+    #         return self.df[(self.df.is_stview) | (self.df.is_bbview)]
+    #     elif self.kind == 'BB':
+    #         return self.df[self.df.is_bbview]
+    #     elif self.kind == 'ST':
+    #         return self.df[self.df.is_stview]
+    # @property
+    # def sv_stds(self):
+    #     return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
+
+    # def get_offsets(self, kind='both'):
+    #     """Provide offsets for method as required.
+    #     IN:
+    #         offset_kind. If set to 'both', both sides will be used to determine
+    #             the offset, 'left' and 'right' do the alternative, respectively.
+    #     """
+    #     print("Not implemented.")
+
 
 
 class Calibrator(object):
