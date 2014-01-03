@@ -1,5 +1,5 @@
 # define the default number of points that each view should have
-SV_LENGTH = STV_LENGTH = BBV_LENGTH = 80
+SPACE_LENGTH = ST_LENGTH = BB_LENGTH = 80
 
 # define pointing boundaries for the spaceview (for offset calibration)
 SV_AZ_MIN = 150.0
