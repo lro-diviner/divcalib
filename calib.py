@@ -261,11 +261,11 @@ class CalBlock(object):
             return None
 
     def check_length_get_mean(self, group):
-        if len(group) < 80:
+        if len(group) < config.SPACE_LENGTH:
             return
-        if len(group) > 80:
-            logging.info("Calib view larger than 80 samples "
-                         "at {}".format(self.mean_time))
+        if len(group) > config.SPACE_LENGTH:
+            logging.info("Calib view larger than {} samples "
+                         "at {}".format(config.SPACE_LENGTH, self.mean_time))
         return group[self.skip_samples:].mean()
 
     @property
