@@ -583,25 +583,22 @@ class Calibrator(object):
         bbcal_times = grouped.apply(f)
         return bbcal_times
 
-    def calc_one_RBB(self, return_values=False):
+    def calc_one_RBB(self):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
         # procedure same as calib_cbb
-        grouped = self.get_bbtemps_grouped()
+        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
+        bbviews_temps = self.df[self.df.is_bbview][T_cols]
+        grouped = bbviews_temps.groupby(self.df.bb_block_labels)
+        
         bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
-        # in case one of the calib block labels was dropped for a reason while
-        # calculating the calib_times, I drop it here, too, by only taking the
-        # calib_block_labels that are in the index of self.calib_times
-        # bbtemps = bbtemps.reindex(self.calib_times.index)
-        # now the sizes have to match , after the above reindexing
         bbtemps.index = self.get_bbcal_times()
         self.bbtemps = bbtemps
 
         # here the end product is already an RBB value per calib time
-        self.RBB = pd.DataFrame(index=bbtemps.index)
+        RBB = pd.DataFrame(index=bbtemps.index)
 
-        self.lookup_radiances_for_thermal_channels(bbtemps, self.RBB)
-        if return_values:
-            return self.RBB
+        self.lookup_radiances_for_thermal_channels(bbtemps, RBB)
+        self.RBB = RBB.dropna()
 
     def calc_many_RBB(self, return_values=False):
         # lookup radiances for all interpolated BB temperatures
