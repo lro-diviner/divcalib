@@ -233,14 +233,32 @@ class CalBlock(object):
     def __init__(self, df, skip_samples=0):
         self.df = df
         self.skip_samples = skip_samples
-        for kind in ['sv', 'bb', 'st']:
-            setattr(self, kind + '_labels', self.get_unique_labels(kind))
         self.spaceviews = get_data_columns( df[ df.is_spaceview ] )
         self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
         return np.sort(labels[labels > 0])
+
+    @property
+    def kind(self):
+        """Define kind of calblock depending on containing bbview, st or both.
+
+        Possible kinds: 'BB', 'ST', 'BOTH'
+        """
+        for kind in ['sv', 'bb', 'st']:
+            setattr(self, kind + '_labels', self.get_unique_labels(kind))
+        if (self.st_labels.size > 0) and (self.bb_labels.size > 0):
+            return 'BOTH'
+        elif self.st_labels.size > 0:
+            return 'ST'
+        elif self.bb_labels.size > 0:
+            return 'BB'
+        elif self.sv_labels.size > 0:
+            # this is required for the few runs that contain SV-only calibration views
+            return 'SV'
+        else:
+            return None
 
     def check_length_get_mean(self, group):
         if len(group) < 80:
