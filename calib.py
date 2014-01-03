@@ -225,8 +225,10 @@ class CalBlock(object):
 
     IN:
         dataframe, containing all meta-data like label numbers, H/K etc.
+        skip_samples, integer, indicating how many samples to skip for
+            mean value calculation
     OUT:
-        via several class methods
+        via several class methods and properties (like members)
     """
     def __init__(self, df, skip_samples=0):
         self.df = df
