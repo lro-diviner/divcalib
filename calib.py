@@ -281,7 +281,7 @@ class CalBlock(object):
         return mean_spaceviews.mean()
 
     def get_mean_counts(self, view):
-        cond = 'is_' + view +'view'
+        cond = 'is_' + view.lower() +'view'
         try:
             return get_data_columns(
                     self.check_length_get_mean(self.df[self.df[cond]]))
@@ -309,22 +309,15 @@ class CalBlock(object):
         
     @property
     def bb_time(self):
-        if self.kind == 'ST':
-            raise WrongTypeError('BB', self.kind)
-        bbdata = self.df[self.df.is_bbview]
-        return get_mean_time(bbdata, self.skip_samples)
+        return self.check_length_get_mean_time('bb')
 
     @property
     def st_time(self):
-        if self.kind == 'BB':
-            raise WrongTypeError('ST', self.kind)
-        bbdata = self.df[self.df.is_stview]
-        return get_mean_time(bbdata, self.skip_samples)
+        return self.check_length_get_mean_time('st')
 
     @property
     def sv_time(self):
-        svdata = self.df[self.df.is_spaceview]
-        return get_mean_time(svdata, self.skip_samples)
+        return self.check_length_get_mean_time('space')
 
     @property
     def mean_time(self):
@@ -646,15 +639,17 @@ class Calibrator(object):
 
         def get_offsets(group):
             cb = CalBlock(group, self.SV_NUM_SKIP_SAMPLE)
-            if len(group) <80:
+            if len(group) < config.SPACE_LENGTH:
                 logging.info("CalBlock at {0} has a spaceview"
-                             " shorter than 80 entries.".format(cb.mean_time))
+                             " shorter than {1} entries.".format(cb.mean_time,
+                                                                 config.SPACE_LENGTH))
                 return
             newdf = pd.DataFrame(cb.offsets).T
             newdf.index = [cb.mean_time]
             return newdf
             
-        grouped = self.caldata.groupby(self.df.calib_block_labels, as_index=False)
+        grouped = self.df[self.df['is_spaceview']].groupby(self.df.calib_block_labels,
+                                                           as_index=False)
         self.offsets = grouped.apply(get_offsets)
             
     def calc_CBB(self):
