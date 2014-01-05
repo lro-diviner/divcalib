@@ -1,13 +1,15 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
-import divconstants as config
 #from plot_utils import ProgressBar
 import logging
 from numpy import poly1d
 import os
-import file_utils as fu
+from . import divconstants as config
+from . import file_utils as fu
+from .exceptions import *
+
 
 logging.basicConfig(filename='calib.log', level=logging.INFO)
 
@@ -20,59 +22,6 @@ tel_A_detectors = [det for det in detectors if det.startswith('a')]
 tel_B_detectors = [det for det in detectors if det.startswith('b')]
 thermal_detectors = detectors[-147:]
 
-
-class DivCalibError(Exception):
-    """Base class for exceptions in this module."""
-    pass
-
-
-class ViewLengthError(DivCalibError):
-    """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
-
-    SV/BBV/ST_LENGTH_TOTAL defined in divconstants.
-    """
-    def __init__(self, view, expected, received):
-        self.view = view
-        self.expected = expected
-        self.received = received
-    def __str__(self):
-        return "Length of {0}-view not the expected {1}. Instead: {2}".format(self.view,
-                                                                              self.expected,
-                                                                              self.received)
-
-
-class NoOfViewsError(DivCalibError):
-    def __init__(self, view, wanted, value, where):
-        self.view = view
-        self.wanted = wanted
-        self.value = value
-        self.where = where
-    def __str__(self):
-        return "Number of {0} views not as expected in {3}. "\
-                "Wanted {1}, got {2}.".format(self.view, self.wanted,
-                                              self.value, self.where)
-
-class UnknownMethodError(DivCalibError):
-    def __init__(self, method, location):
-        self.method = method
-        self.location = location
-    def __str__(self):
-        return "Method {0} not defined here. ({1})".format(self.method,
-                                                           self.location)
-
-class WrongTypeError(DivCalibError):
-    def __init__(self, type_required, type_current):
-        self.type_required = type_required
-        self.type_current = type_current
-    def __str__(self):
-        return "Wrong type {0} for requested operation. Need {1}".format(self.type_current,
-                                                                        self.type_required)
-
-class MeanTimeCalcError(DivCalibError):
-    def __init__(self, t):
-	self.t = t
-    def __str__(self):
-	return "Problem calculating mean time at hour {}".format(self.t)
 
 
 def get_calib_blocks(df, blocktype, del_zero=True):
@@ -219,6 +168,7 @@ class RadianceCorrection(object):
         # table, as poly1d needs it in highest order first
         p = poly1d(self.df[detID][::-1].values)
         return p(radiance)
+
 
 class CalBlock(object):
     """Class to handle different options on how to deal with a single cal block.
@@ -609,30 +559,6 @@ class Calibrator(object):
         self.RBB = calib_RBBs
         if return_values:
             return self.RBB
-
-    # def calc_offsets_old(self):
-    # 
-    #     # if the df has less than 240 samples, then part of the calblock are cut off.
-    #     # I can afford to be so restrictive, because I am using 1 hour blocks around the ROI
-    #     # for calibration to have the central hour ROI calibrated correctly only and written
-    #     # out.But this means to ensure that the calib times don't use less than 240 either.
-    #     # TODO: Mark if offsets come from ST views?
-    # 
-    #     ###
-    #     # change here for method of means!!
-    #     # the current method aggregates just 1 value for the whole calibration block
-    #     ###
-    #     # filtered = self.calgrouped.filter(lambda x: CalBlock(x).kind == 'BB')
-    #     # offsets = filtered.groupby('calib_block_labels').agg(get_offsets_from_calblock)
-    #     # return offsets
-    #     func = lambda x: CalBlock(x, self.SV_NUM_SKIP_SAMPLE).offsets
-    #     offsets = get_data_columns(self.calgrouped.agg(func))
-    # 
-    #     # # set the times as index for this dataframe of offsets
-    #     func = lambda x: CalBlock(x, self.SV_NUM_SKIP_SAMPLE).mean_time
-    #     offsets.index = self.calgrouped.apply(func)
-    # 
-    #     self.offsets = offsets
 
     def calc_offsets(self):
         "Calculate the offsets via the spaceviews, using the CalBlock class."
