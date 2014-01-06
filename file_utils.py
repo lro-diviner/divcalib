@@ -434,7 +434,7 @@ def folder_to_store(folder):
     store = pd.HDFStore(storename, mode='w')
     nfiles = len(fnames)
     olddf = None
-    cols = ['calib_block_labels', 'sv_block_labels', 'bb_block_labels',
+    cols = ['calib_block_labels', 'space_block_labels', 'bb_block_labels',
             'st_block_labels', 'is_spaceview', 'is_bbview', 'is_stview',
             'is_moving', 'is_stowed', 'is_calib']
     for i, fname in enumerate(fnames):

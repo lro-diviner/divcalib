@@ -122,9 +122,56 @@ class RBBTable(object):
 
     def get_radiance(self, temps, ch):
         return self.t2rad[ch](temps)
+
     def get_tb(self, rads, ch):
         return self.rad2t[ch](rads)
 
+    def get_telA_radiances(self, temp):
+        rads = []
+        for i in range(3,7):
+            rads.extend(21*[float(self.get_radiance(temp, i))])
+        return rads
+        
+    def get_telB_radiances(self, temp):
+        rads = []
+        for i in range(7,10):
+            rads.extend(21*[float(self.get_radiance(temp, i))])
+        return rads
+        
+    def lookup_radiances_for_thermal_channels(self, mapping_source, store):
+        """Convert the temperatures to radiances.
+        
+        Parameters
+        ==========
+            mapping_source: pandas DataFrame that has to contain the columns
+                            ['bb_1_temp_interp', 'bb_2_temp_interp'], ergo
+                            this would be called *after* the interpolation
+                            of the bb_x temps is done.
+            store : pandas DataFrame for storing the result
+        """
+        # different mapping sources depending on if we lookup only for single
+        # values at calblock times or for all interpolated temperatures
+        # the caller of this function determines this by providing the mapping source
+        mapping = {'a': mapping_source['bb_1_temp_interp'],
+                   'b': mapping_source['bb_2_temp_interp']}
+
+        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
+        for channel in thermal_channels:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
+
+            #look up the radiances for this channel
+            RBBs = self.get_radiance(bbtemps, self.mcs_div_mapping[channel])
+            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
+            for i in range(1,22):
+                col_name = channel + '_' + str(i).zfill(2)
+                store[col_name] = channel_rbbs
+
+
+###
+### global
+###
+rbbtable = RBBTable()
 
 class RadianceCorrection(object):
     """Polynomial correction for the interpolated radiances.
@@ -133,12 +180,10 @@ class RadianceCorrection(object):
     """
     def __init__(self, new_corr=True):
         super(RadianceCorrection, self).__init__()
-        # excelfile = pd.io.parsers.ExcelFile(os.path.join(fu.codepath,
-        #                                                  'data',
-        #                                                  'Rn_vs_Rn_interp_coefficients.xlsx'))
-        self.excelfile = pd.io.excel.ExcelFile(os.path.join(fu.codepath,
-                                                 'data',
-                                                 'Rn_vs_Rn_interp_coefficients_new.xlsx'))
+        self.excelfile = pd.io.excel.ExcelFile(
+                            os.path.join(fu.codepath,
+                                         'data',
+                                         'Rn_vs_Rn_interp_coefficients_new.xlsx'))
         # the delivered new excel file has both the old and new coeffcients on two
         # different worksheets inside the file.
         # the old correction coefficients are on sheet_names[0], the new ones on
@@ -180,133 +225,119 @@ class CalBlock(object):
     OUT:
         via several class methods and properties (like members)
     """
-    def __init__(self, df, skip_samples=0):
+    def __init__(self, df):
         self.df = df
-        self.skip_samples = skip_samples
-        self.spaceviews = get_data_columns( df[ df.is_spaceview ] )
-        self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
+        for view in 'space bb st'.split():
+            viewdf = self.df[self.df['is_'+view+'view']]
+            setattr(self, view + 'views', viewdf)
+            label = view + '_block_labels'
+            setattr(self, view + '_grouped', viewdf.groupby(self.df[label]))
+            setattr(self, 'unique_' + view + '_labels', self.get_unique_labels(view))
+            
+        if any([len(self.unique_bb_labels) > 1, len(self.unique_st_labels) > 1]):
+            logging.info("Found more than one BB or ST label in CalBlock"
+                         " at {}".format(get_mean_time(self.bbviews)))
+                         
+        if self.has_complete_spaceview and self.has_complete_bbview:
+            self.has_gain = True
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
         return np.sort(labels[labels > 0])
 
     @property
-    def kind(self):
-        """Define kind of calblock depending on containing bbview, st or both.
-
-        Possible kinds: 'BB', 'ST', 'BOTH'
-        """
-        for kind in ['sv', 'bb', 'st']:
-            setattr(self, kind + '_labels', self.get_unique_labels(kind))
-        if (self.st_labels.size > 0) and (self.bb_labels.size > 0):
-            return 'BOTH'
-        elif self.st_labels.size > 0:
-            return 'ST'
-        elif self.bb_labels.size > 0:
-            return 'BB'
-        elif self.sv_labels.size > 0:
-            # this is required for the few runs that contain SV-only calibration views
-            return 'SV'
-        else:
-            return None
-
-    def check_length_get_mean(self, group):
-        if len(group) < config.SPACE_LENGTH:
-            return
-        if len(group) > config.SPACE_LENGTH:
-            logging.info("Calib view larger than {} samples "
-                         "at {}".format(config.SPACE_LENGTH, self.mean_time))
-        return group[self.skip_samples:].mean()
-
-    @property
-    def offsets(self):
-        """Determine offsets for each available spacelook.
-
-        At initialisation, this object receives the number of samples to skip.
-        That number `self.skipsamples` is used here for the offset calculation.
-        """
-        # first, mean values of each spaceview, with skipped removed:
-        mean_spaceviews = self.sv_grouped.agg(self.check_length_get_mean)
-        # then return mean value of these 2 labels, detectors as index.
-        return mean_spaceviews.mean()
-
-    def get_mean_counts(self, view):
-        cond = 'is_' + view.lower() +'view'
-        try:
-            return get_data_columns(
-                    self.check_length_get_mean(self.df[self.df[cond]]))
-        except AttributeError:
-            return
-
-    def check_length_get_mean_time(self, view):
-        cond = 'is_' + view.lower() + 'view'
-        data = self.df[self.df[cond]]
-        limit = getattr(config, view.upper()+'_LENGTH')
-        if len(data) < limit:
-            return
-        if len(data) > limit:
-            logging.info("Calib view larger than {} samples "
-                         " at {}".format(limit, get_mean_time(data, 0)))
-        return get_mean_time(data, self.skip_samples)
-
-    @property
     def has_complete_spaceview(self):
-        return any(self.sv_grouped.size() >= config.SPACE_LENGTH)
+        """Check any of contained spaceviews to be larger than SPACE_LENGTH.
+        
+        This is different from self.has_complete_bbview and _stview
+        """
+        if any(self.space_grouped.size()):
+            logging.info("Space-view larger than {} at {}.".format(config.SPACE_LENGTH,
+                                                        get_mean_time(self.spaceviews)))
+        return any(self.space_grouped.size() >= config.SPACE_LENGTH)
 
     @property
     def has_complete_bbview(self):
-        return len(self.df[self.df.is_bbview]) >= config.BB_LENGTH
+        bbview = self.bbviews
+        if len(bbview) > config.BB_LENGTH:
+            logging.info("BB-view larger than {} at {}.".format(config.BB_LENGTH,
+                                                                get_mean_time(bbview)))
+        return len(bbview) >= config.BB_LENGTH
+
+    @property
+    def has_complete_stview(self):
+        return len(self.stviews) >= config.ST_LENGTH
         
+    def check_length_get_mean(self, group, skip_samples):
+        return group[skip_samples:].mean()
+    
+    def get_offsets(self, method='mean', skipsamples=config.SV_NUM_SKIP_SAMPLE):
+        """Provide offsets for method as required.
+
+        At initialisation, this object receives the number of samples to skip.
+        That number `self.skipsamples` is used here for the offset calculation.
+        IN:
+            offset method. Choices:
+                'mean': all available spaceviews will be averaged (after skipping
+                        <skipsamples> samples)
+                'each': each spaceview provides one time and one offset value.
+        """
+        # Check 
+        if not self.has_complete_spaceview:
+            return None
+        elif method=='mean':
+            # first, mean values of each spaceview, with skipped removed:
+            mean_spaceviews = self.space_grouped.agg(self.check_length_get_mean,
+                                                     config.SV_NUM_SKIP_SAMPLE)
+            # then return mean value of these 2 labels, detectors as index.
+            return mean_spaceviews.mean()
+
+    @property
+    def offset_time(self):
+        if self.has_gain:
+            return get_mean_time(self.bbviews, config.BBV_NUM_SKIP_SAMPLE)
+        else:
+            return get_mean_time(self.spaceview, config.SV_NUM_SKIP_SAMPLE)
+            
     @property
     def bb_time(self):
-        return self.check_length_get_mean_time('bb')
+        return get_mean_time(self.bbviews, config.BBV_NUM_SKIP_SAMPLE)
+        
+    def calc_BB_radiance(self):
+        """Calculate like JPL only one RBB value for a mean BB temperature. """
+        # procedure same as calib_cbb
+        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
 
-    @property
-    def st_time(self):
-        return self.check_length_get_mean_time('st')
-
-    @property
-    def sv_time(self):
-        return self.check_length_get_mean_time('space')
-
-    @property
-    def mean_time(self):
-        if self.kind == 'ST':
-            return self.st_time
-        elif self.kind == 'BB':
-            return self.bb_time
-        elif self.kind == 'SV':
-            return self.sv_time
-        elif self.kind == 'BOTH':
-            t1 = self.st_time
-            t2 = self.bb_time
-            if t2 > t1:
-                return t1 + (t2 - t1) // 2
-            else:
-                return t2 + (t1 - t2) // 2
-
-    # @property
-    # def center_data(self):
-    #     if self.kind == 'BOTH':
-    #         # for the lack of a better definition, if this calib block both
-    #         # contains ST and BB data, I take both as 'center_data'
-    #         return self.df[(self.df.is_stview) | (self.df.is_bbview)]
-    #     elif self.kind == 'BB':
-    #         return self.df[self.df.is_bbview]
-    #     elif self.kind == 'ST':
-    #         return self.df[self.df.is_stview]
-    # @property
-    # def sv_stds(self):
-    #     return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
-
-    # def get_offsets(self, kind='both'):
-    #     """Provide offsets for method as required.
-    #     IN:
-    #         offset_kind. If set to 'both', both sides will be used to determine
-    #             the offset, 'left' and 'right' do the alternative, respectively.
-    #     """
-    #     print("Not implemented.")
-
+        # restrict the data to the BB view
+        bbviews_temps = self.bbviews[T_cols]
+        # get the mean time for the BB view
+    
+        # if bb block longer than expected, log it
+        if len(bbviews_temps) > config.BB_LENGTH:
+            logging.info("BB View larger than {} samples at {}".format(
+                            config.BB_LENGTH, bbtime))
+        # determine the mean value of the interpolated BB temps, minus skipped
+        bbtemps_mean = bbviews_temps[config.BBV_NUM_SKIP_SAMPLE:].mean()
+        
+        # convert the mean temps to radiances
+        rads = []
+        rads.extend(rbbtable.get_telA_radiances(bbtemps_mean[0]))
+        rads.extend(rbbtable.get_telB_radiances(bbtemps_mean[1]))
+        return pd.Series(np.array(rads), index=thermal_detectors)
+        
+    def calc_gain(self):
+        if not self.has_gain:
+            return None
+        RBB = self.calc_BB_radiance()
+        offsets = self.get_offsets(method='mean')
+        CBB = self.get_mean_BB_counts()
+        gains = pd.DataFrame(-RBB / get_thermal_detectors(offsets - CBB)).T
+        gains.index = [self.bb_time]
+        return gains
+        
+    def get_mean_BB_counts(self):
+        return get_data_columns(self.check_length_get_mean(self.bbviews,
+                                                           config.BBV_NUM_SKIP_SAMPLE))
 
 
 class Calibrator(object):
@@ -403,34 +434,36 @@ class Calibrator(object):
             self.interpolate_bb_temps()
 
         #####
-        ### RADIANCES FROM TABLE
+        ### Process CalBlocks
         #####
-        if self.single_rbb:
-            # calculate only one radiance per mean BB temperature per calib block
-            # this is the same method as JPL does it, and it's slightly faster.
-            self.calc_one_RBB()
-        else:
-            # look-up all radiances for all interpolated bb temperatures and then
-            # calculate the mean value of the radiances per calib block
-            self.calc_many_RBB()
+        self.process_calblocks()
 
-        #####
-        ### OFFSETS
-        #####
-        # determine the offsets per calib_block
-        self.calc_offsets()
-
-        #####
-        ### BB COUNTS
-        #####
-        # determine bb counts (=calcCBB) per calib_block
-        self.calc_CBB()
-
-        #####
-        ### GAIN
-        ###
-        self.calc_gain()
-
+        # if self.single_rbb:
+        #     # calculate only one radiance per mean BB temperature per calib block
+        #     # this is the same method as JPL does it, and it's slightly faster.
+        #     self.calc_one_RBB()
+        # else:
+        #     # look-up all radiances for all interpolated bb temperatures and then
+        #     # calculate the mean value of the radiances per calib block
+        #     self.calc_many_RBB()
+        # 
+        # #####
+        # ### OFFSETS
+        # #####
+        # # determine the offsets per calib_block
+        # self.calc_offsets()
+        # 
+        # #####
+        # ### BB COUNTS
+        # #####
+        # # determine bb counts (=calcCBB) per calib_block
+        # self.calc_CBB()
+        # 
+        # #####
+        # ### GAIN
+        # ###
+        # self.calc_gain()
+        # 
         #####
         ### INTERPOLATION OF CALIB DATA
         #####
@@ -501,25 +534,9 @@ class Calibrator(object):
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
 
-    def lookup_radiances_for_thermal_channels(self, mapping_source, store):
-        # different mapping sources depending on if we lookup only for single
-        # values at calblock times or for all interpolated temperatures
-        # the caller of this function determines this by providing the mapping source
-        mapping = {'a': mapping_source['bb_1_temp_interp'],
-                   'b': mapping_source['bb_2_temp_interp']}
-
-        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
-        for channel in thermal_channels:
-            #link to the correct bb temps by checking first letter of channel
-            bbtemps = mapping[channel[0]]
-
-            #look up the radiances for this channel
-            RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
-            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
-            for i in range(1,22):
-                col_name = channel + '_' + str(i).zfill(2)
-                store[col_name] = channel_rbbs
-
+    def process_calblocks(self):
+        pass
+        
     def get_bbcal_times(self):
         grouped = self.caldata[self.caldata.is_bbview].groupby(self.df.bb_block_labels)
         f = lambda x: CalBlock(x, self.BBV_NUM_SKIP_SAMPLE).bb_time
@@ -540,7 +557,7 @@ class Calibrator(object):
         # here the end product is already an RBB value per calib time
         RBB = pd.DataFrame(index=bbtemps.index)
 
-        self.lookup_radiances_for_thermal_channels(bbtemps, RBB)
+        lookup_radiances_for_thermal_channels(bbtemps, RBB)
         self.RBB = RBB.dropna()
 
     def calc_many_RBB(self, return_values=False):
