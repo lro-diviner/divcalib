@@ -226,9 +226,25 @@ class CalBlock(object):
         via several class methods and properties (like members)
     """
     def __init__(self, df):
+        """Initialize CalBlock instance.
+        
+        The init method creates for each of [space, bb, st] the following data item for the 
+        respective view:
+        * xxviews (the dataframe filtered for the view)
+        * xx_grouped (the groupby object to enable skipping samples for each spaceview uniquely
+            (or for other double-views, should they exist, like the double stview I found.))
+        * unique_xx_labels (the unique and sorted list of labels, useful to sequence operations
+            on a view, in case that is required.)
+            
+        It also makes some checks on the appearance of the number of views and lengths of these
+        views and logs any anomalies.
+        Lastly, it sets a boolean to define if this CalBlock has all required data to enable
+        a gain calculation. If not, it still could be useful for an offset determination.
+        """
         self.df = df
+        self.offsets_done = False
         for view in 'space bb st'.split():
-            viewdf = self.df[self.df['is_'+view+'view']]
+            viewdf = get_data_columns(self.df[self.df['is_'+view+'view']])
             setattr(self, view + 'views', viewdf)
             label = view + '_block_labels'
             setattr(self, view + '_grouped', viewdf.groupby(self.df[label]))
@@ -236,8 +252,10 @@ class CalBlock(object):
             
         if any([len(self.unique_bb_labels) > 1, len(self.unique_st_labels) > 1]):
             logging.info("Found more than one BB or ST label in CalBlock"
-                         " at {}".format(get_mean_time(self.bbviews)))
-                         
+                         " at {}.".format(get_mean_time(self.bbviews)))
+        if len(self.unique_space_labels) < 2:
+            logging.info("Found less than 2 SPACE labels in CalBlock"
+                         " at {}.".format(get_mean_time(self.spaceviews)))
         if self.has_complete_spaceview and self.has_complete_bbview:
             self.has_gain = True
 
@@ -293,7 +311,7 @@ class CalBlock(object):
             return mean_spaceviews.mean()
 
     @property
-    def offset_time(self):
+    def offsets_time(self):
         if self.has_gain:
             return get_mean_time(self.bbviews, config.BBV_NUM_SKIP_SAMPLE)
         else:
@@ -303,13 +321,23 @@ class CalBlock(object):
     def bb_time(self):
         return get_mean_time(self.bbviews, config.BBV_NUM_SKIP_SAMPLE)
         
+    @property
+    def offsets(self):
+        if self.offsets_done:
+            offsets = pd.DataFrame(self.offsets_calculated).T
+            offsets.index = [self.offsets_time_calculated]
+        else:
+            offsets = pd.DataFrame(self.get_offsets()).T
+            offsets.index = [self.offsets_time]
+        return offsets
+        
     def calc_BB_radiance(self):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
         # procedure same as calib_cbb
         T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
 
         # restrict the data to the BB view
-        bbviews_temps = self.bbviews[T_cols]
+        bbviews_temps = self.df[self.df.is_bbview][T_cols]
         # get the mean time for the BB view
     
         # if bb block longer than expected, log it
@@ -325,14 +353,21 @@ class CalBlock(object):
         rads.extend(rbbtable.get_telB_radiances(bbtemps_mean[1]))
         return pd.Series(np.array(rads), index=thermal_detectors)
         
-    def calc_gain(self):
+    def get_gains(self):
         if not self.has_gain:
             return None
         RBB = self.calc_BB_radiance()
         offsets = self.get_offsets(method='mean')
+        bb_time = self.bb_time
         CBB = self.get_mean_BB_counts()
         gains = pd.DataFrame(-RBB / get_thermal_detectors(offsets - CBB)).T
-        gains.index = [self.bb_time]
+        gains.index = [bb_time]
+        # as the CalBlock has gain, the offsets used here are the ones to be used for 
+        # calibration and no other calculation is required. Therefore save these for the
+        # collector routine in Calibrator
+        self.offsets_calculated = offsets
+        self.offsets_time_calculated = bb_time
+        self.offsets_done = True
         return gains
         
     def get_mean_BB_counts(self):
@@ -438,32 +473,6 @@ class Calibrator(object):
         #####
         self.process_calblocks()
 
-        # if self.single_rbb:
-        #     # calculate only one radiance per mean BB temperature per calib block
-        #     # this is the same method as JPL does it, and it's slightly faster.
-        #     self.calc_one_RBB()
-        # else:
-        #     # look-up all radiances for all interpolated bb temperatures and then
-        #     # calculate the mean value of the radiances per calib block
-        #     self.calc_many_RBB()
-        # 
-        # #####
-        # ### OFFSETS
-        # #####
-        # # determine the offsets per calib_block
-        # self.calc_offsets()
-        # 
-        # #####
-        # ### BB COUNTS
-        # #####
-        # # determine bb counts (=calcCBB) per calib_block
-        # self.calc_CBB()
-        # 
-        # #####
-        # ### GAIN
-        # ###
-        # self.calc_gain()
-        # 
         #####
         ### INTERPOLATION OF CALIB DATA
         #####
@@ -531,123 +540,16 @@ class Calibrator(object):
             # get new temperatures at all_times
             df[bbtemp.name + '_interp'] = temp_interpolator(all_times)
 
-    def skipped_mean(self, df, num_to_skip):
-        return df[num_to_skip:].mean()
-
     def process_calblocks(self):
-        pass
-        
-    def get_bbcal_times(self):
-        grouped = self.caldata[self.caldata.is_bbview].groupby(self.df.bb_block_labels)
-        f = lambda x: CalBlock(x, self.BBV_NUM_SKIP_SAMPLE).bb_time
-        bbcal_times = grouped.apply(f)
-        return bbcal_times
-
-    def calc_one_RBB(self):
-        """Calculate like JPL only one RBB value for a mean BB temperature. """
-        # procedure same as calib_cbb
-        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
-        bbviews_temps = self.df[self.df.is_bbview][T_cols]
-        grouped = bbviews_temps.groupby(self.df.bb_block_labels)
-        
-        bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
-        bbtemps.index = self.get_bbcal_times()
-        self.bbtemps = bbtemps
-
-        # here the end product is already an RBB value per calib time
-        RBB = pd.DataFrame(index=bbtemps.index)
-
-        lookup_radiances_for_thermal_channels(bbtemps, RBB)
-        self.RBB = RBB.dropna()
-
-    def calc_many_RBB(self, return_values=False):
-        # lookup radiances for all interpolated BB temperatures
-        self.RBB_all = pd.DataFrame(index=self.df.index)
-        self.lookup_radiances_for_thermal_channels(self.df, self.RBB_all)
-
-        # calculate mean values for radiances for calib blocks
-        bbview_rbbs = self.RBB_all[self.df.is_bbview]
-        grouped = bbview_rbbs.groupby(self.df.calib_block_labels)
-        if self.skipsamples:
-            calib_RBBs = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
-        else:
-            calib_RBBs = grouped.mean()
-        calib_RBBs.index = self.bbcal_times
-        self.RBB = calib_RBBs
-        if return_values:
-            return self.RBB
-
-    def calc_offsets(self):
-        "Calculate the offsets via the spaceviews, using the CalBlock class."
-
-        def get_offsets(group):
-            cb = CalBlock(group, self.SV_NUM_SKIP_SAMPLE)
-            if len(group) < config.SPACE_LENGTH:
-                logging.info("CalBlock at {0} has a spaceview"
-                             " shorter than {1} entries.".format(cb.mean_time,
-                                                                 config.SPACE_LENGTH))
-                return
-            newdf = pd.DataFrame(cb.offsets).T
-            newdf.index = [cb.mean_time]
-            return newdf
-            
-        grouped = self.df[self.df['is_spaceview']].groupby(self.df.calib_block_labels,
-                                                           as_index=False)
-        self.offsets = grouped.apply(get_offsets)
-            
-    def calc_CBB(self):
-        # kick out moving data and get only bbviews
-        bbviews = self.df[self.df.is_bbview]
-
-        # get only the science data columns
-        bbviews_counts = get_data_columns(bbviews)
-
-        # group by calibration block label
-        # does bbview ever happen more than once in one calib
-        # block?
-        grouped = bbviews_counts.groupby(self.df.calib_block_labels)
-
-        ###
-        # change here for the aggregation method
-        ###
-        bbcounts = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
-
-        # set the times as index for this dataframe of bbcounts
-        bbcounts.index = self.bbtemps.index
-
-        self.CBB = bbcounts
-
-    def calc_gain(self):
-        """Calc gain.
-
-        Basically, gain = -rbbs / (calib_offsets - calib_bbcounts)
-
-        This is how JPL did it:
-        numerator = -1 * thermal_marker_node.calcRBB(chan,det)
-
-        denominator = (thermal_marker_node.calc_offset_leftSV(chan, det) +
-                       thermal_marker_node.calc_offset_rightSV(chan,det)) / 2.0
-
-        Basically, that means: denominator = mean(loffset, roffset)
-
-        For the second step of the denominator, they used calc_CBB, which is just
-        the mean of counts in BB view:
-        denominator -= thermal_marker_node.calc_CBB(chan, det)
-        return numerator/denominator.
-        """
-        numerator = -1 * self.RBB
-
-        # note how we are calculating only for thermal channels !!
-
-        # we need to restrict the offsets for the times where the CalBlock is
-        # a BB block, as only then we can calculate a gain.
-        offsets = self.offsets.ix[self.bbtemps.index]
-
-        denominator = get_thermal_detectors(offsets) - \
-                        get_thermal_detectors(self.CBB)
-        gains = numerator / denominator
-        self.gains = gains
-
+        calblocks = get_calib_blocks(self.df, 'calib')
+        gain_container = []
+        offset_container = []
+        for calblock in calblocks.values():
+            cb = CalBlock(calblock)
+            gain_container.append(cb.get_gains())
+            offset_container.append(cb.offsets)
+        self.gains = pd.concat(gain_container)
+        self.offsets = pd.concat(offset_container)
         
     def interpolate_caldata_worker(self, offset_times, bbcal_times, all_times):
 
@@ -712,7 +614,7 @@ class Calibrator(object):
 
         # these are the times as defined by above offset and bbcal methods
         offset_times = self.offsets.index.values.astype('float64')
-        bbcal_times = self.bbtemps.index.values.astype('float64')
+        bbcal_times = self.gains.index.values.astype('float64')
         
         offsets_interp, gains_interp = self.interpolate_caldata_worker2(offset_times, 
                                                                        bbcal_times,
