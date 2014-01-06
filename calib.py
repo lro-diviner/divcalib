@@ -250,14 +250,26 @@ class CalBlock(object):
             setattr(self, view + '_grouped', viewdf.groupby(self.df[label]))
             setattr(self, 'unique_' + view + '_labels', self.get_unique_labels(view))
             
-        if any([len(self.unique_bb_labels) > 1, len(self.unique_st_labels) > 1]):
-            logging.info("Found more than one BB or ST label in CalBlock"
+        self.has_gain = self.has_complete_spaceview and self.has_complete_bbview
+        self.logging()
+        
+    def logging(self):
+        "Perform sanity checks and log anomalies"
+        if len(self.unique_bb_labels) > 1: 
+            logging.info("Found more than one BB label in CalBlock"
                          " at {}.".format(get_mean_time(self.bbviews)))
+        if len(self.unique_st_labels) > 1:
+            logging.info("Found more than one ST label in CalBlock"
+                         " at {}.".format(get_mean_time(self.stviews)))
         if len(self.unique_space_labels) < 2:
             logging.info("Found less than 2 SPACE labels in CalBlock"
                          " at {}.".format(get_mean_time(self.spaceviews)))
-        if self.has_complete_spaceview and self.has_complete_bbview:
-            self.has_gain = True
+        if np.any(self.space_grouped.size()>config.SPACE_LENGTH):
+            logging.info("Space-view larger than {} at {}.".format(config.SPACE_LENGTH,
+                                                        get_mean_time(self.spaceviews)))
+        if len(self.bbviews) > config.BB_LENGTH:
+            logging.info("BB-view larger than {} at {}.".format(config.BB_LENGTH,
+                                                                get_mean_time(self.bbviews)))
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
@@ -265,21 +277,11 @@ class CalBlock(object):
 
     @property
     def has_complete_spaceview(self):
-        """Check any of contained spaceviews to be larger than SPACE_LENGTH.
-        
-        This is different from self.has_complete_bbview and _stview
-        """
-        if any(self.space_grouped.size()):
-            logging.info("Space-view larger than {} at {}.".format(config.SPACE_LENGTH,
-                                                        get_mean_time(self.spaceviews)))
-        return any(self.space_grouped.size() >= config.SPACE_LENGTH)
+        return np.any(self.space_grouped.size() >= config.SPACE_LENGTH)
 
     @property
     def has_complete_bbview(self):
         bbview = self.bbviews
-        if len(bbview) > config.BB_LENGTH:
-            logging.info("BB-view larger than {} at {}.".format(config.BB_LENGTH,
-                                                                get_mean_time(bbview)))
         return len(bbview) >= config.BB_LENGTH
 
     @property
@@ -312,10 +314,9 @@ class CalBlock(object):
 
     @property
     def offsets_time(self):
-        if self.has_gain:
-            return get_mean_time(self.bbviews, config.BBV_NUM_SKIP_SAMPLE)
-        else:
-            return get_mean_time(self.spaceview, config.SV_NUM_SKIP_SAMPLE)
+        # as i'm only in here when i don't use bb_time from calc_gain(), i don't
+        # need to check anymore if this calblock has_gain, it should not have at this point
+        return get_mean_time(self.spaceviews, config.SV_NUM_SKIP_SAMPLE)
             
     @property
     def bb_time(self):
@@ -340,10 +341,6 @@ class CalBlock(object):
         bbviews_temps = self.df[self.df.is_bbview][T_cols]
         # get the mean time for the BB view
     
-        # if bb block longer than expected, log it
-        if len(bbviews_temps) > config.BB_LENGTH:
-            logging.info("BB View larger than {} samples at {}".format(
-                            config.BB_LENGTH, bbtime))
         # determine the mean value of the interpolated BB temps, minus skipped
         bbtemps_mean = bbviews_temps[config.BBV_NUM_SKIP_SAMPLE:].mean()
         
@@ -394,6 +391,7 @@ class Calibrator(object):
                            calfitting_order=1,
                            new_rad_corr=True):
         self.df = df
+        logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
         # to control if mean bbview times or mean calib_block_times determine the
@@ -544,7 +542,13 @@ class Calibrator(object):
         calblocks = get_calib_blocks(self.df, 'calib')
         gain_container = []
         offset_container = []
-        for calblock in calblocks.values():
+        for label,calblock in calblocks.iteritems():
+            logging.debug("Processing label {}".format(label))
+            if not np.any(calblock[calblock.is_calib]):
+                n_moving = len(calblock[calblock.is_moving])
+                logging.warning("No caldata in calib_label. Found only {}"
+                                " moving samples.".format(n_moving))
+                continue
             cb = CalBlock(calblock)
             gain_container.append(cb.get_gains())
             offset_container.append(cb.offsets)
