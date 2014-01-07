@@ -264,7 +264,10 @@ class CalBlock(object):
         if len(self.unique_space_labels) < 2:
             logging.info("Found less than 2 SPACE labels in CalBlock"
                          " at {}.".format(get_mean_time(self.spaceviews)))
-        if np.any(self.space_grouped.size()>config.SPACE_LENGTH):
+        if np.any(self.st_grouped.size() > config.ST_LENGTH):
+            logging.info("ST views larger than {} at {}.".format(config.ST_LENGTH,
+                                                        get_mean_time(self.stviews)))
+        if np.any(self.space_grouped.size() > config.SPACE_LENGTH):
             logging.info("Space-view larger than {} at {}.".format(config.SPACE_LENGTH,
                                                         get_mean_time(self.spaceviews)))
         if len(self.bbviews) > config.BB_LENGTH:
