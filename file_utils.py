@@ -7,13 +7,17 @@ import sys
 import glob
 from dateutil.parser import parse as dateparser
 import os
+import socket
 from datetime import timedelta
 from datetime import datetime as dt
-from diviner.data_prep import define_sdtype, prepare_data, index_by_time
+from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 
 # from plot_utils import ProgressBar
 import zipfile
+
+hostname = socket.gethostname()
+hostname = hostname.split('.')[0]
 
 if sys.platform == 'darwin':
     datapath = '/Users/maye/data/diviner'
@@ -21,13 +25,13 @@ if sys.platform == 'darwin':
     kernelpath = '/Users/maye/data/spice/diviner'
     codepath = '/Users/maye/Dropbox/src/diviner'
 else:
-    datapath = '/luna4/maye'
-    outpath = '/luna4/maye/rdr_out'
-    kernelpath = '/luna4/maye/kernels'
-    codepath = '/u/paige/maye/src/diviner'
+    datapath = os.path.join('/'+hostname, os.environ['USER'])
+    outpath = os.path.join(datapath, 'rdr_out')
+    kernelpath = os.path.join(datapath, 'kernels')
+    codepath = os.path.join(os.environ['HOME'], 'src/diviner')
 
-l1adatapath = '/luna4/u/marks/feidata/DIV:opsL1A/data'
-rdrdatapath = '/luna4/u/marks/feidata/DIV:opsRdr/data'
+l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
+rdrdatapath = os.path.join('/'+hostname, 'u/marks/feidata/DIV:opsRdr/data')
 
 
 ###
