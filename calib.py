@@ -1,4 +1,4 @@
-from __future__ import division, print_function, absolute_import
+from __future__ import division, print_function
 import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
@@ -6,9 +6,9 @@ from scipy.interpolate import UnivariateSpline as Spline
 import logging
 from numpy import poly1d
 import os
-from . import divconstants as config
-from . import file_utils as fu
-from .exceptions import *
+import divconstants as config
+import file_utils as fu
+from exceptions import *
 
 
 logging.basicConfig(filename='calib.log', level=logging.INFO)
