@@ -330,6 +330,8 @@ class CalBlock(object):
         if self.offsets_done:
             offsets = pd.DataFrame(self.offsets_calculated).T
             offsets.index = [self.offsets_time_calculated]
+	elif not self.has_complete_spaceview:
+	    return
         else:
             offsets = pd.DataFrame(self.get_offsets()).T
             offsets.index = [self.offsets_time]
