@@ -12,6 +12,8 @@ from datetime import timedelta
 from datetime import datetime as dt
 from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
+import logging
+
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -33,6 +35,19 @@ else:
 l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
 rdrdatapath = os.path.join('/'+hostname, 'u/marks/feidata/DIV:opsRdr/data')
 
+
+### 
+### general utilities
+###
+
+def get_timestr(fname):
+    basename = os.path.basename(fname)
+    return basename[:10]
+
+
+def tstr_to_datetime(tstr):
+    dtime = dt.strptime(tstr, '%Y%m%d%H')
+    return dtime
 
 ###
 ### Tools for data output to tables
@@ -711,10 +726,14 @@ def get_raw_l1a(timestr):
     return l1afile.df
 
 
-def open_and_accumulate(fname):
-    """One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
-     to be unique! Each cleaning operation starts the numbering from 1 again!
-     """
+def open_and_accumulate(fname, minimum_number=3):
+    """Open L1A datafile fname and accumulate neighboring data.
+
+    One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
+    to be unique! Each cleaning operation starts the numbering from 1 again!
+
+    minimum_number controls how many files are attached as one block.
+    """
     centerfile = L1ADataFile(fname)
     dataframes = deque()
     dataframes.append(centerfile.open())
@@ -724,8 +743,12 @@ def open_and_accumulate(fname):
     while True:
         fn_handler.set_previous_hour()
         f = L1ADataFile(fn_handler.fname)
-        print("Appending {0} on the left.".format(fn_handler.timestr))
-        dataframes.appendleft(f.open_dirty())
+        logging.debug("Appending {0} on the left.".format(fn_handler.timestr))
+        try:
+            dataframes.appendleft(f.open_dirty())
+	except IOError:
+	    logging.warning('Could not find previous file {}'.format(fn_handler.fname))
+	    break
         if any(f.open().is_calib):
             break
     # append next hours until calib blocks found
@@ -735,7 +758,11 @@ def open_and_accumulate(fname):
         fn_handler.set_next_hour()
         f = L1ADataFile(fn_handler.fname)
         print("Appending {0} on the right.".format(fn_handler.timestr))
-        dataframes.append(f.open_dirty())
+        try:
+            dataframes.append(f.open_dirty())
+        except IOError:
+	    logging.warning('Could not find following file {}'.format(fn_handler.fname))
+	    break
         if any(f.open().is_calib):
             break
     df = prepare_data(pd.concat(list(dataframes)))
