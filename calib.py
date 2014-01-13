@@ -11,7 +11,9 @@ import file_utils as fu
 from exceptions import *
 
 
-logging.basicConfig(filename='calib.log', level=logging.INFO)
+#logging.basicConfig(filename='divcalib.log',
+#	   	    format='%(asctime)s %(message)s',
+#		    level=logging.INFO)
 
 channels = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']
 thermal_channels = channels[2:]
@@ -551,8 +553,8 @@ class Calibrator(object):
             logging.debug("Processing label {}".format(label))
             if not np.any(calblock[calblock.is_calib]):
                 n_moving = len(calblock[calblock.is_moving])
-                logging.warning("No caldata in calib_label. Found only {}"
-                                " moving samples.".format(n_moving))
+                logging.warning("No caldata in calib_label at {}.  Found only {}"
+                                " moving samples.".format(get_mean_time(calblock), n_moving))
                 continue
             cb = CalBlock(calblock)
             gain_container.append(cb.get_gains())
