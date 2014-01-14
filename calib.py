@@ -59,7 +59,7 @@ def get_mean_time(df_in, skipsamples=0):
         t2 = df.index[-1]
     except IndexError:
         print("Problem with calculating mean time.")
-        logging.warning('Index not found in get_mean_time. '
+        logging.error('Index not found in get_mean_time. '
                         'Length of df: {0}'.format(len(df.index)))
 	raise MeanTimeCalcError('unknown')
         return np.nan
@@ -259,22 +259,22 @@ class CalBlock(object):
         "Perform sanity checks and log anomalies"
         if len(self.unique_bb_labels) > 1: 
             logging.info("Found more than one BB label in CalBlock"
-                         " at {}.".format(get_mean_time(self.bbviews)))
+                         " at {}.".format(self.df.index[0]))
         if len(self.unique_st_labels) > 1:
             logging.info("Found more than one ST label in CalBlock"
-                         " at {}.".format(get_mean_time(self.stviews)))
+                         " at {}.".format(self.df.index[0]))
         if len(self.unique_space_labels) < 2:
             logging.info("Found less than 2 SPACE labels in CalBlock"
-                         " at {}.".format(get_mean_time(self.spaceviews)))
+                         " at {}.".format(self.df.index[0]))
         if np.any(self.st_grouped.size() > config.ST_LENGTH):
             logging.info("ST views larger than {} at {}.".format(config.ST_LENGTH,
-                                                        get_mean_time(self.stviews)))
+                                                        self.df.index[0]))
         if np.any(self.space_grouped.size() > config.SPACE_LENGTH):
             logging.info("Space-view larger than {} at {}.".format(config.SPACE_LENGTH,
-                                                        get_mean_time(self.spaceviews)))
+                                                        self.df.index[0]))
         if len(self.bbviews) > config.BB_LENGTH:
             logging.info("BB-view larger than {} at {}.".format(config.BB_LENGTH,
-                                                                get_mean_time(self.bbviews)))
+                                                                self.df.index[0]))
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
@@ -336,6 +336,12 @@ class CalBlock(object):
 	    return
         else:
             offsets = pd.DataFrame(self.get_offsets()).T
+            time = self.offsets_time
+            if time == np.nan:
+                logging.error("Found no offset time at  {}. Should not even reached"
+                             " this point, as calblock must has_complete_spaceview."
+                              .format(self.df.index[0]))
+                return
             offsets.index = [self.offsets_time]
         return offsets
         
@@ -554,7 +560,7 @@ class Calibrator(object):
             if not np.any(calblock[calblock.is_calib]):
                 n_moving = len(calblock[calblock.is_moving])
                 logging.warning("No caldata in calib_label at {}.  Found only {}"
-                                " moving samples.".format(get_mean_time(calblock), n_moving))
+                                " moving samples.".format(self.df.index[0], n_moving))
                 continue
             cb = CalBlock(calblock)
             gain_container.append(cb.get_gains())
