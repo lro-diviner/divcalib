@@ -587,7 +587,23 @@ class Calibrator(object):
         
         return offsets_interp, gains_interp
         
-    def interpolate_caldata_worker2(self, offset_times, bbcal_times, all_times):
+    def interpolate_gains(self, bbcal_times, all_times):
+        def do_spline(col, times):
+            return Spline(times, col, s=0.0, k=self.calfitting_order)(all_times)
+        
+        np_gains = np.apply_along_axis(do_spline,
+                                       0,
+                                       self.gains[thermal_detectors],
+                                       bbcal_times)
+
+        gains_interp = pd.DataFrame(np_gains,
+                                    index=self.df.index,
+                                    columns=thermal_detectors)
+
+        return gains_interp
+
+    def interpolate_offsets(self, offset_times, all_times):
+
         def do_spline(col, times):
             return Spline(times, col, s=0.0, k=self.calfitting_order)(all_times)
             
@@ -599,14 +615,8 @@ class Calibrator(object):
         offsets_interp = pd.DataFrame(np_offsets,
                                       index=self.df.index,
                                       columns=thermal_detectors)
-        np_gains = np.apply_along_axis(do_spline,
-                                       0,
-                                       self.gains[thermal_detectors],
-                                       bbcal_times)
-        gains_interp = pd.DataFrame(np_gains,
-                                    index=self.df.index,
-                                    columns=thermal_detectors)
-        return offsets_interp, gains_interp
+        return offsets_interp
+
         
     def interpolate_caldata(self):
         """Interpolate the offsets and gains all over the dataframe.
@@ -623,19 +633,29 @@ class Calibrator(object):
 
         # only work with real data, filter out meta-data
         sdata = get_data_columns(sdata)
-
-        # times are converted to float64 for the interpolation routine
-
+        
         # the target where we want to interpolate for
         all_times = sdata.index.values.astype('float64')
-
-        # these are the times as defined by above offset and bbcal methods
-        offset_times = self.offsets.index.values.astype('float64')
-        bbcal_times = self.gains.index.values.astype('float64')
         
-        offsets_interp, gains_interp = self.interpolate_caldata_worker2(offset_times, 
-                                                                       bbcal_times,
-                                                                       all_times)
+        if len(self.gains) == 1:
+            logging.warning("Only one gain found. Propagating over whole hour at"
+                            " {}.".format(self.df.index[0]))
+            gains_interp = pd.DataFrame(index=sdata.index)
+            for col in self.gains.columns:
+                gains_interp[col] = self.gains[col].values[0]
+        else:
+            bbcal_times = self.gains.index.values.astype('float64')
+            gains_interp = self.interpolate_gains(bbcal_times, all_times)
+
+        if len(self.offsets) == 1:
+            logging.warning("Only one offsets found. Propagating over whole hour"
+                            " at {}.".format(self.df.index[0]))
+            offsets_interp = pd.DataFrame(index=sdata.index)
+            for col in self.offsets.columns:
+                offsets_interp[col] = self.offsets[col].values[0]
+        else:
+            offset_times = self.offsets.index.values.astype('float64')
+            offsets_interp = self.interpolate_offsets(offset_times, all_times)
 
         self.sdata = sdata
         self.offsets_interp = offsets_interp
