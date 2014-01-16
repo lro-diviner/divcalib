@@ -746,9 +746,9 @@ def open_and_accumulate(fname, minimum_number=3):
         logging.debug("Appending {0} on the left.".format(fn_handler.timestr))
         try:
             dataframes.appendleft(f.open_dirty())
-	except IOError:
-	    logging.warning('Could not find previous file {}'.format(fn_handler.fname))
-	    break
+        except IOError:
+            logging.warning('Could not find previous file {}'.format(fn_handler.fname))
+            break
         if any(f.open().is_calib):
             break
     # append next hours until calib blocks found
@@ -761,8 +761,8 @@ def open_and_accumulate(fname, minimum_number=3):
         try:
             dataframes.append(f.open_dirty())
         except IOError:
-	    logging.warning('Could not find following file {}'.format(fn_handler.fname))
-	    break
+            logging.warning('Could not find following file {}'.format(fn_handler.fname))
+            break
         if any(f.open().is_calib):
             break
     df = prepare_data(pd.concat(list(dataframes)))
