@@ -109,13 +109,14 @@ def define_sdtype(df):
     df['calib_block_labels'] = nd.label((df.sdtype == 1) | \
                                         (df.sdtype == 2) | \
                                         (df.sdtype == 3))[0]
+    df.sdtype[df.moving == 1] = -1
     df['sv_block_labels'] = nd.label(df.sdtype == 1)[0]
     df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
     df['st_block_labels'] = nd.label(df.sdtype == 3)[0]
 
     # this resets data from sdtypes >0 above that is still 'moving' to be
     # sdtype=-1 (i.e. 'moving', defined by me)
-    df.sdtype[df.moving == 1] = -1
+    # df.sdtype[df.moving == 1] = -1
 
     # now I don't need to check for moving anymore, the sdtypes are clean
     df['is_spaceview'] = (df.sdtype == 1)
