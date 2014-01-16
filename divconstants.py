@@ -1,8 +1,5 @@
 # define the default number of points that each view should have
-SV_LENGTH = STV_LENGTH = BBV_LENGTH = 80
-
-# integrated length of spaceview for all detectors (80*9*21):
-SV_LENGTH_TOTAL = 15120
+SPACE_LENGTH = ST_LENGTH = BB_LENGTH = 80
 
 # define pointing boundaries for the spaceview (for offset calibration)
 SV_AZ_MIN = 150.0

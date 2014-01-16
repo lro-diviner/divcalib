@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import pandas as pd
 import numpy as np
 from scipy.interpolate import UnivariateSpline as Spline
-import divconstants as c
+import divconstants as config
 #from plot_utils import ProgressBar
 import logging
 from numpy import poly1d
@@ -29,16 +29,16 @@ class DivCalibError(Exception):
 class ViewLengthError(DivCalibError):
     """ Exception for view length (9 ch * 21 det * 80 samples = 15120).
 
-    SV_LENGTH_TOTAL defined at top of this file.
+    SV/BBV/ST_LENGTH_TOTAL defined in divconstants.
     """
-    def __init__(self, view, value,value2):
+    def __init__(self, view, expected, received):
         self.view = view
-        self.value = value
-        self.value2 = value2
+        self.expected = expected
+        self.received = received
     def __str__(self):
-        return "Length of {0}-view not {1}."\
-                " Instead: ".format(self.view,
-                                    c.SV_LENGTH_TOTAL) + repr(self.value) + repr(self.value2)
+        return "Length of {0}-view not the expected {1}. Instead: {2}".format(self.view,
+                                                                              self.expected,
+                                                                              self.received)
 
 
 class NoOfViewsError(DivCalibError):
@@ -225,47 +225,20 @@ class CalBlock(object):
 
     IN:
         dataframe, containing all meta-data like label numbers, H/K etc.
+        skip_samples, integer, indicating how many samples to skip for
+            mean value calculation
     OUT:
-        via several class methods
+        via several class methods and properties (like members)
     """
     def __init__(self, df, skip_samples=0):
         self.df = df
         self.skip_samples = skip_samples
-        for kind in ['sv', 'bb', 'st']:
-            setattr(self, kind + '_labels', self.get_unique_labels(kind))
-        self.spaceviews = get_data_columns(df[df.is_spaceview])
+        self.spaceviews = get_data_columns( df[ df.is_spaceview ] )
         self.sv_grouped = self.spaceviews.groupby(self.df.sv_block_labels)
 
-    def get_unique_labels(self,view):
+    def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
         return np.sort(labels[labels > 0])
-
-    @property
-    def offsets(self):
-        """Determine offsets for each available spacelook.
-
-        At initialisation, this object receives the number of samples to skip.
-        This number is used here for the offset calculation
-        """
-        if any(self.sv_grouped.size() < 80):
-            logging.info("CalBlock at {0} has a spaceview shorter "
-                         "than 80 entries.".format(self.mean_time))
-        # first, mean values of each spaceview, with skipped removed:
-        mean_spaceviews = self.sv_grouped.agg(lambda x: x[self.skip_samples:].mean())
-        # then return mean value of these 2 labels, detectors as index.
-        return mean_spaceviews.mean()
-
-    @property
-    def sv_stds(self):
-        return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
-
-    # def get_offsets(self, kind='both'):
-    #     """Provide offsets for method as required.
-    #     IN:
-    #         offset_kind. If set to 'both', both sides will be used to determine
-    #             the offset, 'left' and 'right' do the alternative, respectively.
-    #     """
-    #     print("Not implemented.")
 
     @property
     def kind(self):
@@ -273,7 +246,8 @@ class CalBlock(object):
 
         Possible kinds: 'BB', 'ST', 'BOTH'
         """
-        # more than 1 kind?
+        for kind in ['sv', 'bb', 'st']:
+            setattr(self, kind + '_labels', self.get_unique_labels(kind))
         if (self.st_labels.size > 0) and (self.bb_labels.size > 0):
             return 'BOTH'
         elif self.st_labels.size > 0:
@@ -286,24 +260,64 @@ class CalBlock(object):
         else:
             return None
 
+    def check_length_get_mean(self, group):
+        if len(group) < config.SPACE_LENGTH:
+            return
+        if len(group) > config.SPACE_LENGTH:
+            logging.info("Calib view larger than {} samples "
+                         "at {}".format(config.SPACE_LENGTH, self.mean_time))
+        return group[self.skip_samples:].mean()
+
+    @property
+    def offsets(self):
+        """Determine offsets for each available spacelook.
+
+        At initialisation, this object receives the number of samples to skip.
+        That number `self.skipsamples` is used here for the offset calculation.
+        """
+        # first, mean values of each spaceview, with skipped removed:
+        mean_spaceviews = self.sv_grouped.agg(self.check_length_get_mean)
+        # then return mean value of these 2 labels, detectors as index.
+        return mean_spaceviews.mean()
+
+    def get_mean_counts(self, view):
+        cond = 'is_' + view.lower() +'view'
+        try:
+            return get_data_columns(
+                    self.check_length_get_mean(self.df[self.df[cond]]))
+        except AttributeError:
+            return
+
+    def check_length_get_mean_time(self, view):
+        cond = 'is_' + view.lower() + 'view'
+        data = self.df[self.df[cond]]
+        limit = getattr(config, view.upper()+'_LENGTH')
+        if len(data) < limit:
+            return
+        if len(data) > limit:
+            logging.info("Calib view larger than {} samples "
+                         " at {}".format(limit, get_mean_time(data, 0)))
+        return get_mean_time(data, self.skip_samples)
+
+    @property
+    def has_complete_spaceview(self):
+        return any(self.sv_grouped.size() >= config.SPACE_LENGTH)
+
+    @property
+    def has_complete_bbview(self):
+        return len(self.df[self.df.is_bbview]) >= config.BB_LENGTH
+        
     @property
     def bb_time(self):
-        if self.kind == 'ST':
-            raise WrongTypeError('BB', self.kind)
-        bbdata = self.df[self.df.is_bbview]
-        return get_mean_time(bbdata, self.skip_samples)
+        return self.check_length_get_mean_time('bb')
 
     @property
     def st_time(self):
-        if self.kind == 'BB':
-            raise WrongTypeError('ST', self.kind)
-        bbdata = self.df[self.df.is_stview]
-        return get_mean_time(bbdata, self.skip_samples)
+        return self.check_length_get_mean_time('st')
 
     @property
     def sv_time(self):
-        svdata = self.df[self.df.is_spaceview]
-        return get_mean_time(svdata, self.skip_samples)
+        return self.check_length_get_mean_time('space')
 
     @property
     def mean_time(self):
@@ -321,16 +335,28 @@ class CalBlock(object):
             else:
                 return t2 + (t1 - t2) // 2
 
-    @property
-    def center_data(self):
-        if self.kind == 'BOTH':
-            # for the lack of a better definition, if this calib block both
-            # contains ST and BB data, I take both as 'center_data'
-            return self.df[(self.df.is_stview) | (self.df.is_bbview)]
-        elif self.kind == 'BB':
-            return self.df[self.df.is_bbview]
-        elif self.kind == 'ST':
-            return self.df[self.df.is_stview]
+    # @property
+    # def center_data(self):
+    #     if self.kind == 'BOTH':
+    #         # for the lack of a better definition, if this calib block both
+    #         # contains ST and BB data, I take both as 'center_data'
+    #         return self.df[(self.df.is_stview) | (self.df.is_bbview)]
+    #     elif self.kind == 'BB':
+    #         return self.df[self.df.is_bbview]
+    #     elif self.kind == 'ST':
+    #         return self.df[self.df.is_stview]
+    # @property
+    # def sv_stds(self):
+    #     return self.sv_grouped.agg(lambda x: x[self.skip_samples:].std())
+
+    # def get_offsets(self, kind='both'):
+    #     """Provide offsets for method as required.
+    #     IN:
+    #         offset_kind. If set to 'both', both sides will be used to determine
+    #             the offset, 'left' and 'right' do the alternative, respectively.
+    #     """
+    #     print("Not implemented.")
+
 
 
 class Calibrator(object):
@@ -367,9 +393,9 @@ class Calibrator(object):
         # to control if some of the first samples of views are being skipped
         self.skipsamples = skipsamples
         if skipsamples == True:
-            self.BBV_NUM_SKIP_SAMPLE = c.BBV_NUM_SKIP_SAMPLE
-            self.SV_NUM_SKIP_SAMPLE = c.SV_NUM_SKIP_SAMPLE
-            self.STV_NUM_SKIP_SAMPLE = c.STV_NUM_SKIP_SAMPLE
+            self.BBV_NUM_SKIP_SAMPLE = config.BBV_NUM_SKIP_SAMPLE
+            self.SV_NUM_SKIP_SAMPLE = config.SV_NUM_SKIP_SAMPLE
+            self.STV_NUM_SKIP_SAMPLE = config.STV_NUM_SKIP_SAMPLE
         else:
             self.BBV_NUM_SKIP_SAMPLE = 0
             self.SV_NUM_SKIP_SAMPLE = 0
@@ -525,6 +551,65 @@ class Calibrator(object):
     def skipped_mean(self, df, num_to_skip):
         return df[num_to_skip:].mean()
 
+    def lookup_radiances_for_thermal_channels(self, mapping_source, store):
+        # different mapping sources depending on if we lookup only for single
+        # values at calblock times or for all interpolated temperatures
+        # the caller of this function determines this by providing the mapping source
+        mapping = {'a': mapping_source['bb_1_temp_interp'],
+                   'b': mapping_source['bb_2_temp_interp']}
+
+        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
+        for channel in thermal_channels:
+            #link to the correct bb temps by checking first letter of channel
+            bbtemps = mapping[channel[0]]
+
+            #look up the radiances for this channel
+            RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
+            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
+            for i in range(1,22):
+                col_name = channel + '_' + str(i).zfill(2)
+                store[col_name] = channel_rbbs
+
+    def get_bbcal_times(self):
+        grouped = self.caldata[self.caldata.is_bbview].groupby(self.df.bb_block_labels)
+        f = lambda x: CalBlock(x, self.BBV_NUM_SKIP_SAMPLE).bb_time
+        bbcal_times = grouped.apply(f)
+        return bbcal_times
+
+    def calc_one_RBB(self):
+        """Calculate like JPL only one RBB value for a mean BB temperature. """
+        # procedure same as calib_cbb
+        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
+        bbviews_temps = self.df[self.df.is_bbview][T_cols]
+        grouped = bbviews_temps.groupby(self.df.bb_block_labels)
+        
+        bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
+        bbtemps.index = self.get_bbcal_times()
+        self.bbtemps = bbtemps
+
+        # here the end product is already an RBB value per calib time
+        RBB = pd.DataFrame(index=bbtemps.index)
+
+        self.lookup_radiances_for_thermal_channels(bbtemps, RBB)
+        self.RBB = RBB.dropna()
+
+    def calc_many_RBB(self, return_values=False):
+        # lookup radiances for all interpolated BB temperatures
+        self.RBB_all = pd.DataFrame(index=self.df.index)
+        self.lookup_radiances_for_thermal_channels(self.df, self.RBB_all)
+
+        # calculate mean values for radiances for calib blocks
+        bbview_rbbs = self.RBB_all[self.df.is_bbview]
+        grouped = bbview_rbbs.groupby(self.df.calib_block_labels)
+        if self.skipsamples:
+            calib_RBBs = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
+        else:
+            calib_RBBs = grouped.mean()
+        calib_RBBs.index = self.bbcal_times
+        self.RBB = calib_RBBs
+        if return_values:
+            return self.RBB
+
     # def calc_offsets_old(self):
     # 
     #     # if the df has less than 240 samples, then part of the calblock are cut off.
@@ -550,13 +635,21 @@ class Calibrator(object):
     #     self.offsets = offsets
 
     def calc_offsets(self):
+        "Calculate the offsets via the spaceviews, using the CalBlock class."
+
         def get_offsets(group):
             cb = CalBlock(group, self.SV_NUM_SKIP_SAMPLE)
+            if len(group) < config.SPACE_LENGTH:
+                logging.info("CalBlock at {0} has a spaceview"
+                             " shorter than {1} entries.".format(cb.mean_time,
+                                                                 config.SPACE_LENGTH))
+                return
             newdf = pd.DataFrame(cb.offsets).T
             newdf.index = [cb.mean_time]
             return newdf
             
-        grouped = self.caldata.groupby(self.df.calib_block_labels, as_index=False)
+        grouped = self.df[self.df['is_spaceview']].groupby(self.df.calib_block_labels,
+                                                           as_index=False)
         self.offsets = grouped.apply(get_offsets)
             
     def calc_CBB(self):
@@ -580,78 +673,6 @@ class Calibrator(object):
         bbcounts.index = self.bbtemps.index
 
         self.CBB = bbcounts
-
-    def lookup_radiances_for_thermal_channels(self, mapping_source, store):
-        # different mapping sources depending on if we lookup only for single
-        # values at calblock times or for all interpolated temperatures
-        # the caller of this function determines this by providing the mapping source
-        mapping = {'a': mapping_source['bb_1_temp_interp'],
-                   'b': mapping_source['bb_2_temp_interp']}
-
-        # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
-        for channel in thermal_channels:
-            #link to the correct bb temps by checking first letter of channel
-            bbtemps = mapping[channel[0]]
-
-            #look up the radiances for this channel
-            RBBs = self.rbbtable.get_radiance(bbtemps, self.mcs_div_mapping[channel])
-            channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
-            for i in range(1,22):
-                col_name = channel + '_' + str(i).zfill(2)
-                store[col_name] = channel_rbbs
-
-    def get_bbtemps_grouped(self):
-        T_cols = ['bb_1_temp_interp','bb_2_temp_interp']
-        bbviews_temps = self.df[self.df.is_bbview][T_cols]
-        grouped = bbviews_temps.groupby(self.df.calib_block_labels)
-        return grouped
-
-    def get_bbcal_times(self):
-        def get_bb_times(grp):
-            cb = CalBlock(grp, self.BBV_NUM_SKIP_SAMPLE)
-            return cb.bb_time
-
-        grouped = self.df[self.df.is_bbview].groupby(self.df.calib_block_labels)
-        filtered = grouped.filter(lambda x: CalBlock(x).kind != 'ST')
-        bbcal_times = filtered.groupby('calib_block_labels').apply(get_bb_times)
-        return bbcal_times
-
-    def calc_one_RBB(self, return_values=False):
-        """Calculate like JPL only one RBB value for a mean BB temperature. """
-        # procedure same as calib_cbb
-        grouped = self.get_bbtemps_grouped()
-        bbtemps = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
-        # in case one of the calib block labels was dropped for a reason while
-        # calculating the calib_times, I drop it here, too, by only taking the
-        # calib_block_labels that are in the index of self.calib_times
-        # bbtemps = bbtemps.reindex(self.calib_times.index)
-        # now the sizes have to match , after the above reindexing
-        bbtemps.index = self.get_bbcal_times()
-        self.bbtemps = bbtemps
-
-        # here the end product is already an RBB value per calib time
-        self.RBB = pd.DataFrame(index=bbtemps.index)
-
-        self.lookup_radiances_for_thermal_channels(bbtemps, self.RBB)
-        if return_values:
-            return self.RBB
-
-    def calc_many_RBB(self, return_values=False):
-        # lookup radiances for all interpolated BB temperatures
-        self.RBB_all = pd.DataFrame(index=self.df.index)
-        self.lookup_radiances_for_thermal_channels(self.df, self.RBB_all)
-
-        # calculate mean values for radiances for calib blocks
-        bbview_rbbs = self.RBB_all[self.df.is_bbview]
-        grouped = bbview_rbbs.groupby(self.df.calib_block_labels)
-        if self.skipsamples:
-            calib_RBBs = grouped.agg(self.skipped_mean, self.BBV_NUM_SKIP_SAMPLE)
-        else:
-            calib_RBBs = grouped.mean()
-        calib_RBBs.index = self.bbcal_times
-        self.RBB = calib_RBBs
-        if return_values:
-            return self.RBB
 
     def calc_gain(self):
         """Calc gain.
@@ -695,8 +716,10 @@ class Calibrator(object):
 
         for det in thermal_detectors:
             # change k for the kind of fit you want
-            s_offset = Spline(offset_times, self.offsets[det], s=0.0, k=self.calfitting_order)
-            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, k=self.calfitting_order)
+            s_offset = Spline(offset_times, self.offsets[det], s=0.0, 
+                              k=self.calfitting_order)
+            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, 
+                              k=self.calfitting_order)
             offsets_interp[det] = s_offset(all_times)
             gains_interp[det]   = s_gain(all_times)
         
