@@ -3,11 +3,11 @@ from diviner import file_utils as fu, calib
 from os.path import join as pjoin
 import divtweet
 import sys
-from multiprocessing import Pool
 from datetime import timedelta
 import logging
 import pandas as pd
 import os
+from joblib import Parallel, delayed
 
 logname = 'divcalib.log'
 logging.basicConfig(filename=logname,
@@ -22,14 +22,14 @@ def process_fname(fname):
     sys.stdout.flush()
     df = fu.open_and_accumulate(fname)
     if not df.index.is_monotonic:
-	logging.ERROR("Found non-monotonic 3-hour index at {}".format(fname))
+	logging.error("Founid non-monotonic 3-hour index at {}".format(fname))
 	return
     c = calib.Calibrator(df)
     try:
 	c.calibrate()
     except Exception as e:
 	print("Caught error", e)
-	logging.ERROR("{} did not calibrate!!!".format(fname))
+	logging.error("{} did not calibrate!!!".format(fname))
         return
     hdfname = pjoin(root, tstr + '.h5')
     tstamp = fu.tstr_to_datetime(tstr)
@@ -39,7 +39,7 @@ def process_fname(fname):
         c.Tb[tstamp:end].to_hdf(hdfname, 'tb')
     except KeyError:
         print("KeyError at {}".format(fname))
-        logging.ERROR("KeyError at {}".format(fname))
+        logging.error("KeyError at {}".format(fname))
 
 
 def main(start, end, startover=False):
@@ -52,7 +52,6 @@ def main(start, end, startover=False):
     """
     months = pd.date_range(start, end , freq='M')
     print("Created date range:",months)
-    p = Pool(12)
     fnames = []
     for month in months:
         m = month.strftime('%Y%m')
@@ -69,9 +68,9 @@ def main(start, end, startover=False):
             fnames.extend(pump.fnames)
 
     print("Found",len(fnames),'files to do.')
-    p.map(process_fname, fnames)
-    divtweet.tweet_machine("Finished processing {0}, {1} files.".format(month,
-                                                                len(fnames)))
+    Parallel(n_jobs=10)(delayed(process_fname)(fname) for fname in fnames)
+    #divtweet.tweet_machine("Finished processing {0}, {1} files.".format(month,
+    #                                                            len(fnames)))
 
 def usage():
     print("Usage: {} start end [new|skip]".format(sys.argv[0]))
