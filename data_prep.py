@@ -120,7 +120,6 @@ def define_sdtype(df):
     df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
     df['st_block_labels'] = nd.label(df.sdtype == 3)[0]
 
-
     # now I don't need to check for moving anymore, the sdtypes are clean
     df['is_spaceview'] = (df.sdtype == 1)
     df['is_bbview'] = (df.sdtype == 2)
