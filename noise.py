@@ -1,10 +1,11 @@
+#!/usr/bin/env python
 from __future__ import division
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import pandas
 import numpy as np
-from diviner import get_channel_mean, read_div_data, divplot,make_date_index
+import diviner as div
 from scipy import fft
 import os
 import sys
@@ -12,11 +13,8 @@ from os.path import split, splitext
 from glob import glob
 from multiprocessing import Pool
 
-# choose channel
-channel = 1
-
-# choose detector
-det = 11
+resultsdir = '/u/paige/maye/WWW/noise'
+debug = False
 
 def isodd(number):
     return bool(number % 2)
@@ -25,10 +23,6 @@ def get_label(dataframe, label, ch, det=11):
     l = dataframe[label][(dataframe.c==ch) & (dataframe.det==det)]
     return l
     
-def plot_channels(ax, data):
-    for tb,ch in zip(data,channels):
-        ax.plot(tb, label="{0}_{1}".format(ch, det))
-
 def plot_all(ax, tbdata, azdata, elevdata, title):
     ax.plot(tbdata, label='tb')
     ax.plot(azdata, label='az_cmd')
@@ -60,14 +54,44 @@ def fix_columns(df):
     df.columns=headers
     
 def prep_data(fname):
-    df = read_div_data(fname)
+    df = div.read_div_data(fname)
     fix_columns(df)
-    df.set_index(make_date_index(df),inplace=True)
+    df.set_index('jdate', inplace=True)
     return df
+  
+def plot_channel_means(ax, df,col_str, ch_start=1, ch_end=9):
+    for i in range(ch_start,ch_end+1):
+        series = div.get_channel_mean(df, col_str, i)
+        if debug: print(i,series.min())
+        ax.plot(series, label=str(i))
+    ax.set_ylabel('c_mean('+col_str+')')
+
+def plot_channel_stds(ax, df,col_str):
+    for i in range(9):
+        series = div.get_channel_std(df, col_str, i+1)
+        if debug: print(i,series.min())
+        ax.plot(series, label=str(i+1))
+    ax.set_ylabel('c_std('+col_str+')')
+
+def get_datasetname(fname):
+    return splitext(split(fname)[1])[0]
+    
+def get_new_fname(datasetname, col_str):
+    basename = '{0}_{1}.png'.format(datasetname, col_str)
+    return os.path.join(resultsdir,basename)
+
+def plot_csunzen(ax, df):
+    csunzen = div.get_channel_mean(df,'csunzen',1)
+    # csunzen[csunzen < -360]=np.nan
+    ax2=ax.twinx()
+    ax2.plot(csunzen,label='csunzen',color='blue')
+    ax2.axhline(y=90,color='black')
+    for tl in ax2.get_yticklabels():
+        tl.set_color('blue')
+    ax2.set_ylabel('csunzen')
     
 def process_fname(fname_col_str):
     fname,col_str = fname_col_str
-    resultsdir = '/u/paige/maye/WWW/noise'
     
     print "Preparing data..."
     df = prep_data(fname)
@@ -75,25 +99,15 @@ def process_fname(fname_col_str):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     print "Plotting channels."
-    for i in range(9):
-        series = get_channel_mean(df,col_str,i+1)
-        series[series==-9999.0]=np.nan
-        # attention!
-        series[series<(series.mean()-3*series.std())]=np.nan
-        # attention off
-        print i,series.min()
-        ax.plot(series,label=str(i+1))
+    plot_channel_means(ax, df, col_str, 3, 5)
     print "Done plotting channels. Plotting csunzen."
-    csunzen = get_channel_mean(df,'csunzen',1)
-    csunzen[csunzen < -360]=np.nan
-    ax.plot(csunzen,label='csunzen')
-    ax.legend(loc='best',ncol=5, mode='expand')
-    datasetname = splitext(split(fname)[1])[0]
+    plot_csunzen(ax, df)
+    ax.legend(loc='best',ncol=3,)
+    datasetname = get_datasetname(fname)
     ax.set_title(datasetname+'_'+col_str)
-    basename = '{0}_{1}.png'.format(datasetname,'tb')
-    resfname = os.path.join(resultsdir,basename)
-    print "Result filename: ",resfname
-    plt.savefig(resfname)
+    plotfname = get_new_fname(datasetname, col_str)
+    print "Result filename: ", plotfname
+    plt.savefig(plotfname)
             
     # 
     # ##############
@@ -142,14 +156,15 @@ def process_fname(fname_col_str):
     # plt.show()
     
 if __name__ == '__main__':
-    p = Pool(8)
+    p = Pool(4)
     workdir = '/luna1/maye/'
     fnames = glob(workdir+'*.h5')
     fnames.sort()
     try:
         col_str = sys.argv[1]
-    except IndexError:
-        print 'Provide column string to work on.'
+        i_start, i_end = [int(i) for i in sys.argv[2:]]
+    except (IndexError, ValueError):
+        print 'Provide "data_col i_start i_end" to work on.'
         sys.exit()
     fnames_and_col_str = [(fname,col_str) for fname in fnames]
-    p.map(process_fname, fnames_and_col_str)
+    p.map(process_fname, fnames_and_col_str[i_start:i_end])

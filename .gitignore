@@ -30,8 +30,21 @@ pip-log.txt
 ._*
 
 *.wav
+*.png
 *.h5
 .DS_Store
 nohup.out
 *.bin
 *.tab
+.fuse*
+playing\ around.ipynb
+*.log
+.ipynb_checkpoints
+
+*.out
+*.pdf
+*.aux
+*.toc
+*.orig
+*.idx
+*.mp4
