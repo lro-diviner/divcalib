@@ -116,7 +116,7 @@ def define_sdtype(df):
     # ensures that I don't get empty moving data marked as bb_block_labels 
     df.sdtype[df.moving == 1] = -1
 
-    df['sv_block_labels'] = nd.label(df.sdtype == 1)[0]
+    df['space_block_labels'] = nd.label(df.sdtype == 1)[0]
     df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
     df['st_block_labels'] = nd.label(df.sdtype == 3)[0]
 

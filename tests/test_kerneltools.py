@@ -3,7 +3,7 @@ import os
 import spice
 from datetime import datetime as dt
 from diviner.file_utils import kernelpath
-from diviner import kerneltools
+from diviner import spicekerneltools
 from nose.tools import assert_equals
 
 

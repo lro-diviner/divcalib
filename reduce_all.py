@@ -16,7 +16,7 @@ def get_time(df):
 
 def get_first_sv_mean(df):
     """function to return mean value for first spaceview only"""
-    d = dict(list(df.groupby('sv_block_labels')))
+    d = dict(list(df.groupby('space_block_labels')))
     return d[min(d.keys())].mean()
     
 def get_data(month, det, view='is_spaceview', lock=None, container=None):
