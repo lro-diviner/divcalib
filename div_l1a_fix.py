@@ -55,45 +55,41 @@ def main(infile):
         c2[40:length-40, :, i] = data.ix[i:length-80+i, 'a2_01':'a2_21']
 
 
+    # Look for highest difference in DN in Ch 1-2 all detectors
 
-for i in range (0,81):
-    c1[40:length-40,:,i]=data[i:length-80+i,0:21]
-    c2[40:length-40,:,i]=data[i:length-80+i,21:42]
+    max_diff1 = ma.max(ma.max(c1, axis=2) - ma.min(c1, axis=2), axis=1)
+    max_diff2 = ma.max(ma.max(c2, axis=2) - ma.min(c2, axis=2), axis=1)
+    max_diff = ma.max(transpose( dstack( (max_diff1, max_diff2) ),
+                      (1,0,2)), 
+                      axis=2)
 
+    max_diff = max_diff.flatten()
 
-# Look for highest difference in DN in Ch 1-2 all detectors
+    # Where the DN difference exceeds 50, set noise to zero.
 
-max_diff1=ma.max(ma.max(c1,axis=2)-ma.min(c1,axis=2),axis=1)
-max_diff2=ma.max(ma.max(c2,axis=2)-ma.min(c2,axis=2),axis=1)
-max_diff=ma.max(transpose(dstack((max_diff1,max_diff2)),(1,0,2)),axis=2)
+    noise = where(max_diff<=50, noise, 0)
 
-max_diff=max_diff.flatten()
+    # The first and last 40 lines cannot be checked.
 
-# Where the DN difference exceeds 50, set noise to zero.
+    noise[0:40] = 0
+    noise[length-40:length] = 0
 
-noise=where(max_diff<=50, noise, 0)
+    # Finally, correct the data - scale the noise and subtract it off
+    # Clone the noise array for each detector - I'm sure there's a more elegant way to do this...
 
-# The first and last 40 lines cannot be checked.
+    noise=transpose(vstack((noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise)), (1,0))
 
-noise[0:40]=0
-noise[length-40:length]=0
+    data[:,42:63]=data[:,42:63]-factors[:,2]*noise
+    data[:,63:84]=data[:,63:84]-factors[:,3]*noise
+    data[:,84:105]=data[:,84:105]-factors[:,4]*noise
+    data[:,105:126]=data[:,105:126]-factors[:,5]*noise
+    data[:,126:147]=data[:,126:147]-factors[:,6]*noise
+    data[:,147:168]=data[:,147:168]-factors[:,7]*noise
+    data[:,168:189]=data[:,168:189]-factors[:,8]*noise
 
-# Finally, correct the data - scale the noise and subtract it off
-# Clone the noise array for each detector - I'm sure there's a more elegant way to do this...
+    savetxt(outfile, data, fmt='%.2f', delimiter=",")
 
-noise=transpose(vstack((noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise)),(1,0))
-
-data[:,42:63]=data[:,42:63]-factors[:,2]*noise
-data[:,63:84]=data[:,63:84]-factors[:,3]*noise
-data[:,84:105]=data[:,84:105]-factors[:,4]*noise
-data[:,105:126]=data[:,105:126]-factors[:,5]*noise
-data[:,126:147]=data[:,126:147]-factors[:,6]*noise
-data[:,147:168]=data[:,147:168]-factors[:,7]*noise
-data[:,168:189]=data[:,168:189]-factors[:,8]*noise
-
-savetxt(outfile, data, fmt='%.2f', delimiter=",")
-
-
-
-
-
+if __name__ == '__main__':
+    infile = sys.argv[1]
+    
+    main(infile)
