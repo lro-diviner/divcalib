@@ -15,7 +15,7 @@ from divininer import calib
 # The same scaling factor will be used for all detectors of Ch. 7-9.
 # Ch. 1-2 will not be corrected since they were used in the first place to derive the correction.
 
-factors=loadtxt("/u/bandfield/joshband/div_l1a_fix/scaling_factors.ascii",dtype=float)
+factors = np.loadtxt("scaling_factors.ascii", dtype=float)
 
 factors=transpose(factors,(1,0))
 
