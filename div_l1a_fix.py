@@ -8,7 +8,6 @@ from numpy import *
 from sys import *
 # end remove
 from diviner import file_utils as fu
-from diviner import calib
 
 # Read in scaling factors
 # These were derived from extensive stowed periods
@@ -22,14 +21,10 @@ factors = np.loadtxt("scaling_factors.ascii", dtype=float)
 # equivalent
 factors = factors.T
 
-def main(infile):
+def correct_noise(data):
     # Read in L1A count data. Isolate noise from Channels 1-2
 
-    outfile = infile + ".corrected"
 
-    original = fu.L1ADataFile(infile).open()
-    data = original[calib.detectors]
-    
     boxcar = np.zeros(75) + (1./75.)
     ch1and2 = data.filter(regex='a[1,2]_')
     
@@ -64,33 +59,30 @@ def main(infile):
                       (1,0,2)), 
                       axis=2)
 
-    max_diff = max_diff.flatten()
-
     # Where the DN difference exceeds 50, set noise to zero.
-
-    noise = where(max_diff<=50, noise, 0)
-
+    # max_diff.shape is (length, 1) so a flatten() is required
+    noise = ch1and2.noise.where(max_diff.flatten()<=50, 0)
+    
     # The first and last 40 lines cannot be checked.
+    
+    noise[:40] = 0
+    noise[length-40:] = 0
+    
 
-    noise[0:40] = 0
-    noise[length-40:length] = 0
-
-    # Finally, correct the data - scale the noise and subtract it off
-    # Clone the noise array for each detector - I'm sure there's a more elegant way to do this...
-
-    noise=transpose(vstack((noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise, noise)), (1,0))
-
-    data[:,42:63]=data[:,42:63]-factors[:,2]*noise
-    data[:,63:84]=data[:,63:84]-factors[:,3]*noise
-    data[:,84:105]=data[:,84:105]-factors[:,4]*noise
-    data[:,105:126]=data[:,105:126]-factors[:,5]*noise
-    data[:,126:147]=data[:,126:147]-factors[:,6]*noise
-    data[:,147:168]=data[:,147:168]-factors[:,7]*noise
-    data[:,168:189]=data[:,168:189]-factors[:,8]*noise
-
-    savetxt(outfile, data, fmt='%.2f', delimiter=",")
-
+    for i in xrange(2,9):
+        if i < 6:
+            # a3..a6
+            ch = 'a'+str(i+1)
+        else:
+            # b1..b3
+            ch = 'b'+str(i-6+1)
+        row = factors[:, i]
+        term = noise.values[:, newaxis] * row
+        data.ix[:, ch+'_01':ch+'_21'] -= term
+    
+    return data
+    
 if __name__ == '__main__':
     infile = sys.argv[1]
-    
-    main(infile)
+    data = fu.L1ADataFile(infile).open()
+    retval = main(data)
