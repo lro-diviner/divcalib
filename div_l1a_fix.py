@@ -17,7 +17,9 @@ from divininer import calib
 
 factors = np.loadtxt("scaling_factors.ascii", dtype=float)
 
-factors=transpose(factors,(1,0))
+# factors = transpose(factors, (1,0))
+# equivalent
+factors = factors.T
 
 # Read in L1A count data. Isolate noise from Channels 1-2
 
