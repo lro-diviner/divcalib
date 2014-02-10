@@ -1,8 +1,13 @@
 #! /usr/bin/env python
-
+from __future__ import division, print_function
+import numpy as np
+import sys
+# remove when cleanup done
 from numpy import *
 from sys import *
-
+# end remove
+from diviner import file_utils as fu
+from divininer import calib
 
 # Read in scaling factors
 # These were derived from extensive stowed periods
