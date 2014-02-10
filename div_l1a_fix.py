@@ -21,32 +21,39 @@ factors = np.loadtxt("scaling_factors.ascii", dtype=float)
 # equivalent
 factors = factors.T
 
-# Read in L1A count data. Isolate noise from Channels 1-2
+def main(infile):
+    # Read in L1A count data. Isolate noise from Channels 1-2
 
-infile=argv[1]
-outfile=infile+".corrected"
+    outfile = infile + ".corrected"
 
-columns=arange(59,248,dtype=int)
+    original = fu.L1ADataFile(infile).open()
+    data = original[calib.detectors]
+    
+    boxcar = np.zeros(75) + (1./75.)
+    ch1and2 = data.filter(regex='a[1,2]_')
+    
+    ch1and2['averaged'] = ch1and2.mean(axis=1)
+    ch1and2['convolved'] = np.convolve(ch1and2['averaged'], boxcar, mode='same')
+    ch1and2['noise'] = ch1and2['averaged'] - ch1and2['convolved']
 
-data=loadtxt(infile,delimiter=',',skiprows=8,usecols=columns)
 
-boxcar=zeros(75)+(1./75.)
+    # Calculate detector maximum/minimum DN values for Channels 1-2
+    # This will be used to identify sunlit/warm surfaces and
+    # calibration observations. If the maximum DN difference
+    # for the previous and post 40 observations for any detector
+    # exceeds 50, the noise is set to zero and the observation is
+    # not corrected.
 
-noise=average(data[:,0:42],axis=1)
-noise=noise-convolve(noise,boxcar,mode='same')
+    length = data.shape[0]
+
+    c1 = zeros((length,21,81))
+    c2 = zeros((length,21,81))
 
 
-# Calculate detector maximum/minimum DN values for Channels 1-2
-# This will be used to identify sunlit/warm surfaces and
-# calibration observations. If the maximum DN difference
-# for the previous and post 40 observations for any detector
-# exceeds 50, the noise is set to zero and the observation is
-# not corrected.
+    for i in xrange(0,81):
+        c1[40:length-40, :, i] = data.ix[i:length-80+i, 'a1_01':'a1_21']
+        c2[40:length-40, :, i] = data.ix[i:length-80+i, 'a2_01':'a2_21']
 
-length=shape(data)[0]
-
-c1=zeros((length,21,81))
-c2=zeros((length,21,81))
 
 
 for i in range (0,81):
