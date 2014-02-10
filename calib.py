@@ -9,7 +9,7 @@ import os
 import divconstants as config
 import file_utils as fu
 from exceptions import *
-
+from div_l1a_fix import correct_noise
 
 #logging.basicConfig(filename='divcalib.log',
 #	   	    format='%(asctime)s %(message)s',
@@ -402,8 +402,10 @@ class Calibrator(object):
                            do_rad_corr=True,
                            do_negative_corr=False,
                            calfitting_order=1,
-                           new_rad_corr=True):
-        self.df = df
+                           new_rad_corr=True,
+                           fix_noise=True):
+                           
+        self.df = correct_noise(df) if fix_noise else df
         logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
