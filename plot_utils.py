@@ -41,6 +41,13 @@ def plot_calib_block(df, label, id, det='a6_11', limits=None, **kwargs):
 
 
 def plot_all_calib_blocks(df, **kwargs):
+    """Plot all calibration blocks found in the provided dataframe.
+    
+    Parameters:
+    ==========
+    df:      pandas Dataframe with block labels defined (went through define_sdtype())
+    kwargs:  same keyword arguments as plot_calib_block
+    """
     calib_ids = df.calib_block_labels.unique().tolist()
     # check if the calib block has actually calibration data
     for calid in calib_ids[:]:
