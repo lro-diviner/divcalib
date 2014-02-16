@@ -55,11 +55,10 @@ def prepare_data(df_in):
     """Declare NaN value and pad nan data for some."""
     # df = index_by_time(df_in)
     # df[df == -9999.0] = nan
-    df = df_in
-    df.last_el_cmd.replace([np.nan], inplace=True)
-    df.last_az_cmd.replace([np.nan], inplace=True)
-    df.moving.replace([np.nan], inplace=True)
-    return df
+    df_in.last_el_cmd.replace([np.nan], inplace=True)
+    df_in.last_az_cmd.replace([np.nan], inplace=True)
+    df_in.moving.replace([np.nan], inplace=True)
+    return df_in
 
 
 def get_sv_selector(df):
