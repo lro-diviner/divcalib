@@ -813,18 +813,26 @@ class RDRxReader(object):
         dtypes, keys = parse_descriptor(self.descriptorpath)
         self.df = fname_to_df(fname, dtypes, keys)
         
-    # def parse_times(df):
-    #     format = format='%d-%b-%Y %H:%M:%S.%f'
-    #     # I don't need to round the seconds here because the df.utc data has 
-    #     # already a 3-digit millisecond string: '19:00:00.793'
-    #     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f',
-    #                            utc=True)
-    #     df.set_index(times, inplace=True)
-    #     return df.drop(['date','utc'], axis=1)
-    # 
+    def parse_times(self):
+        df = self.df
+        timecols = [u'yyyy', u'mm', u'dd', u'hh', u'mn', u'ss']
+        secs_only = df.ss.astype('int')
+        msecs = (df.ss - secs_only).round(3)
+        times = pd.to_datetime(df.yyyy.astype('int').astype('str')+
+                               df.mm.astype('int').astype('str')+
+                               df.dd.astype('int').astype('str')+
+                               df.hh.astype('int').astype('str')+
+                               df.mn.astype('int').astype('str')+
+                               df.ss.astype('int').astype('str')+
+                               (msecs).astype('str'), 
+                               format='%Y%m%d%H%M%S0.%f',
+                               utc=True)
+        df.set_index(times, inplace=True)
+        self.df = df.drop(timecols, axis=1)
+    
     def open(self):
         self.df[self.df == -9999] = np.nan
-        
+        self.parse_times()
         df = prepare_data(self.df)
         define_sdtype(df)
         return df
