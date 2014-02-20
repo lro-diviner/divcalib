@@ -277,7 +277,7 @@ def parse_times(df):
     # I don't need to round the seconds here because the df.utc data has 
     # already a 3-digit millisecond string: '19:00:00.793'
     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f',
-                           utc=True)
+                           utc=False)
     df.set_index(times, inplace=True)
     return df.drop(['date','utc'], axis=1)
 
@@ -826,7 +826,7 @@ class RDRxReader(object):
                                df.ss.astype('int').astype('str')+
                                (msecs).astype('str'), 
                                format='%Y%m%d%H%M%S0.%f',
-                               utc=True)
+                               utc=False)
         df.set_index(times, inplace=True)
         self.df = df.drop(timecols, axis=1)
     
