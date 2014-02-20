@@ -803,3 +803,43 @@ class L1ADataPump(DivXDataPump):
     def get_default(self):
         df = read_l1a_data(self.fnames[0])
         return self.clean_final_df(df)
+
+
+class RDRxReader(object):
+    """docstring for RDRxReader"""
+    def __init__(self, tstr):
+        super(RDRxReader, self).__init__()
+        fname = os.path.join(self.datapath, tstr + self.extension)
+        dtypes, keys = parse_descriptor(self.descriptorpath)
+        self.df = fname_to_df(fname, dtypes, keys)
+        
+    # def parse_times(df):
+    #     format = format='%d-%b-%Y %H:%M:%S.%f'
+    #     # I don't need to round the seconds here because the df.utc data has 
+    #     # already a 3-digit millisecond string: '19:00:00.793'
+    #     times = pd.to_datetime(df.date + ' ' + df.utc, format='%d-%b-%Y %H:%M:%S.%f',
+    #                            utc=True)
+    #     df.set_index(times, inplace=True)
+    #     return df.drop(['date','utc'], axis=1)
+    # 
+    def open(self):
+        self.df[self.df == -9999] = np.nan
+        
+        df = prepare_data(self.df)
+        define_sdtype(df)
+        return df
+        
+    def open_raw(self):
+        return self.df
+
+    
+class RDRRReader(RDRxReader):
+    datapath = '/luna7/marks/rdrr_data'
+    descriptorpath = os.path.join(datapath, 'rdrr.des')
+    extension = '.rdrr'
+
+
+class RDRSReader(RDRxReader):
+    datapath = '/luna7/marks/rdrs_data'
+    descriptorpath = os.path.join(datapath, 'rdrs.des')
+    extension = '.rdrs'
