@@ -41,8 +41,8 @@ def correct_noise(data):
 
     length = data.shape[0]
 
-    c1 = zeros((length,21,81))
-    c2 = zeros((length,21,81))
+    c1 = np.zeros((length,21,81))
+    c2 = np.zeros((length,21,81))
 
 
     for i in xrange(0,81):
@@ -54,7 +54,7 @@ def correct_noise(data):
 
     max_diff1 = ma.max(ma.max(c1, axis=2) - ma.min(c1, axis=2), axis=1)
     max_diff2 = ma.max(ma.max(c2, axis=2) - ma.min(c2, axis=2), axis=1)
-    max_diff = ma.max(transpose( dstack( (max_diff1, max_diff2) ),
+    max_diff = ma.max(np.transpose(np.dstack( (max_diff1, max_diff2) ),
                       (1,0,2)), 
                       axis=2)
 
