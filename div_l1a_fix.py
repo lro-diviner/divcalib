@@ -3,11 +3,9 @@ from __future__ import division, print_function
 import numpy as np
 from numpy import ma
 import sys
-# remove when cleanup done
-from numpy import *
-from sys import *
-# end remove
+import diviner
 from diviner import file_utils as fu
+import os
 
 # Read in scaling factors
 # These were derived from extensive stowed periods
@@ -15,7 +13,8 @@ from diviner import file_utils as fu
 # The same scaling factor will be used for all detectors of Ch. 7-9.
 # Ch. 1-2 will not be corrected since they were used in the first place to derive the correction.
 
-factors = np.loadtxt("scaling_factors.ascii", dtype=float)
+factors = np.loadtxt(os.path.join(diviner.__path__[0],
+                                  "scaling_factors.ascii"), dtype=float)
 
 # factors = transpose(factors, (1,0))
 # equivalent
