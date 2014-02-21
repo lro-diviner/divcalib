@@ -3,10 +3,11 @@ from __future__ import print_function, division
 import pandas as pd
 from diviner import file_utils as fu, calib
 import numpy as np
-from multiprocessing import Pool
+from joblib import Parallel, delayed
 import sys
 import os
 import logging
+
 
 root = '/raid1/maye/coldregions'
 logging.basicConfig(filename='log_coldregions_full_hours.log', level=logging.INFO)
