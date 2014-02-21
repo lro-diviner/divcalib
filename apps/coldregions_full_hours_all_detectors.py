@@ -66,5 +66,5 @@ if __name__ == '__main__':
     
         combined = zip(timestrings, no*[path])
         print(combined[0])
-        # Parallel(n_jobs=12, verbose=3)(delayed(calibrate_from_timestr)(args) for args in combined)
+        Parallel(n_jobs=12, verbose=3)(delayed(calibrate_from_timestr)(args) for args in combined)
     
