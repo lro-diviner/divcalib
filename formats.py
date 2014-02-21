@@ -1,5 +1,6 @@
 from pds.core.parser import Parser
 import StringIO
+from collections import OrderedDict
 
 def create_formatdic_for_dataframe():
     """Generate format dictionary to be used for pandas.DataFrame.to_string().
@@ -250,23 +251,48 @@ class Formatter(object):
     nan         = [i[2] for i in format_nan]
 
 
-def parse_format_file(fname=None):
+# def parse_rdr_format_file(fname=None):
+#     if not fname:
+#         fname = '../../data/rdr_format.txt'
+#     parser = Parser()
+#     with open(fname) as f:
+#         rdrformat = f.readlines()
+#     s = ''
+#     for line in rdrformat:
+#         if line == '\n':
+#             sio = StringIO.StringIO(s)
+#             yield parser.parse(sio)['COLUMN']
+#             s = ''
+#         s += line
+#         
+#     
+# def get_formats_dic():
+#     dic = OrderedDict()
+#     for col in parse_rdr_format_file():
+#         dic[col['NAME']] = col
+#     return dic
+
+
+def parse_rdr_col_file(fname=None):
     if not fname:
-        fname = '../../data/rdr_format.txt'
-    parser = Parser()
+        fname = '../../data/rdr_columns.txt'
     with open(fname) as f:
-        rdrformat = f.readlines()
-    s = ''
-    for line in rdrformat:
-        if line == '\n':
-            sio = StringIO.StringIO(s)
-            yield parser.parse(sio)['COLUMN']
-            s = ''
-        s += line
-        
-    
-def get_formats_dic():
-    dic = {}
-    for col in parse_format_file():
-        dic[col['NAME']] = col
+        data = f.readlines()
+    # use this counter to know when 4 items were collected
+    counter = 0
+    container = []
+    for line in data:
+        if not line.strip():
+            continue
+        container.append(line.strip())
+        counter += 1
+        if counter == 4:
+            yield RDRColumn(*container)
+            counter = 0
+            container = []
+
+def get_formats_dict():
+    dic = OrderedDict()
+    for col in parse_rdr_col_file():
+        dic[col.colname] = col
     return dic
