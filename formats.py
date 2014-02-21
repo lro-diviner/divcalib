@@ -1,3 +1,6 @@
+from pds.core.parser import Parser
+import StringIO
+
 def create_formatdic_for_dataframe():
     """Generate format dictionary to be used for pandas.DataFrame.to_string().
     
@@ -245,3 +248,25 @@ class Formatter(object):
     space       = [i[2] for i in format_space]
     solartarget = [i[2] for i in format_solartarget]
     nan         = [i[2] for i in format_nan]
+
+
+def parse_format_file(fname=None):
+    if not fname:
+        fname = '../../data/rdr_format.txt'
+    parser = Parser()
+    with open(fname) as f:
+        rdrformat = f.readlines()
+    s = ''
+    for line in rdrformat:
+        if line == '\n':
+            sio = StringIO.StringIO(s)
+            yield parser.parse(sio)['COLUMN']
+            s = ''
+        s += line
+        
+    
+def get_formats_dic():
+    dic = {}
+    for col in parse_format_file():
+        dic[col['NAME']] = col
+    return dic
