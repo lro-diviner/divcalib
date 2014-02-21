@@ -48,6 +48,11 @@ def get_timestr(fname):
 def tstr_to_datetime(tstr):
     dtime = dt.strptime(tstr, '%Y%m%d%H')
     return dtime
+    
+def timestamp_to_timestring(val):
+    dt = val.to_pydatetime()
+    return dt.strftime("%Y%m%d%H")
+
 
 ###
 ### Tools for data output to tables
