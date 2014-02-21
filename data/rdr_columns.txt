@@ -1,0 +1,240 @@
+1
+
+date
+
+Character 13
+
+Date at the midpoint of observation (SCET, UTC).   E.g. "25-Jun-2009"
+
+2
+
+utc
+
+Character 14
+
+Time at the midpoint of observation (SCET, UTC).  E.g. "19:35.37.440"
+
+3
+
+jdate
+
+Real 17.9
+
+Julian Date at the midpoint of observation (SCET, UTC). E.g. 2454102.123456789
+
+4
+
+orbit
+
+Integer 5
+
+Orbit number.  0 to 99999
+
+5
+
+sundist
+
+Real 7.5
+
+The distance from the center of the moon to the sun (AU).  E.g. 1.00001
+
+6
+
+sunlat
+
+Real 8.5
+
+Subsolar Latitude (deg).  -1.7 to 1.7 degrees.
+
+7
+
+sunlon
+
+Real 9.5
+
+Subsolar East Longitude (deg). 0.00000 to 360.00000
+
+8
+
+sclk
+
+Real 16.5
+
+Spacecraft clock at midpoint of observation (seconds.subseconds).  The seconds are relative to the 2001 epoch.  The numbers to the right of the decimal point are not decimal fraction of a second but rather subseconds.   Each second is divided into 65536 subseconds, thus the range for subseconds is 0 – 65535.   Example:  123456789.00001
+
+9
+
+sclat
+
+Real 9.5
+
+Subspacecraft Latitude (deg).  -90.00000 to 90.00000
+
+10
+
+sclon
+
+Real 9.5
+
+Subspacecraft East Longitude (deg).  0 to 360.00000
+
+11
+
+scrad
+
+Real 11.5
+
+Distance from the center of moon to the spacecraft (km).   E.g.: 11000.00000
+
+12
+
+scalt
+
+Real 11.5
+
+Distance from the surface of the moon to the spacecraft (km).  E.g.: 11000.00000.  Uses spherical moon approximation as described in Section 2.4.3.
+
+13
+
+el_cmd
+
+Real 7.3
+
+Last Elevation Command (deg).  0 to 270.000
+
+14
+
+az_cmd
+
+Real 7.3
+
+Last Azimuth Command (deg). 0 to 270.000
+
+15
+
+af
+
+Integer 4
+
+Activity Flag.  Range is -999 to 999.  See Appendix B of DLRE RDR SIS for description
+
+16
+
+orientlat
+
+Real 9.5
+
+Orientation Latitude (deg).  The latitudinal component of the "orientation vector", a vector from the center of the moon in the direction of the detector array direction (defined as from detector 21 to detector 1).  Provides angular orientation of the FOV's.  -90.00000 to 90.00000
+
+17
+
+orientlon
+
+Real 9.5
+
+Orientation Longitude (deg).  The east longitudinal component of the "orientation vector", a vector from the center of the moon in the direction of the detector array direction (defined as from detector 21 to detector 1).  Provides angular orientation of the FOV's.  0 to 360.00000
+
+18
+
+c
+
+Integer 1
+
+Diviner Channel Number. 1 to 9
+
+19
+
+det
+
+Integer 3
+
+Diviner Detector Number. 1 to 21
+
+20
+
+vlookx
+
+Real 9.6
+
+The X component of the Diviner Look Unit Vector, using the lunar coordinate system described in Section 2.4.3.  -1.0 to 1.0
+
+21
+
+vlooky
+
+Real 9.6
+
+The Y component of the Diviner Look Unit Vector, using the lunar coordinate system described in Section 2.4.3.  -1.0 to 1.0
+
+22
+
+vlookz
+
+Real 9.6
+
+The Z component of the Diviner Look Unit Vector, using the lunar coordinate system described in Section 2.4.3.  -1.0 to 1.0
+
+23
+
+radiance
+
+Real 10.4
+
+Calibrated Radiance (W m-2 sr-1).  The realistic range of radiance is -1000.0000 to 1000.0000, but this number can be as high as 99999.9999 during spacecraft or instrument anomalies.
+
+24
+
+tb
+
+Real 8.3
+
+Calibrated Brightness Temperature (K).   Except for Channels 1 and 2, which is radiance relative to normally illuminated Lambert surface at sun-moon distance. The realistic range of tb is -450.000 to 450.000, but this number can be as high as 9999.999 during spacecraft or instrument anomalies.   Negative values correspond to negative radiances.
+
+25
+
+clat
+
+Real 9.5
+
+Latitude of FOV center (deg).   Undefined if off planet.    Uses spherical moon approximation as described in Section 2.4.3.  -90.00000 to 90.00000
+
+26
+
+clon
+
+Real 9.5
+
+East longitude of FOV center (deg).  Undefined if off planet.    Uses spherical moon approximation as described in Section 2.4.3.  0 to 360.00000 
+
+27
+
+cemis
+
+Real 9.5
+
+Emission Angle at FOV center (deg).   This is the angle between the vector from the surface FOV center to Diviner and a “normal” vector drawn perpendicular to the Moon’s surface.  Undefined if off planet.    Uses spherical moon approximation as described in Section 2.4.3.  0 to 90.00000
+
+28
+
+csunzen
+
+Real 9.5
+
+Solar Zenith angle at FOV center (deg). This is the angle between the vector from the surface FOV center to the Sun and a "normal" vector drawn perpendicular to the Moon's surface.  Undefined when off planet except during solar calibrations when it is defined as the angle between the vector to the Sun and the normal vector of the solar calibration target.   Uses spherical moon approximation as described in Section 2.4.3.  0 to 180.00000
+
+29
+
+csunazi
+
+Real 9.5
+
+Solar Azimuth Angle at FOV Center (deg).  0 degrees when aligned with the solar vector and measured counter-clockwise when looking down at the planet.  Undefined when off planet except during solar calibrations when it is defined as the angle between the projection of the vector to the sun onto the solar calibration target plane and the X-axis of the solar calibration target reference system (STS) .  The X-axis direction of the STS is roughly parallel to the outward edge of the solar calibration target panel.      Uses spherical moon approximation as described in Section 2.4.3.  0 to 360.00000
+
+30
+
+cloctime
+
+Real 8.5
+
+Local time at FOV Center (hours past midnight).  Undefined if off planet.    Uses spherical moon approximation as described in Section 2.4.3.  0 to 24.00000
+

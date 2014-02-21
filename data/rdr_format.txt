@@ -1,0 +1,447 @@
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 1
+ NAME                 = date
+ DATA_TYPE            = CHARACTER
+ START_BYTE           = 2
+ BYTES                = 11
+ DESCRIPTION          = "Date at the midpoint of observation (SCET, UTC).
+                        E.g. '25-Jun-2009'"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 2
+ NAME                 = utc
+ DATA_TYPE            = CHARACTER
+ START_BYTE           = 17
+ BYTES                = 12
+ DESCRIPTION          = "Time at the midpoint of observation (SCET, UTC).
+                        E.g. '19:35.37.440'"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 3
+ NAME                 = jdate
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 32
+ BYTES                = 17
+ DESCRIPTION          = "Julian Date at the midpoint of observation (SCET,
+                        UTC). E.g. 2454102.123456789"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 4
+ NAME                 = orbit
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 51
+ BYTES                = 5
+ DESCRIPTION          = "Orbit number. 0 to 99999"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 5
+ NAME                 = sundist
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 58
+ BYTES                = 7
+ DESCRIPTION          = "The distance from the center of the moon to the
+                        sun (AU). E.g. 1.00001"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 6
+ NAME                 = sunlat
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 67
+ BYTES                = 8
+ DESCRIPTION          = "Subsolar Latitude (deg). E.g. -1.54333"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 7
+ NAME                 = sunlon
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 77
+ BYTES                = 9
+ DESCRIPTION          = "Subsolar East Longitude (deg). 0.00000 to
+                        360.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 8
+ NAME                 = sclk
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 88
+ BYTES                = 16
+ DESCRIPTION          = "Spacecraft clock at midpoint of observation
+                        (seconds.subseconds). The seconds are relative to
+                        the 2001 epoch. The numbers to the right of the
+                        decimal point are not decimal fraction of a second
+                        but rather subseconds. Each second is divided into
+                        65536 subseconds, thus the range for subseconds is
+                        0 - 65535. Example: 123456789.00001"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 9
+ NAME                 = sclat
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 106
+ BYTES                = 9
+ DESCRIPTION          = "Subspacecraft Latitude (deg). -90.00000 to
+                        90.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 10
+ NAME                 = sclon
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 117
+ BYTES                = 9
+ DESCRIPTION          = "Subspacecraft East Longitude (deg). 0 to
+                        360.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 11
+ NAME                 = scrad
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 128
+ BYTES                = 11
+ DESCRIPTION          = "Distance from the center of moon to the
+                        spacecraft (km). E.g.: 11000.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 12
+ NAME                 = scalt
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 141
+ BYTES                = 11
+ DESCRIPTION          = "Distance from the surface of the moon to the
+                        spacecraft (km). E.g.: 11000.00000. Uses
+                        ellipsoidal moon approximation as described in
+                        Section 2.4.3 of the RDR SIS."
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 13
+ NAME                 = el_cmd
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 154
+ BYTES                = 7
+ DESCRIPTION          = "Last Elevation Command (deg). 0 to 270.000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 14
+ NAME                 = az_cmd
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 163
+ BYTES                = 7
+ DESCRIPTION          = "Last Azimuth Command (deg). 0 to 270.000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 15
+ NAME                 = af
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 172
+ BYTES                = 4
+ DESCRIPTION          = "Activity Flag. See Appendix B of DLRE RDR SIS for
+                        description"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 16
+ NAME                 = orientlat
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 178
+ BYTES                = 9
+ DESCRIPTION          = "Orientation Latitude (deg). The latitudinal
+                        component of the 'orientation vector', a vector
+                        from the center of the moon in the direction of
+                        the detector array direction (defined as from
+                        detector 21 to detector 1). Provides angular
+                        orientation of the FOV's. -90.00000 to 90.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 17
+ NAME                 = orientlon
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 189
+ BYTES                = 9
+ DESCRIPTION          = "Orientation Longitude (deg). The east
+                        longitudinal component of the 'orientation
+                        vector', a vector from the center of the moon in
+                        the direction of the detector array direction
+                        (defined as from detector 21 to detector 1).
+                        Provides angular orientation of the FOV's. 0 to
+                        360.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 18
+ NAME                 = c
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 200
+ BYTES                = 1
+ DESCRIPTION          = "Diviner Channel Number. 1 to 9"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 19
+ NAME                 = det
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 203
+ BYTES                = 3
+ DESCRIPTION          = "Diviner Detector Number. 1 to 21"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 20
+ NAME                 = vlookx
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 208
+ BYTES                = 9
+ DESCRIPTION          = "The X component of the Diviner Look Unit Vector,
+                        using the lunar coordinate system described in
+                        Section 2.4.3 of the RDR SIS. E.g. -0.999999"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 21
+ NAME                 = vlooky
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 219
+ BYTES                = 9
+ DESCRIPTION          = "The Y component of the Diviner Look Unit Vector,
+                        using the lunar coordinate system described in
+                        Section 2.4.3 of the RDR SIS. E.g. -0.999999"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 22
+ NAME                 = vlookz
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 230
+ BYTES                = 9
+ DESCRIPTION          = "The Z component of the Diviner Look Unit Vector,
+                        using the lunar coordinate system described in
+                        Section 2.4.3 of the RDR SIS. E.g. -0.999999"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 23
+ NAME                 = radiance
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 241
+ BYTES                = 10
+ DESCRIPTION          = "Calibrated Radiance (W m**-2 sr**-1). Range is
+                        -1000.0000 to 1000.0000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 24
+ NAME                 = tb
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 253
+ BYTES                = 8
+ DESCRIPTION          = "Calibrated Brightness Temperature (K). Except for
+                        Channels 1 and 2, which is radiance relative to
+                        normally illuminated Lambert surface at sun-moon
+                        distance. Range is -450.000 to 450.000, where
+                        negative tb values correspond to negative radiance
+                        values."
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 25
+ NAME                 = clat
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 263
+ BYTES                = 9
+ DESCRIPTION          = "Latitude of FOV center (deg). Undefined if off
+                        planet. Uses ellipsoidal moon approximation as
+                        described in Section 2.4.3 of the RDR SIS.
+                        -90.00000 to 90.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 26
+ NAME                 = clon
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 274
+ BYTES                = 9
+ DESCRIPTION          = "East longitude of FOV center (deg). Undefined if
+                        off planet. Uses ellipsoidal moon approximation as
+                        described in Section 2.4.3 of the RDR SIS. 0 to
+                        360.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 27
+ NAME                 = cemis
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 285
+ BYTES                = 9
+ DESCRIPTION          = "Emission Angle at FOV center (deg). Undefined if
+                        off planet. Uses ellipsoidal moon approximation as
+                        described in Section 2.4.3 of the RDR SIS. 0 to
+                        90.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 28
+ NAME                 = csunzen
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 296
+ BYTES                = 9
+ DESCRIPTION          = "Solar Zenith angle at FOV center (deg). Undefined
+                        when off planet except during solar calibrations
+                        when it is defined as the solar zenith angle of
+                        the detector FOV center projected onto the solar
+                        calibration target. Uses ellipsoidal moon
+                        approximation as described in Section 2.4.3 of the
+                        RDR SIS. 0 to 180.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 29
+ NAME                 = csunazi
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 307
+ BYTES                = 9
+ DESCRIPTION          = "Solar Azimuth Angle at FOV Center (deg). 0
+                        degrees when aligned with the solar vector and
+                        measured counter-clockwise when looking down at
+                        the planet. Undefined when off planet except
+                        during solar calibrations when it is defined as
+                        the solar azimuth angle of the detector FOV center
+                        projected onto the solar calibration target. Uses
+                        ellipsoidal moon approximation as described in
+                        Section 2.4.3 of the RDR SIS. 0 to 360.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 30
+ NAME                 = cloctime
+ DATA_TYPE            = ASCII_REAL
+ START_BYTE           = 318
+ BYTES                = 8
+ DESCRIPTION          = "Local time at FOV Center (hours past midnight).
+                        Undefined if off planet. Uses ellipsoidal moon
+                        approximation as described in Section 2.4.3 of the
+                        RDR SIS. 0 to 24.00000"
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 31
+ NAME                 = qca
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 328
+ BYTES                = 3
+ DESCRIPTION          = "Quality Flag for Calibration. A 3-digit decimal
+                        integer representing an 8-bit binary quality flag.
+                        Bits set to 1 represent various conditions which
+                        compromise data quality. A value of zero
+                        represents best quality and increasing values
+                        indicate lower quality. Range is 0 to 255. See
+                        Appendix C of the RDR SIS for more details."
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 32
+ NAME                 = qge
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 333
+ BYTES                = 3
+ DESCRIPTION          = "Quality Flag for Geometry. A 3-digit decimal
+                        integer representing an 8-bit binary quality flag.
+                        Bits set to 1 represent various conditions which
+                        compromise data quality. A value of zero
+                        represents best quality and increasing values
+                        indicate lower quality. Range is 0 to 255. See
+                        Appendix C of the RDR SIS for more details."
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
+
+OBJECT                 = COLUMN
+ COLUMN_NUMBER        = 33
+ NAME                 = qmi
+ DATA_TYPE            = ASCII_INTEGER
+ START_BYTE           = 338
+ BYTES                = 3
+ DESCRIPTION          = "Quality Flag for Miscellaneous. A 3-digit decimal
+                        integer representing an 8-bit binary quality flag.
+                        Bits set to 1 represent various conditions which
+                        compromise data quality. A value of zero
+                        represents best quality and increasing values
+                        indicate lower quality. Range is 0 to 255. See
+                        Appendix C of the RDR SIS for more details."
+ UNKNOWN_CONSTANT     = -9999
+ INVALID_CONSTANT     = -9998
+END_OBJECT             = COLUMN
