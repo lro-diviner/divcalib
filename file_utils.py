@@ -854,13 +854,13 @@ class RDRxReader(object):
         return self.df
 
     
-class RDRRReader(RDRxReader):
+class RDRR_Reader(RDRxReader):
     datapath = '/luna7/marks/rdrr_data'
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 
 
-class RDRSReader(RDRxReader):
+class RDRS_Reader(RDRxReader):
     datapath = '/luna7/marks/rdrs_data'
     descriptorpath = os.path.join(datapath, 'rdrs.des')
     extension = '.rdrs'
