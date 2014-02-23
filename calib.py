@@ -24,6 +24,10 @@ tel_A_detectors = [det for det in detectors if det.startswith('a')]
 tel_B_detectors = [det for det in detectors if det.startswith('b')]
 thermal_detectors = detectors[-147:]
 
+mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3,
+                   'a4': 4, 'a5': 5, 'a6': 6,
+                   'b1': 7, 'b2': 8, 'b3': 9}
+
 
 
 def get_calib_blocks(df, blocktype, del_zero=True):
@@ -163,7 +167,7 @@ class RBBTable(object):
             bbtemps = mapping[channel[0]]
 
             #look up the radiances for this channel
-            RBBs = self.get_radiance(bbtemps, self.mcs_div_mapping[channel])
+            RBBs = self.get_radiance(bbtemps, mcs_div_mapping[channel])
             channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
             for i in range(1,22):
                 col_name = channel + '_' + str(i).zfill(2)
@@ -390,10 +394,6 @@ class Calibrator(object):
 
     Meaning, all detectors have their own column.
     """
-    # map between div247 channel names and diviner channel ids
-    mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3,
-                       'a4': 4, 'a5': 5, 'a6': 6,
-                       'b1': 7, 'b2': 8, 'b3': 9}
 
     # temperature - radiance converter table
     rbbtable = RBBTable()
@@ -693,7 +693,7 @@ class Calibrator(object):
         container = []
         for channel in thermal_channels:
             tbch = self.norm_radiance.filter(regex=channel+'_').apply(self.rbbtable.get_tb,
-                                                        args=(self.mcs_div_mapping[channel],))
+                                                        args=(mcs_div_mapping[channel],))
             container.append(tbch)
         self.Tb = pd.concat(container, axis=1)
         logging.debug("Calculated brightness temperatures.")
