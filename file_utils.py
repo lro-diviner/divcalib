@@ -830,14 +830,15 @@ class RDRxReader(object):
         timecols = [u'yyyy', u'mm', u'dd', u'hh', u'mn', u'ss']
         secs_only = df.ss.astype('int')
         msecs = (df.ss - secs_only).round(3)
+        mapper = lambda x: str(int(x)).zfill(2)
         times = pd.to_datetime(df.yyyy.astype('int').astype('str')+
-                               df.mm.astype('int').astype('str')+
-                               df.dd.astype('int').astype('str')+
-                               df.hh.astype('int').astype('str')+
-                               df.mn.astype('int').astype('str')+
-                               df.ss.astype('int').astype('str')+
-                               (msecs).astype('str'), 
-                               format='%Y%m%d%H%M%S0.%f',
+                               df.mm.map(mapper)+
+                               df.dd.map(mapper)+
+                               df.hh.map(mapper)+
+                               df.mn.map(mapper)+
+                               df.ss.map(mapper)+
+                               (msecs).astype('str').str[1:], 
+                               format='%Y%m%d%H%M%S.%f',
                                utc=False)
         df.set_index(times, inplace=True)
         self.df = df.drop(timecols, axis=1)
