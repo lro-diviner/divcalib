@@ -7,9 +7,8 @@ from joblib import Parallel, delayed
 import sys
 import os
 import logging
+import glob
 
-root = '/raid1/maye/coldregions'
-logging.basicConfig(filename='log_coldregions.log', level=logging.INFO)
 
 
 def get_l1a_timestring(val):
@@ -47,22 +46,33 @@ def process_one_timestring(args):
 
 
 if __name__ == '__main__':
+    root = '/raid1/maye/coldregions/no_rad_correction_padded_bbtemps'
+    logging.basicConfig(filename='log_coldregions_no_rad_corr.log', level=logging.INFO)
     
-    try:
-        region_number = sys.argv[1]
-        subfolder = sys.argv[2]
-    except IndexError:
-        print('Use one of [1,3,5] to indicate which region to produce. And add a subfolder string'
-              ' after that like so: {0} 1 no_rad_correction (for example)'.format(sys.argv[0]))
-        sys.exit()
-    region = pd.read_hdf(root+'/../regions_data.h5', 'region'+region_number)
+    for region_no in [1,3,5]:
+        print("Processing region {}".format(region_no))
+        logging.info("Processing region {}".format(region_no))
+        regionstr = 'region'+str(region_no)
+        regiondata = pd.read_hdf(os.path.join(root,
+                                              '..',
+                                              'regions_data.h5'),
+                                 regionstr)
+        path = os.path.join(root, regionstr)
+        
+        timestrings = regiondata.filetimestr.unique()
+        no = len(timestrings)
     
-    timestrings = region.filetimestr.unique()
-    no = len(timestrings)
-    
-    combined = zip(timestrings, no*[region])
-    p = Pool(12)
-    p.map(process_one_timestring, combined)
-    
-    hours = glob.glob()
+        # combined = zip(timestrings, no*[region])
+        Parallel(n_jobs=10, verbose=3)(delayed(process_one_timestring)(tstr,
+                                                                       path,
+                                                                       regiondata) \
+                                        for tstr in timestrings)
+     
+        container = []
+        tstring_files = glob.glob(os.path.join(path, 'tstring_*.h5'))
+        for f in tstring_files:
+            container.append(pd.read_hdf(f, 'df'))
+            os.remove(f)
+        df = pd.concat(container)
+        df.to_hdf(os.path.join(path, regionstr+'_no_rad_corr.h5'), 'df')
 
