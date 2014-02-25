@@ -403,7 +403,7 @@ class Calibrator(object):
                            do_negative_corr=False,
                            calfitting_order=1,
                            new_rad_corr=True,
-                           fix_noise=True):
+                           fix_noise=False):
                            
         self.df = correct_noise(df) if fix_noise else df
         logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
