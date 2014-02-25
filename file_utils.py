@@ -40,19 +40,23 @@ rdrdatapath = os.path.join('/'+hostname, 'u/marks/feidata/DIV:opsRdr/data')
 ### general utilities
 ###
 
-def get_timestr(fname):
-    basename = os.path.basename(fname)
-    return basename[:10]
+def get_timestr(indata):
+    # datetime type
+    if hasattr(indata, 'strftime'):
+        return indata.strftime("%Y%m%d%H")
+    # pandas timestamp
+    elif hasattr(indata, 'to_pydatetime'):
+        dt = indata.to_pydatetime()
+        return dt.strftime("%Y%m%d%H")
+    else:
+        # filename string
+        basename = os.path.basename(fname)
+        return basename[:10]
 
 
 def tstr_to_datetime(tstr):
     dtime = dt.strptime(tstr, '%Y%m%d%H')
     return dtime
-
-
-def timestamp_to_timestring(val):
-    dt = val.to_pydatetime()
-    return dt.strftime("%Y%m%d%H")
 
 
 def fname_to_tindex(fname):
