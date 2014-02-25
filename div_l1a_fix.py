@@ -76,7 +76,7 @@ def correct_noise(data):
             # b1..b3
             ch = 'b'+str(i-6+1)
         row = factors[:, i]
-        term = noise.values[:, newaxis] * row
+        term = noise.values[:, np.newaxis] * row
         data.ix[:, ch+'_01':ch+'_21'] -= term
     
     return data
