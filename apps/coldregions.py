@@ -24,13 +24,9 @@ def get_column_from_timestr(t, col, **kwargs):
     return getattr(c, col)
 
 
-def process_one_timestring(args):
-    t, region = args
-    savename = os.path.join(root, 'tstring_'+t+'.h5')
-    # if os.path.exists(savename):
-    #     print "Skipping",t,'. Already done.'
-    #     return
-    print(t)
+def process_one_timestring(t, path, region):
+    savename = os.path.join(path, 'tstring_'+t+'.h5')
+    logging.info('Processing {}, savename: {}'.format(t, savename))
     region_now = region[region.filetimestr == t]
     newrad = get_column_from_timestr(t, 'norm_radiance')
     dets = region_now.det.unique()
