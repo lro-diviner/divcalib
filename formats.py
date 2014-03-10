@@ -8,7 +8,7 @@ def create_formatdic_for_dataframe():
     Currently not in use, because of DataFrame.to_string bug:
     https://github.com/pydata/pandas/issues/4158
     
-    Saving his part can be used for when to_string() is being repaired.
+    Saving this part, can be used for when to_string() is being repaired.
     """
 
 
