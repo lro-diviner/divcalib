@@ -26,14 +26,16 @@ if sys.platform == 'darwin':
     outpath = '/Users/maye/data/diviner/out'
     kernelpath = '/Users/maye/data/spice/diviner'
     codepath = '/Users/maye/Dropbox/src/diviner'
+    l1adatapath = os.path.join(datapath, 'l1a_data')
+    rdrdatapath = os.path.join(datapath, 'opsRDR')
 else:
     datapath = os.path.join('/'+hostname, os.environ['USER'])
     outpath = os.path.join(datapath, 'rdr_out')
     kernelpath = os.path.join(datapath, 'kernels')
     codepath = os.path.join(os.environ['HOME'], 'src/diviner')
+    l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
+    rdrdatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsRdr/data')
 
-l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
-rdrdatapath = os.path.join('/'+hostname, 'u/marks/feidata/DIV:opsRdr/data')
 
 ###
 ### data transport utilities
@@ -870,7 +872,7 @@ class RDRxReader(object):
 
     
 class RDRR_Reader(RDRxReader):
-    datapath = '/luna7/marks/rdrr_data'
+    datapath = os.path.join(datapath,'rdrr_data')
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 
