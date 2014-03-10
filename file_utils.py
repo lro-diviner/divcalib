@@ -13,7 +13,7 @@ from datetime import datetime as dt
 from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 import logging
-
+from subprocess import call
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -35,6 +35,21 @@ else:
 l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
 rdrdatapath = os.path.join('/'+hostname, 'u/marks/feidata/DIV:opsRdr/data')
 
+###
+### data transport utilities
+###
+def scp_l1a_file(tstr):
+    src_host = 'luna4'
+    target_path = os.path.join(datapath, 'l1a_data')
+    cmd = 'scp '+ src_host + ':'+ l1adatapath + '/' + tstr + '_L1A.TAB ' + target_path
+    call(cmd, shell=True)
+
+
+def scp_opsRDR_file(tstr):
+    src_host = 'luna4'
+    target_path = os.path.join(datapath, 'opsRDR')
+    cmd = 'scp '+ src_host + ':'+ rdrdatapath + '/' + tstr + '_RDR.TAB.zip ' + target_path
+    call(cmd, shell=True)
 
 ### 
 ### general utilities
