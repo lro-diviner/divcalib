@@ -76,6 +76,10 @@ def fname_to_tindex(fname):
     basename = os.path.basename(fname)
     tstr = basename.split('_')[0]
     return tstr[:8]+' '+tstr[8:]
+    
+    
+def tstr_to_tindex(tstr):
+    pass # TODO
 
 
 ###
