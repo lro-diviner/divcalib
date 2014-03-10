@@ -773,7 +773,6 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
                       "fu.open_and_accumulate().")
         sys.exit()
     if tstr:
-        print("Am here.")
         centerfile = L1ADataFile.from_timestr(tstr)
     else:
         centerfile = L1ADataFile(fname)
