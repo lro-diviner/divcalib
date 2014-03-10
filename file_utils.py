@@ -755,20 +755,29 @@ def get_raw_l1a(timestr):
     return l1afile.df
 
 
-def open_and_accumulate(fname, minimum_number=3):
+def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     """Open L1A datafile fname and accumulate neighboring data.
 
-    One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
-    to be unique! Each cleaning operation starts the numbering from 1 again!
+    One CAN NOT accumulate cleaned data files, because I rely on the numbering of 
+    calib-blocks to be unique! 
+    Each cleaning operation starts the numbering from 1 again!
 
     minimum_number controls how many files are attached as one block.
     """
-    centerfile = L1ADataFile(fname)
+    if not (fname or tstr):
+        logging.error("One of fname or tstr has to be provided in "
+                      "fu.open_and_accumulate().")
+        sys.exit()
+    if tstr:
+        print("Am here.")
+        centerfile = L1ADataFile.from_timestr(tstr)
+    else:
+        centerfile = L1ADataFile(fname)
     dataframes = deque()
     dataframes.append(centerfile.open())
     # append previous hours until calib blocks found
     # start with center file:
-    fn_handler = FileName(fname)
+    fn_handler = FileName(centerfile.fname)
     while True:
         fn_handler.set_previous_hour()
         f = L1ADataFile(fn_handler.fname)
@@ -782,7 +791,7 @@ def open_and_accumulate(fname, minimum_number=3):
             break
     # append next hours until calib blocks found
     # go back to center file name
-    fn_handler = FileName(fname)
+    fn_handler = FileName(centerfile.fname)
     while True:
         fn_handler.set_next_hour()
         f = L1ADataFile(fn_handler.fname)
