@@ -798,7 +798,7 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     while True:
         fn_handler.set_next_hour()
         f = L1ADataFile(fn_handler.fname)
-        print("Appending {0} on the right.".format(fn_handler.timestr))
+        logging.debug("Appending {0} on the right.".format(fn_handler.timestr))
         try:
             dataframes.append(f.open_dirty())
         except IOError:
