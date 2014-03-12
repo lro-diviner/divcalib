@@ -906,7 +906,7 @@ class RDRxReader(object):
 
     
 class RDRR_Reader(RDRxReader):
-    datapath = 'luna7/marks/rdrr_data'
+    datapath = '/luna7/marks/rdrr_data'
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 
