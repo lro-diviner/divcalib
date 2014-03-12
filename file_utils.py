@@ -63,11 +63,11 @@ def get_timestr(indata):
         return indata.strftime("%Y%m%d%H")
     # pandas timestamp
     elif hasattr(indata, 'to_pydatetime'):
-        dt = indata.to_pydatetime()
-        return dt.strftime("%Y%m%d%H")
+        t = indata.to_pydatetime()
+        return t.strftime("%Y%m%d%H")
     else:
         # filename string
-        basename = os.path.basename(fname)
+        basename = os.path.basename(indata)
         return basename[:10]
 
 
