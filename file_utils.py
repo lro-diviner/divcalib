@@ -26,15 +26,32 @@ if sys.platform == 'darwin':
     outpath = '/Users/maye/data/diviner/out'
     kernelpath = '/Users/maye/data/spice/diviner'
     codepath = '/Users/maye/Dropbox/src/diviner'
+    l1adatapath = os.path.join(datapath, 'l1a_data')
+    rdrdatapath = os.path.join(datapath, 'opsRDR')
 else:
     datapath = os.path.join('/'+hostname, os.environ['USER'])
     outpath = os.path.join(datapath, 'rdr_out')
     kernelpath = os.path.join(datapath, 'kernels')
     codepath = os.path.join(os.environ['HOME'], 'src/diviner')
+    l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
+    rdrdatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsRdr/data')
 
-l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
-rdrdatapath = os.path.join('/'+hostname, 'u/marks/feidata/DIV:opsRdr/data')
 
+###
+### data transport utilities
+###
+def scp_l1a_file(tstr):
+    src_host = 'luna4'
+    target_path = os.path.join(datapath, 'l1a_data')
+    cmd = 'scp '+ src_host + ':'+ l1adatapath + '/' + tstr + '_L1A.TAB ' + target_path
+    call(cmd, shell=True)
+
+
+def scp_opsRDR_file(tstr):
+    src_host = 'luna4'
+    target_path = os.path.join(datapath, 'opsRDR')
+    cmd = 'scp '+ src_host + ':'+ rdrdatapath + '/' + tstr + '_RDR.TAB.zip ' + target_path
+    call(cmd, shell=True)
 
 ### 
 ### general utilities
@@ -63,6 +80,10 @@ def fname_to_tindex(fname):
     basename = os.path.basename(fname)
     tstr = basename.split('_')[0]
     return tstr[:8]+' '+tstr[8:]
+    
+    
+def tstr_to_tindex(tstr):
+    pass # TODO
 
 ###
 ### divdata related
@@ -758,20 +779,28 @@ def get_raw_l1a(timestr):
     return l1afile.df
 
 
-def open_and_accumulate(fname, minimum_number=3):
+def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     """Open L1A datafile fname and accumulate neighboring data.
 
-    One CAN NOT accumulate cleaned data files, because I rely on the numbering of calib-blocks
-    to be unique! Each cleaning operation starts the numbering from 1 again!
+    One CAN NOT accumulate cleaned data files, because I rely on the numbering of 
+    calib-blocks to be unique! 
+    Each cleaning operation starts the numbering from 1 again!
 
     minimum_number controls how many files are attached as one block.
     """
-    centerfile = L1ADataFile(fname)
+    if not (fname or tstr):
+        logging.error("One of fname or tstr has to be provided in "
+                      "fu.open_and_accumulate().")
+        sys.exit()
+    if tstr:
+        centerfile = L1ADataFile.from_timestr(tstr)
+    else:
+        centerfile = L1ADataFile(fname)
     dataframes = deque()
     dataframes.append(centerfile.open())
     # append previous hours until calib blocks found
     # start with center file:
-    fn_handler = FileName(fname)
+    fn_handler = FileName(centerfile.fname)
     while True:
         fn_handler.set_previous_hour()
         f = L1ADataFile(fn_handler.fname)
@@ -785,11 +814,11 @@ def open_and_accumulate(fname, minimum_number=3):
             break
     # append next hours until calib blocks found
     # go back to center file name
-    fn_handler = FileName(fname)
+    fn_handler = FileName(centerfile.fname)
     while True:
         fn_handler.set_next_hour()
         f = L1ADataFile(fn_handler.fname)
-        print("Appending {0} on the right.".format(fn_handler.timestr))
+        logging.debug("Appending {0} on the right.".format(fn_handler.timestr))
         try:
             dataframes.append(f.open_dirty())
         except IOError:
@@ -875,7 +904,7 @@ class RDRxReader(object):
 
     
 class RDRR_Reader(RDRxReader):
-    datapath = '/luna7/marks/rdrr_data'
+    datapath = os.path.join(datapath,'rdrr_data')
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 

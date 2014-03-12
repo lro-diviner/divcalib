@@ -1,6 +1,33 @@
 from pds.core.parser import Parser
 import StringIO
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
+
+def parse_rdr_col_file(fname=None):
+    RDRColumn = namedtuple('RDRColumn', 'colno, colname, type_format, desc')
+    if not fname:
+        fname = '../../data/rdr_columns.txt'
+    with open(fname) as f:
+        data = f.readlines()
+    # use this counter to know when 4 items were collected
+    counter = 0
+    container = []
+    for line in data:
+        if not line.strip():
+            continue
+        container.append(line.strip())
+        counter += 1
+        if counter == 4:
+            yield RDRColumn(*container)
+            counter = 0
+            container = []
+
+
+def get_formats_dict():
+    dic = OrderedDict()
+    for col in parse_rdr_col_file():
+        dic[col.colname] = col
+    return dic
+
 
 def create_formatdic_for_dataframe():
     """Generate format dictionary to be used for pandas.DataFrame.to_string().
@@ -8,7 +35,7 @@ def create_formatdic_for_dataframe():
     Currently not in use, because of DataFrame.to_string bug:
     https://github.com/pydata/pandas/issues/4158
     
-    Saving his part can be used for when to_string() is being repaired.
+    Saving this part, can be used for when to_string() is being repaired.
     """
 
 
@@ -273,26 +300,3 @@ class Formatter(object):
 #     return dic
 
 
-def parse_rdr_col_file(fname=None):
-    if not fname:
-        fname = '../../data/rdr_columns.txt'
-    with open(fname) as f:
-        data = f.readlines()
-    # use this counter to know when 4 items were collected
-    counter = 0
-    container = []
-    for line in data:
-        if not line.strip():
-            continue
-        container.append(line.strip())
-        counter += 1
-        if counter == 4:
-            yield RDRColumn(*container)
-            counter = 0
-            container = []
-
-def get_formats_dict():
-    dic = OrderedDict()
-    for col in parse_rdr_col_file():
-        dic[col.colname] = col
-    return dic
