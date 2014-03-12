@@ -51,11 +51,11 @@ def scp_l1a_file(tstr):
 def scp_opsRDR_file(tstr):
     src_host = 'luna4'
     target_path = os.path.join(datapath, 'opsRDR')
-    cmd = 'scp {0}:{1}/{2}_RDR.TAB.zip {3}'.format(src_host, rdrdatapath, 
+    cmd = 'scp {0}:{1}/{2}_RDR.TAB.zip {3}'.format(src_host, rdrdatapath,
                                                    tstr, target_path)
     call(cmd, shell=True)
 
-### 
+###
 ### general utilities
 ###
 
@@ -82,8 +82,8 @@ def fname_to_tindex(fname):
     basename = os.path.basename(fname)
     tstr = basename.split('_')[0]
     return tstr[:8]+' '+tstr[8:]
-    
-    
+
+
 def tstr_to_tindex(tstr):
     return tstr[:8]+' '+tstr[8:]
 
@@ -97,11 +97,11 @@ def get_hour_from_divdata(tstr, c, det, savedir):
 
     cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,"
                   "month,date,hour,minute,second,jdate,clat,clon,radiance,tb "
-                  "| pprint titles=0 > ".format(c, det))
+                  "| pprint titles=0 >".format(c, det))
     cmd_base = 'divdata daterange={0}'.format(tstr)
     outfname = os.path.join(savedir,
                             '{0}_divdata.csv'.format(tstr))
-    cmd = cmd_base + cmd_middle + outfname
+    cmd = '{0} {1} {2}'.format(cmd_base, cmd_middle, outfname)
     print(cmd)
     # call(cmd, shell=True)
 
@@ -299,7 +299,7 @@ class RDRReader(object):
         else:
             self.f = open(self.fname)
         return self.read_df()
-        
+
     def get_rdr_headers(self):
         """Get headers from both ops and PDS RDR files."""
         # skipcounter
@@ -332,7 +332,7 @@ class RDRReader(object):
 
 def parse_times(df):
     format = '%d-%b-%Y %H:%M:%S.%f'
-    # I don't need to round the seconds here because the df.utc data has 
+    # I don't need to round the seconds here because the df.utc data has
     # already a 3-digit millisecond string: '19:00:00.793'
     times = pd.to_datetime(df.date + ' ' + df.utc, format=format, utc=False)
     df.set_index(times, inplace=True)
@@ -786,8 +786,8 @@ def get_raw_l1a(timestr):
 def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     """Open L1A datafile fname and accumulate neighboring data.
 
-    One CAN NOT accumulate cleaned data files, because I rely on the numbering of 
-    calib-blocks to be unique! 
+    One CAN NOT accumulate cleaned data files, because I rely on the numbering of
+    calib-blocks to be unique!
     Each cleaning operation starts the numbering from 1 again!
 
     minimum_number controls how many files are attached as one block.
@@ -877,7 +877,7 @@ class RDRxReader(object):
         fname = os.path.join(self.datapath, tstr + self.extension)
         dtypes, keys = parse_descriptor(self.descriptorpath)
         self.df = fname_to_df(fname, dtypes, keys)
-        
+
     def parse_times(self):
         df = self.df
         timecols = [u'yyyy', u'mm', u'dd', u'hh', u'mn', u'ss']
@@ -890,23 +890,23 @@ class RDRxReader(object):
                                df.hh.map(mapper)+
                                df.mn.map(mapper)+
                                df.ss.map(mapper)+
-                               (msecs).astype('str').str[1:], 
+                               (msecs).astype('str').str[1:],
                                format='%Y%m%d%H%M%S.%f',
                                utc=False)
         df.set_index(times, inplace=True)
         self.df = df.drop(timecols, axis=1)
-    
+
     def open(self):
         self.df[self.df == -9999] = np.nan
         self.parse_times()
         df = prepare_data(self.df)
         define_sdtype(df)
         return df
-        
+
     def open_raw(self):
         return self.df
 
-    
+
 class RDRR_Reader(RDRxReader):
     datapath = '/luna7/marks/rdrr_data'
     descriptorpath = os.path.join(datapath, 'rdrr.des')
