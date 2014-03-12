@@ -294,7 +294,8 @@ class RDRReader(object):
             self.f = zfile.open(zfile.namelist()[0])
         else:
             self.f = open(self.fname)
-
+        return self.read_df()
+        
     def get_rdr_headers(self):
         """Get headers from both ops and PDS RDR files."""
         # skipcounter
