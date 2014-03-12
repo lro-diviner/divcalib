@@ -43,14 +43,16 @@ else:
 def scp_l1a_file(tstr):
     src_host = 'luna4'
     target_path = os.path.join(datapath, 'l1a_data')
-    cmd = 'scp '+ src_host + ':'+ l1adatapath + '/' + tstr + '_L1A.TAB ' + target_path
+    cmd = 'scp {0}:{1}/{2}_L1A.TAB {3}'.format(src_host, l1adatapath,
+                                               tstr, target_path)
     call(cmd, shell=True)
 
 
 def scp_opsRDR_file(tstr):
     src_host = 'luna4'
     target_path = os.path.join(datapath, 'opsRDR')
-    cmd = 'scp '+ src_host + ':'+ rdrdatapath + '/' + tstr + '_RDR.TAB.zip ' + target_path
+    cmd = 'scp {0}:{1}/{2}_RDR.TAB.zip {3}'.format(src_host, rdrdatapath, 
+                                                   tstr, target_path)
     call(cmd, shell=True)
 
 ### 
