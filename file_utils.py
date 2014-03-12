@@ -57,19 +57,23 @@ def scp_opsRDR_file(tstr):
 ### general utilities
 ###
 
-def get_timestr(fname):
-    basename = os.path.basename(fname)
-    return basename[:10]
+def get_timestr(indata):
+    # datetime type
+    if hasattr(indata, 'strftime'):
+        return indata.strftime("%Y%m%d%H")
+    # pandas timestamp
+    elif hasattr(indata, 'to_pydatetime'):
+        dt = indata.to_pydatetime()
+        return dt.strftime("%Y%m%d%H")
+    else:
+        # filename string
+        basename = os.path.basename(fname)
+        return basename[:10]
 
 
 def tstr_to_datetime(tstr):
     dtime = dt.strptime(tstr, '%Y%m%d%H')
     return dtime
-
-
-def timestamp_to_timestring(val):
-    dt = val.to_pydatetime()
-    return dt.strftime("%Y%m%d%H")
 
 
 def fname_to_tindex(fname):
@@ -80,6 +84,22 @@ def fname_to_tindex(fname):
     
 def tstr_to_tindex(tstr):
     pass # TODO
+
+###
+### divdata related
+###
+
+def get_hour_from_divdata(tstr, c, det):
+    """tstr in format %Y%m%d%H as usual."""
+
+    cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,month,date,hour,"
+      "minute,second,jdate,radiance,tb | pprint titles=0 > ".format(c, det))
+    cmd_base = 'divdata daterange={0}'.format(tstr)
+    outfname = os.path.join(savedir,
+                            '{0}_divdata.csv'.format(tstr))
+    cmd = cmd_base + cmd_middle + outfname
+    print(cmd)
+    # call(cmd, shell=True)
 
 
 ###

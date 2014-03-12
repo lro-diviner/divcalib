@@ -3,21 +3,14 @@ from __future__ import print_function, division
 import pandas as pd
 from diviner import file_utils as fu, calib
 import numpy as np
-from multiprocessing import Pool
+from joblib import Parallel, delayed
 import sys
 import os
 import logging
-
-root = '/raid1/maye/coldregions'
-logging.basicConfig(filename='log_coldregions.log', level=logging.INFO)
+import glob
 
 
-def get_l1a_timestring(val):
-    dt = val.to_pydatetime()
-    return dt.strftime("%Y%m%d%H")
-
-
-def get_column_from_timestr(t, col, **kwargs):
+def get_column_from_timestr(t, col, kwargs):
     l1a = fu.L1ADataFile.from_timestr(t)
     df = fu.open_and_accumulate(l1a.fname)
     c = calib.Calibrator(df, **kwargs)
@@ -25,15 +18,11 @@ def get_column_from_timestr(t, col, **kwargs):
     return getattr(c, col)
 
 
-def process_one_timestring(args):
-    t, region = args
-    savename = os.path.join(root, 'tstring_'+t+'.h5')
-    # if os.path.exists(savename):
-    #     print "Skipping",t,'. Already done.'
-    #     return
-    print(t)
+def process_one_timestring(t, path, region, kwargs):
+    savename = os.path.join(path, 'tstring_'+t+'.h5')
+    logging.info('Processing {}, savename: {}'.format(t, savename))
     region_now = region[region.filetimestr == t]
-    newrad = get_column_from_timestr(t, 'norm_radiance')
+    newrad = get_column_from_timestr(t, 'norm_radiance', kwargs)
     dets = region_now.det.unique()
     container = []
     for det in dets:
@@ -47,22 +36,40 @@ def process_one_timestring(args):
 
 
 if __name__ == '__main__':
+    root = '/raid1/maye/coldregions/no_rad_correction_padded_bbtemps'
+    logging.basicConfig(filename='log_coldregions_no_rad_corr.log', level=logging.INFO)
     
-    try:
-        region_number = sys.argv[1]
-        subfolder = sys.argv[2]
-    except IndexError:
-        print('Use one of [1,3,5] to indicate which region to produce. And add a subfolder string'
-              ' after that like so: {0} 1 no_rad_correction (for example)'.format(sys.argv[0]))
-        sys.exit()
-    region = pd.read_hdf(root+'/../regions_data.h5', 'region'+region_number)
+    for region_no in [1,3,5]:
+        print("Processing region {}".format(region_no))
+        logging.info("Processing region {}".format(region_no))
+        regionstr = 'region'+str(region_no)
+        regiondata = pd.read_hdf(os.path.join(root,
+                                              '..',
+                                              'regions_data.h5'),
+                                 regionstr)
+        path = os.path.join(root, regionstr)
+        
+        timestrings = regiondata.filetimestr.unique()
+        no = len(timestrings)
     
-    timestrings = region.filetimestr.unique()
-    no = len(timestrings)
-    
-    combined = zip(timestrings, no*[region])
-    p = Pool(12)
-    p.map(process_one_timestring, combined)
-    
-    hours = glob.glob()
+        ###
+        # Control here how the calibration should be run!!
+        ###
+        
+        kwargs = dict(do_rad_corr=False, pad_bbtemps=True)
+        
+        Parallel(n_jobs=10, 
+                 verbose=3)(delayed(process_one_timestring)(tstr,
+                                                            path,
+                                                            regiondata,
+                                                            kwargs)
+                            for tstr in timestrings[:5])
+     
+        container = []
+        tstring_files = glob.glob(os.path.join(path, 'tstring_*.h5'))
+        for f in tstring_files:
+            container.append(pd.read_hdf(f, 'df'))
+            os.remove(f)
+        df = pd.concat(container)
+        df.to_hdf(os.path.join(path, regionstr+'_no_rad_corr.h5.test'), 'df')
 
