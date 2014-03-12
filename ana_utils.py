@@ -27,6 +27,15 @@ class RDRHelper(object):
         return chdetdf.radiance
         
         
+class RDRR_Helper(object):
+    def __init__(self, df):
+        self.df = df
+
+    def get_chdet_rad(self, ch, det):
+        colname = 'radiance_'+str(ch)+'_'+str(det).zfill(2)
+        return self.df[colname]
+
+
 class CalibHelper(object):
     def __init__(self, calib_object):
         self.c = calib_object
