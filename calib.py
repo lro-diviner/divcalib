@@ -137,16 +137,16 @@ class RBBTable(object):
         for i in range(3,7):
             rads.extend(21*[float(self.get_radiance(temp, i))])
         return rads
-        
+
     def get_telB_radiances(self, temp):
         rads = []
         for i in range(7,10):
             rads.extend(21*[float(self.get_radiance(temp, i))])
         return rads
-        
+
     def lookup_radiances_for_thermal_channels(self, mapping_source, store):
         """Convert the temperatures to radiances.
-        
+
         Parameters
         ==========
             mapping_source: pandas DataFrame that has to contain the columns
@@ -233,15 +233,15 @@ class CalBlock(object):
     """
     def __init__(self, df):
         """Initialize CalBlock instance.
-        
-        The init method creates for each of [space, bb, st] the following data item for the 
+
+        The init method creates for each of [space, bb, st] the following data item for the
         respective view:
         * xxviews (the dataframe filtered for the view)
         * xx_grouped (the groupby object to enable skipping samples for each spaceview uniquely
             (or for other double-views, should they exist, like the double stview I found.))
         * unique_xx_labels (the unique and sorted list of labels, useful to sequence operations
             on a view, in case that is required.)
-            
+
         It also makes some checks on the appearance of the number of views and lengths of these
         views and logs any anomalies.
         Lastly, it sets a boolean to define if this CalBlock has all required data to enable
@@ -255,13 +255,13 @@ class CalBlock(object):
             label = view + '_block_labels'
             setattr(self, view + '_grouped', viewdf.groupby(self.df[label]))
             setattr(self, 'unique_' + view + '_labels', self.get_unique_labels(view))
-            
+
         self.has_gain = self.has_complete_spaceview and self.has_complete_bbview
         self.logging()
-        
+
     def logging(self):
         "Perform sanity checks and log anomalies"
-        if len(self.unique_bb_labels) > 1: 
+        if len(self.unique_bb_labels) > 1:
             logging.info("Found more than one BB label in CalBlock"
                          " at {}.".format(self.df.index[0]))
         if len(self.unique_st_labels) > 1:
@@ -296,10 +296,10 @@ class CalBlock(object):
     @property
     def has_complete_stview(self):
         return len(self.stviews) >= config.ST_LENGTH
-        
+
     def check_length_get_mean(self, group, skip_samples):
         return group[skip_samples:].mean()
-    
+
     def get_offsets(self, method='mean', skipsamples=config.SV_NUM_SKIP_SAMPLE):
         """Provide offsets for method as required.
 
@@ -311,7 +311,7 @@ class CalBlock(object):
                         <skipsamples> samples)
                 'each': each spaceview provides one time and one offset value.
         """
-        # Check 
+        # Check
         if not self.has_complete_spaceview:
             return None
         elif method=='mean':
@@ -326,11 +326,11 @@ class CalBlock(object):
         # as i'm only in here when i don't use bb_time from calc_gain(), i don't
         # need to check anymore if this calblock has_gain, it should not have at this point
         return get_mean_time(self.spaceviews, config.SV_NUM_SKIP_SAMPLE)
-            
+
     @property
     def bb_time(self):
         return get_mean_time(self.bbviews, config.BBV_NUM_SKIP_SAMPLE)
-        
+
     @property
     def offsets(self):
         if self.offsets_done:
@@ -348,7 +348,7 @@ class CalBlock(object):
                 return
             offsets.index = [self.offsets_time]
         return offsets
-        
+
     def calc_BB_radiance(self):
         """Calculate like JPL only one RBB value for a mean BB temperature. """
         # procedure same as calib_cbb
@@ -357,16 +357,16 @@ class CalBlock(object):
         # restrict the data to the BB view
         bbviews_temps = self.df[self.df.is_bbview][T_cols]
         # get the mean time for the BB view
-    
+
         # determine the mean value of the interpolated BB temps, minus skipped
         bbtemps_mean = bbviews_temps[config.BBV_NUM_SKIP_SAMPLE:].mean()
-        
+
         # convert the mean temps to radiances
         rads = []
         rads.extend(rbbtable.get_telA_radiances(bbtemps_mean[0]))
         rads.extend(rbbtable.get_telB_radiances(bbtemps_mean[1]))
         return pd.Series(np.array(rads), index=thermal_detectors)
-        
+
     def get_gains(self):
         if not self.has_gain:
             return None
@@ -376,14 +376,14 @@ class CalBlock(object):
         CBB = self.get_mean_BB_counts()
         gains = pd.DataFrame(-RBB / get_thermal_detectors(offsets - CBB)).T
         gains.index = [bb_time]
-        # as the CalBlock has gain, the offsets used here are the ones to be used for 
+        # as the CalBlock has gain, the offsets used here are the ones to be used for
         # calibration and no other calculation is required. Therefore save these for the
         # collector routine in Calibrator
         self.offsets_calculated = offsets
         self.offsets_time_calculated = bb_time
         self.offsets_done = True
         return gains
-        
+
     def get_mean_BB_counts(self):
         return get_data_columns(self.check_length_get_mean(self.bbviews,
                                                            config.BBV_NUM_SKIP_SAMPLE))
@@ -404,7 +404,7 @@ class Calibrator(object):
                            calfitting_order=1,
                            new_rad_corr=True,
                            fix_noise=True):
-                           
+
         self.df = correct_noise(df) if fix_noise else df
         logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
@@ -569,7 +569,7 @@ class Calibrator(object):
             offset_container.append(cb.offsets)
         self.gains = pd.concat(gain_container)
         self.offsets = pd.concat(offset_container)
-        
+
     def interpolate_caldata_worker(self, offset_times, bbcal_times, all_times):
 
         sdata = get_data_columns(self.df)
@@ -580,19 +580,19 @@ class Calibrator(object):
 
         for det in thermal_detectors:
             # change k for the kind of fit you want
-            s_offset = Spline(offset_times, self.offsets[det], s=0.0, 
+            s_offset = Spline(offset_times, self.offsets[det], s=0.0,
                               k=self.calfitting_order)
-            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0, 
+            s_gain   = Spline(bbcal_times, self.gains[det], s=0.0,
                               k=self.calfitting_order)
             offsets_interp[det] = s_offset(all_times)
             gains_interp[det]   = s_gain(all_times)
-        
+
         return offsets_interp, gains_interp
-        
+
     def interpolate_gains(self, bbcal_times, all_times):
         def do_spline(col, times):
             return Spline(times, col, s=0.0, k=self.calfitting_order)(all_times)
-        
+
         np_gains = np.apply_along_axis(do_spline,
                                        0,
                                        self.gains[thermal_detectors],
@@ -608,18 +608,18 @@ class Calibrator(object):
 
         def do_spline(col, times):
             return Spline(times, col, s=0.0, k=self.calfitting_order)(all_times)
-            
-        np_offsets = np.apply_along_axis(do_spline, 
-                                         0, 
+
+        np_offsets = np.apply_along_axis(do_spline,
+                                         0,
                                          self.offsets[thermal_detectors],
                                          offset_times)
-                                         
+
         offsets_interp = pd.DataFrame(np_offsets,
                                       index=self.df.index,
                                       columns=thermal_detectors)
         return offsets_interp
 
-        
+
     def interpolate_caldata(self):
         """Interpolate the offsets and gains all over the dataframe.
 
@@ -635,10 +635,10 @@ class Calibrator(object):
 
         # only work with real data, filter out meta-data
         sdata = get_data_columns(sdata)
-        
+
         # the target where we want to interpolate for
         all_times = sdata.index.values.astype('float64')
-        
+
         if len(self.gains) == 1:
             logging.warning("Only one gain found. Propagating over whole hour at"
                             " {}.".format(self.df.index[0]))
