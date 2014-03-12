@@ -92,11 +92,12 @@ def tstr_to_tindex(tstr):
 ### divdata related
 ###
 
-def get_hour_from_divdata(tstr, c, det):
+def get_hour_from_divdata(tstr, c, det, savedir):
     """tstr in format %Y%m%d%H as usual."""
 
-    cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,month,date,hour,"
-      "minute,second,jdate,radiance,tb | pprint titles=0 > ".format(c, det))
+    cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,"
+                  "month,date,hour,minute,second,jdate,clat,clon,radiance,tb "
+                  "| pprint titles=0 > ".format(c, det))
     cmd_base = 'divdata daterange={0}'.format(tstr)
     outfname = os.path.join(savedir,
                             '{0}_divdata.csv'.format(tstr))
