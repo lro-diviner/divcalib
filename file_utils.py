@@ -83,7 +83,8 @@ def fname_to_tindex(fname):
     
     
 def tstr_to_tindex(tstr):
-    pass # TODO
+    return tstr[:8]+' '+tstr[8:]
+
 
 ###
 ### divdata related
