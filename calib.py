@@ -688,12 +688,13 @@ class Calibrator(object):
         self.abs_radiance = abs_radiance
         logging.debug('Calculated radiances.')
 
-    def calc_tb(self):
-        self.Tb = pd.DataFrame(index=self.abs_radiance.index)
-        container = []
+    def calc_tb(self):s
+h        container = []
         for channel in thermal_channels:
             tbch = self.norm_radiance.filter(regex=channel+'_').apply(self.rbbtable.get_tb,
                                                         args=(mcs_div_mapping[channel],))
             container.append(tbch)
-        self.Tb = pd.concat(container, axis=1)
+        self.tb = pd.concat(container, axis=1)
+        # to not render existing code useless
+        self.Tb = self.tb
         logging.debug("Calculated brightness temperatures.")
