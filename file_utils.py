@@ -13,7 +13,7 @@ from datetime import datetime as dt
 from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 import logging
-
+from subprocess import call
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -63,6 +63,22 @@ def fname_to_tindex(fname):
     basename = os.path.basename(fname)
     tstr = basename.split('_')[0]
     return tstr[:8]+' '+tstr[8:]
+
+###
+### divdata related
+###
+
+def get_hour_from_divdata(tstr, c, det):
+    """tstr in format %Y%m%d%H as usual."""
+
+    cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,month,date,hour,"
+      "minute,second,jdate,radiance,tb | pprint titles=0 > ".format(c, det))
+    cmd_base = 'divdata daterange={0}'.format(tstr)
+    outfname = os.path.join(savedir,
+                            '{0}_divdata.csv'.format(tstr))
+    cmd = cmd_base + cmd_middle + outfname
+    print(cmd)
+    # call(cmd, shell=True)
 
 
 ###
