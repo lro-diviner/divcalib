@@ -797,7 +797,7 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     else:
         centerfile = L1ADataFile(fname)
     dataframes = deque()
-    dataframes.append(centerfile.open())
+    dataframes.append(centerfile.open_dirty())
     # append previous hours until calib blocks found
     # start with center file:
     fn_handler = FileName(centerfile.fname)
