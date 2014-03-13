@@ -92,7 +92,7 @@ def tstr_to_tindex(tstr):
 ### divdata related
 ###
 
-def get_divdata(tstr, c, det, savedir):
+def get_divdata(tstr, c, det, savedir='.'):
     """tstr in format %Y%m%d%H as usual."""
 
     cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,"
