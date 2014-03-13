@@ -2,6 +2,9 @@
 from __future__ import print_function, division
 import pandas as pd
 import sys
+import os
+from subprocess import call
+from diviner.data_prep import index_by_time
 
 
 def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
