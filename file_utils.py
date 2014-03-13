@@ -92,20 +92,63 @@ def tstr_to_tindex(tstr):
 ### divdata related
 ###
 
-def get_divdata(tstr, c, det, savedir='.'):
-    """tstr in format %Y%m%d%H as usual."""
-
-    cmd_middle = ("clat=-90,90 c={0},{0} det={1},{1} | pextract extract=year,"
-                  "month,date,hour,minute,second,jdate,clat,clon,radiance,tb "
-                  "| pprint titles=0 >".format(c, det))
-    cmd_base = 'divdata daterange={0}'.format(tstr)
-    outfname = os.path.join(savedir,
-                            '{0}_divdata.csv'.format(tstr))
-    cmd = '{0} {1} {2}'.format(cmd_base, cmd_middle, outfname)
-    print(cmd)
-    # call(cmd, shell=True)
-
-
+def get_divdata(tstr, cstart, detstart, savedir='', keep_csv=False, 
+                drop_dates=True, cend=None, detend=None):
+    """tstr in format %Y%m%d%H as usual.
+    
+    Parameters:
+        tstr: In usual format %Y%m%d%H
+        c, det:  Diviner channel and detector numbers
+        savedir: path for the output files to be stored, default: current
+        keep_csv: boolean to decide if to delete the tmp csv or to keep
+        keep_time_cols: if you can't cope with datetime object, you can keep
+            the time columns in the dataframe.
+    Have to embed everything in a tc-shell call because otherwise
+    the paths are not set-up correctly.
+    """
+    if not cend:
+        cend = cstart
+    if not detend:
+        detend = detstart
+    pipes_root = '/u/marks/luner/pipes/rel'
+    divdata_cmd = '/u/marks/luner/c38/rel/divdata'
+    divdata_opt1 = 'daterange={0}'.format(tstr)
+    divdata_opt2 = "clat=-90,90 c={0},{1} det={2},{3}".format(cstart, cend,
+                                                            detstart, detend)
+    pextract_cmd = os.path.join(pipes_root, 'pextract')
+    pprint_cmd = os.path.join(pipes_root, 'pprint')
+    pextract_opt = "extract=year,month,date,hour,minute,second,jdate,"\
+                   "c,det,clat,clon,radiance,tb"
+    pprint_opt = "titles=0 >"
+    outfname = os.path.join(savedir, '{0}_divdata.csv'.format(tstr))
+    cmd = "tcsh -c '{divdata_cmd} {divdata_opt1} {divdata_opt2}|"\
+          "{pextract_cmd} {pextract_opt}|"\
+          "{pprint_cmd} {pprint_opt} "\
+          "{outfname}'".format(divdata_cmd=divdata_cmd,
+                                 divdata_opt1=divdata_opt1,
+                                 divdata_opt2=divdata_opt2,
+                                 pextract_cmd=pextract_cmd,
+                                 pextract_opt=pextract_opt,
+                                 pprint_cmd=pprint_cmd,
+                                 pprint_opt=pprint_opt,
+                                 outfname=outfname)
+    print("Calling\n", cmd)
+    sys.stdout.flush()
+    call(cmd, shell=True)
+    if os.path.exists(outfname):
+        print("Created", outfname)
+        print("Size:",os.path.getsize(outfname))
+    else:
+        print("Something went wrong, cannot find the output file.")
+        return
+    print("Pandas parsing...")
+    df = pd.read_csv(outfname, delim_whitespace=True)
+    # first column is empty
+    df.drop(df.columns[0], axis=1, inplace=True)
+    # parse times and drop time columns
+    df = index_by_time(df, drop_dates=drop_dates)
+    return df
+    
 ###
 ### Tools for data output to tables
 ###
