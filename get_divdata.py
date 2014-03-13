@@ -131,10 +131,21 @@ if __name__ == '__main__':
                                              "time columns when parsing time into a datetime "
                                              "object. Default is 'False'.",
                         action='store_true')
-
+    parser.add_argument('-t', '--test', help='Print out the call command for verification and'
+                                             ' exit.',
+                        action='store_true')
 
     args = parser.parse_args()
+    if len(args.timestring) != 10:
+        print("\n Nope! timestring has to be 8 characters!\n")
+        parser.print_help()
+        sys.exit()
+    if args.test:
+        cmd = create_cmd_string(args.timestring, args.cstart, args.detstart, args.savedir,
+                                cend=args.cend, detend=args.detend)
+        print("Command verification:\n",cmd)
+        sys.exit()
     get_divdata(args.timestring, args.cstart, args.detstart, args.savedir, 
                 cend=args.cend, detend=args.detend,
                 keep_csv=args.keep_csv, drop_dates=~args.keep_dates, 
-                create_hdf=args.create_hdf)
+                create_hdf=args.create_hdf, save_hdf=args.create_hdf)
