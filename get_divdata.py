@@ -9,20 +9,7 @@ from diviner.data_prep import index_by_time
 # global list of columns to be extracted. will be adaptable by user later
 columns = 'year,month,date,hour,minute,second,jdate,c,det,clat,clon,radiance,tb'.split(',')
 
-def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
-                create_hdf=True, drop_dates=True, keep_csv=False):
-    """tstr in format %Y%m%d%H as usual.
-
-    Parameters:
-        tstr: In usual format %Y%m%d%H
-        c, det:  Diviner channel and detector numbers
-        savedir: path for the output files to be stored, default: current
-        keep_csv: boolean to decide if to delete the tmp csv or to keep
-        keep_time_cols: if you can't cope with datetime object, you can keep
-            the time columns in the dataframe.
-    Have to embed everything in a tc-shell call because otherwise
-    the paths are not set-up correctly.
-    """
+def create_cmd_string(tstr, cstart, detstart, savedir='', cend=None, detend=None):
     if not cend:
         cend = cstart
     if not detend:
@@ -48,11 +35,35 @@ def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
                                  pprint_cmd=pprint_cmd,
                                  pprint_opt=pprint_opt,
                                  outfname=outfname)
+    return cmd, outfname
+
+
+def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
+                create_hdf=True, drop_dates=True, keep_csv=False, save_hdf=False):
+    """tstr in format %Y%m%d%H as usual.
+
+    Parameters:
+        tstr: In usual format %Y%m%d%H
+        c, det:  Diviner channel and detector numbers
+        savedir: path for the output files to be stored, default: current
+        create_hdf: Parse the pprint text file into a pandas dataframe and return it to caller
+            Default is True
+        save_hdf: Save the pandas dataframe to disk, this is an option for the command-line 
+            use of this tool. Dataframe handle in HDF file is 'df'. Default is False
+        keep_csv: boolean to decide if to delete the tmp csv or to keep
+        drop_dates: if you can't cope with datetime object, you can keep
+            the time columns in the dataframe.
+        
+    Have to embed everything in a tc-shell call because otherwise
+    the paths are not set-up correctly.
+    """
+    cmd, outfname = create_cmd_string(tstr, cstart, detstart, 
+                                      savedir=savedir, cend=cend, detend=detend)
     print("Calling\n", cmd)
     sys.stdout.flush()
     call(cmd, shell=True)
     if os.path.exists(outfname):
-        print("Created", outfname)
+        print("Created text file", outfname)
         print("Size:",os.path.getsize(outfname))
     else:
         print("Something went wrong, cannot find the output file.")
