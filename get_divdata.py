@@ -76,7 +76,13 @@ def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
         # parse times and drop time columns
         df = index_by_time(df, drop_dates=drop_dates)
         if not keep_csv:
+            print("Removing temporary text file", outfname)
             os.remove(outfname)
+        if save_hdf:
+            basename = os.path.basename(outfname)
+            outname = os.path.splitext(basename)[0]+'.h5'
+            print("Creating HDF file:",outname)
+            df.to_hdf(outname,'df')
         return df
 
 
@@ -114,8 +120,9 @@ if __name__ == '__main__':
     parser.add_argument('--detend', help="Last Diviner detector number to provide data for.",
                         type=int, choices=range(1,22))
     parser.add_argument('--create_hdf', help="Boolean flag. If active, parse CSV file with pandas"
-                                             " and save "
-                                             "HDF5 file with times parsed into datetime index.",
+                                             " and save HDF5 file with times parsed into "
+                                             "datetime index. Dataframe handle in HDF file "
+                                             "is 'df'.",
                         action='store_true')
     parser.add_argument('--keep_csv', help="Boolean flag. If active, don't delete the csv file "
                                            "if active after creating the HDF5 file.",
