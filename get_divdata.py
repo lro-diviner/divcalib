@@ -6,6 +6,8 @@ import os
 from subprocess import call
 from diviner.data_prep import index_by_time
 
+# global list of columns to be extracted. will be adaptable by user later
+columns = 'year,month,date,hour,minute,second,jdate,c,det,clat,clon,radiance,tb'.split(',')
 
 def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
                 create_hdf=True, drop_dates=True, keep_csv=False):
@@ -32,8 +34,7 @@ def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
                                                             detstart, detend)
     pextract_cmd = os.path.join(pipes_root, 'pextract')
     pprint_cmd = os.path.join(pipes_root, 'pprint')
-    pextract_opt = "extract=year,month,date,hour,minute,second,jdate,"\
-                   "c,det,clat,clon,radiance,tb"
+    pextract_opt = "extract={}".format(','.join(columns))
     pprint_opt = "titles=0 >"
     outfname = os.path.join(savedir, '{0}_divdata.csv'.format(tstr))
     cmd = "tcsh -c '{divdata_cmd} {divdata_opt1} {divdata_opt2}|"\
