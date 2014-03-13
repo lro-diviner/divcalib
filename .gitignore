@@ -50,3 +50,5 @@ playing\ around.ipynb
 *.mp4
 *.html
 notebooks/Badly formatted files_files
+*.swp
+.spyderworkspace
