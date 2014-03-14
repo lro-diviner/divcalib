@@ -102,6 +102,7 @@ def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend
         df.drop(df.columns[0], axis=1, inplace=True)
         # parse times and drop time columns
         df = index_by_time(df, drop_dates=drop_dates)
+        df.sort_index(inplace=True)
         if not keep_csv:
             print("Removing temporary text file", textfname)
             os.remove(textfname)
