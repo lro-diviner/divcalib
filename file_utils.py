@@ -78,10 +78,13 @@ def tstr_to_datetime(tstr):
     return dtime
 
 
+def fname_to_tstr(fname):
+    return os.path.basename(fname)[:10]
+    
 def fname_to_tindex(fname):
-    basename = os.path.basename(fname)
-    tstr = basename.split('_')[0]
-    return tstr[:8]+' '+tstr[8:]
+    "Convert a filename to a dataframe-index string to get the hour indicated by the filename."
+    tstr = fname_to_tstr(fname)
+    return tstr_to_tindex(tstr)
 
 
 def tstr_to_tindex(tstr):
