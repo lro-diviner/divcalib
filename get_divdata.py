@@ -135,11 +135,20 @@ if __name__ == '__main__':
                                              ' exit.',
                         action='store_true')
 
+    parser.add_argument('-c', '--col', help="Add a requested column to the pextract call."
+                                            " One can either put columns in a comma-separated"
+                                            " list like 'abc,def' (no whitespaces) or"
+                                            " call this argument several times like '-c abc"
+                                            " -c def'.",
+                        action='append')
+                        
     args = parser.parse_args()
     if len(args.timestring) != 10:
         print("\n Nope! timestring has to be 8 characters!\n")
         parser.print_help()
         sys.exit()
+    if args.col:
+        columns.extend(args.col)
     if args.test:
         cmd = create_cmd_string(args.timestring, args.cstart, args.detstart, args.savedir,
                                 cend=args.cend, detend=args.detend)
