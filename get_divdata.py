@@ -9,7 +9,14 @@ from diviner.data_prep import index_by_time
 # global list of columns to be extracted. will be adaptable by user later
 columns = 'year,month,date,hour,minute,second,jdate,c,det,clat,clon,radiance,tb'.split(',')
 
-def create_cmd_string(tstr, cstart, detstart, savedir='', cend=None, detend=None):
+# prepare the divdata_cache access
+user = os.environ['USER']
+divdata_cache = os.path.join('/raid1',user,'divdata')
+if not os.path.exists(divdata_cache):
+    os.mkdir(divdata_cache)
+    
+
+def create_cmd_string(tstr, cstart, detstart, outfname, cend=None, detend=None):
     if not cend:
         cend = cstart
     if not detend:
@@ -23,7 +30,6 @@ def create_cmd_string(tstr, cstart, detstart, savedir='', cend=None, detend=None
     pprint_cmd = os.path.join(pipes_root, 'pprint')
     pextract_opt = "extract={}".format(','.join(columns))
     pprint_opt = "titles=0 >"
-    outfname = os.path.join(savedir, '{0}_divdata.csv'.format(tstr))
     cmd = "tcsh -c '{divdata_cmd} {divdata_opt1} {divdata_opt2}|"\
           "{pextract_cmd} {pextract_opt}|"\
           "{pprint_cmd} {pprint_opt} "\
@@ -35,10 +41,15 @@ def create_cmd_string(tstr, cstart, detstart, savedir='', cend=None, detend=None
                                  pprint_cmd=pprint_cmd,
                                  pprint_opt=pprint_opt,
                                  outfname=outfname)
-    return cmd, outfname
+    return cmd
 
+def output_basename(tstr, cstart, cend, detstart, detend, ext):
+    basename = "{tstr}_{cstart}-{cend}_{detstart}-{detend}_divdata.{ext}".format(
+        tstr=tstr, cstart=cstart, cend=cend, detstart=detstart, detend=detend, ext=ext)
+    return basename
+        
 
-def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
+def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend=None,
                 create_hdf=True, drop_dates=True, keep_csv=False, save_hdf=False):
     """tstr in format %Y%m%d%H as usual.
 
@@ -57,32 +68,45 @@ def get_divdata(tstr, cstart, detstart, savedir='', cend=None, detend=None,
     Have to embed everything in a tc-shell call because otherwise
     the paths are not set-up correctly.
     """
-    cmd, outfname = create_cmd_string(tstr, cstart, detstart, 
-                                      savedir=savedir, cend=cend, detend=detend)
+    if not cend:
+        cend = cstart
+    if not detend:
+        detend = detstart
+    # define fname paths
+    basetext = output_basename(tstr, cstart, cend, detstart, detend, 'tab')
+    basehdf =  output_basename(tstr, cstart, cend, detstart, detend, 'h5')
+    textfname = os.path.join(savedir, basetext)
+    hdffname =  os.path.join(savedir, basehdf)
+    # if csv is not wanted, only the hdf is of interest, so if it's there, return that:
+    if not keep_csv:
+        if os.path.exists(hdffname):
+            print("Found HDF in cache. Returning that.")
+            df = pd.read_hdf(hdffname, 'df')
+            return df
+    cmd = create_cmd_string(tstr, cstart, detstart, textfname,
+                                      cend=cend, detend=detend)
     print("Calling\n", cmd)
     sys.stdout.flush()
     call(cmd, shell=True)
-    if os.path.exists(outfname):
-        print("Created text file", outfname)
-        print("Size:",os.path.getsize(outfname))
+    if os.path.exists(textfname):
+        print("Created text file", textfname)
+        print("Size:",os.path.getsize(textfname))
     else:
         print("Something went wrong, cannot find the output file.")
         return
     if create_hdf:
         print("Pandas parsing...")
-        df = pd.read_csv(outfname, delim_whitespace=True)
+        df = pd.read_csv(textfname, delim_whitespace=True)
         # first column is empty
         df.drop(df.columns[0], axis=1, inplace=True)
         # parse times and drop time columns
         df = index_by_time(df, drop_dates=drop_dates)
         if not keep_csv:
-            print("Removing temporary text file", outfname)
-            os.remove(outfname)
+            print("Removing temporary text file", textfname)
+            os.remove(textfname)
         if save_hdf:
-            basename = os.path.basename(outfname)
-            outname = os.path.splitext(basename)[0]+'.h5'
-            print("Creating HDF file:",outname)
-            df.to_hdf(outname,'df')
+            print("Creating HDF file:", hdffname)
+            df.to_hdf(hdffname, 'df')
         return df
 
 
