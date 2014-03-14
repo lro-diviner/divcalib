@@ -50,7 +50,8 @@ def output_basename(tstr, cstart, cend, detstart, detend, ext):
         
 
 def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend=None,
-                create_hdf=True, drop_dates=True, keep_csv=False, save_hdf=False):
+                create_hdf=True, drop_dates=True, keep_csv=False, save_hdf=False,
+                ignore_cache=False):
     """tstr in format %Y%m%d%H as usual.
 
     Parameters:
@@ -78,7 +79,7 @@ def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend
     textfname = os.path.join(savedir, basetext)
     hdffname =  os.path.join(savedir, basehdf)
     # if csv is not wanted, only the hdf is of interest, so if it's there, return that:
-    if not keep_csv:
+    if not (keep_csv or ignore_cache):
         if os.path.exists(hdffname):
             print("Found HDF in cache. Returning that.")
             df = pd.read_hdf(hdffname, 'df')
