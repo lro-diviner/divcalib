@@ -11,7 +11,11 @@ columns = 'year,month,date,hour,minute,second,jdate,c,det,clat,clon,radiance,tb'
 
 # prepare the divdata_cache access
 user = os.environ['USER']
-divdata_cache = os.path.join('/raid1',user,'divdata')
+if sys.platform =='darwin':
+    datadir = os.path.join(os.environ['HOME'], 'data', 'diviner')
+else:
+    datadir = os.path.join('raid1', 'user')
+divdata_cache = os.path.join(datadir, 'divdata')
 if not os.path.exists(divdata_cache):
     os.mkdir(divdata_cache)
     
