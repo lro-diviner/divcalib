@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import divconstants as c
 from scipy import ndimage as nd
+from datetime import datetime
 
 ###
 ### general tools for data preparation
@@ -51,9 +52,10 @@ def index_by_time(df, drop_dates=True):
     return df
 
 
-def round_to_secs(ts):
-    return pd.Timestamp(long(np.round(ts.value, -9)))
-
+def cutoff_msec(ts):
+    dtime = ts.to_datetime()
+    return pd.Timestamp(datetime(dtime.year,dtime.month,dtime.day,
+                                 dtime.hour,dtime.minute,dtime.second))
 
 def parse_divdata_times(df, drop_dates=True):
     format = "%Y%m%d%H%M"
@@ -65,11 +67,10 @@ def parse_divdata_times(df, drop_dates=True):
                                subdf.minute, format=format, utc=False)
     times = up_to_min + seconds
     index = pd.DatetimeIndex(times)
-    ts = pd.TimeSeries(index.map(round_to_secs))
+    ts = pd.TimeSeries(index.map(cutoff_msec))
     ms = pd.Series(index.microsecond.round(-3)*1000, dtype='timedelta64[ns]')
-    newindex = ts+ms
-    df.set_index(newindex, inplace=True)
-    return df.drop(timecols, axis=1) if drop_dates else df 
+    df.index = ts + ms
+    return df.drop(timecols+['second'], axis=1) if drop_dates else df 
     
 
 def prepare_data(df_in):

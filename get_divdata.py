@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 import os
 from subprocess import call
-from diviner.data_prep import parse_divdata_times
+from diviner.data_prep import parse_divdata_times, index_by_time
 
 # global list of columns to be extracted. will be adaptable by user later
 columns = 'year,month,date,hour,minute,second,jdate,c,det,clat,clon,radiance,tb'.split(',')
