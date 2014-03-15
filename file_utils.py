@@ -276,23 +276,25 @@ class RDRReader(object):
         super(RDRReader, self).__init__()
         self.fname = fname
         self.get_rdr_headers()
-
+        # to not break existing code refererring to self.open
+        self.read_df = self.open
+        
     def find_fnames(self):
         self.fnames = glob.glob(os.path.join(self.datapath,
                                       self.timestr + '*_RDR.TAB.zip'))
 
-    def open(self):
+    def open_file(self):
         if self.fname.lower().endswith('.zip'):
             zfile = zipfile.ZipFile(self.fname)
             self.f = zfile.open(zfile.namelist()[0])
         else:
             self.f = open(self.fname)
-        return self.read_df()
+        return
 
     def get_rdr_headers(self):
         """Get headers from both ops and PDS RDR files."""
         # skipcounter
-        self.open()
+        self.open_file()
         self.no_to_skip = 0
         while True:
             line = self.f.readline()
@@ -302,8 +304,8 @@ class RDRReader(object):
         self.headers = parse_header_line(line)
         self.f.close()
 
-    def read_df(self, nrows=None, do_parse_times=True):
-        self.open()
+    def open(self, nrows=None, do_parse_times=True):
+        self.open_file()
         df = pd.io.parsers.read_csv(self.f,
                                     skiprows=self.no_to_skip,
                                     skipinitialspace=True,
@@ -312,6 +314,7 @@ class RDRReader(object):
                                     )
         self.f.close()
         return parse_times(df) if do_parse_times else df
+
 
     def gen_open(self):
         for fname in self.fnames:

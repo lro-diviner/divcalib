@@ -397,27 +397,39 @@ class Calibrator(object):
 
     # temperature - radiance converter table
     rbbtable = RBBTable()
-    def __init__(self, df, do_bbtimes=True, pad_bbtemps=False,
+    def __init__(self, df, pad_bbtemps=False,
                            single_rbb=True, skipsamples=True,
                            do_rad_corr=True,
                            do_negative_corr=False,
                            calfitting_order=1,
                            new_rad_corr=True,
-                           fix_noise=False):
-        self.df = correct_noise(df) if fix_noise else df
+                           fix_noise=False,
+                           do_jpl_calib=False):
+        if fix_noise:
+            self.df = correct_noise(df)
+        else:
+            self.df = df
+
         logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
-        # to control if mean bbview times or mean calib_block_times determine the
-        # time of a calibration point
-        self.do_bbtimes = do_bbtimes
+
+        # quick way to simulate JPL calib as good as possible
+        if do_jpl_calib:
+            pad_bbtemps = True
+            single_rbb = True
+            skipsamples = True
+            do_rad_corr = False
+
         # to control if bbtemps are interpolated or just forward-filled (=padded)
         self.pad_bbtemps = pad_bbtemps
+
         # to control if RBB are just determined for 1 mean bb temp (JPL's method)
         #or for all bbtemps of a bbview
         # I have confirmed in tests that the results differ negligibly (2e-16 rads)
         # and the JPL method (single_rbb=True) is better in speed
         self.single_rbb = single_rbb
+
         # to control if some of the first samples of views are being skipped
         self.skipsamples = skipsamples
         if skipsamples == True:
@@ -448,6 +460,7 @@ class Calibrator(object):
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = thermal_channels
 
+            
     def call_up_to(self, wanted):
         keys = 'bbtemps rbb offsets cbb gain caldata rads tb'.split()
         methods =  {'bbtemps':self.interpolate_bb_temps,

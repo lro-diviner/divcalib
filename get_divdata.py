@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 import os
 from subprocess import call
-from diviner.data_prep import index_by_time
+from diviner.data_prep import parse_divdata_times
 
 # global list of columns to be extracted. will be adaptable by user later
 columns = 'year,month,date,hour,minute,second,jdate,c,det,clat,clon,radiance,tb'.split(',')
@@ -101,7 +101,7 @@ def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend
         # first column is empty
         df.drop(df.columns[0], axis=1, inplace=True)
         # parse times and drop time columns
-        df = index_by_time(df, drop_dates=drop_dates)
+        df = parse_divdata_times(df, drop_dates=drop_dates)
         df.sort_index(inplace=True)
         if not keep_csv:
             print("Removing temporary text file", textfname)

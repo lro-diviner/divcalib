@@ -51,6 +51,27 @@ def index_by_time(df, drop_dates=True):
     return df
 
 
+def round_to_secs(ts):
+    return pd.Timestamp(long(np.round(ts.value, -9)))
+
+
+def parse_divdata_times(df, drop_dates=True):
+    format = "%Y%m%d%H%M"
+    timecols = 'year month date hour minute'.split()
+    subdf = df[timecols].astype('int')
+    seconds = pd.Series(df.second*1e9, dtype='timedelta64[ns]')
+    up_to_min = pd.to_datetime(subdf.year*int(1e8) + subdf.month*int(1e6) + 
+                               subdf.date*int(1e4) + subdf.hour*int(1e2) + 
+                               subdf.minute, format=format, utc=False)
+    times = up_to_min + seconds
+    index = pd.DatetimeIndex(times)
+    ts = pd.TimeSeries(index.map(round_to_secs))
+    ms = pd.Series(index.microsecond.round(-3)*1000, dtype='timedelta64[ns]')
+    newindex = ts+ms
+    df.set_index(newindex, inplace=True)
+    return df.drop(timecols, axis=1) if drop_dates else df 
+    
+
 def prepare_data(df_in):
     """Declare NaN value and pad nan data for some."""
     # df = index_by_time(df_in)
