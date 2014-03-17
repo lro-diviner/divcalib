@@ -408,7 +408,7 @@ class Calibrator(object):
         if fix_noise:
             self.df = correct_noise(df)
         else:
-            self.df = df
+            self.df = df.copy()
 
         logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
