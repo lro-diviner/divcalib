@@ -20,21 +20,23 @@ import zipfile
 
 hostname = socket.gethostname()
 hostname = hostname.split('.')[0]
-
+user = os.environ['USER']
+home = os.environ['HOME']
 if sys.platform == 'darwin':
-    datapath = '/Users/maye/data/diviner'
-    outpath = '/Users/maye/data/diviner/out'
-    kernelpath = '/Users/maye/data/spice/diviner'
-    codepath = '/Users/maye/Dropbox/src/diviner'
+    datapath = os.path.join(home, 'data','diviner')
+    outpath = os.path.join(datapath, 'out')
+    kernelpath = os.path.join(home, 'data','spice', 'diviner')
+    codepath = os.path.join(home, 'Dropbox','src', 'diviner')
     l1adatapath = os.path.join(datapath, 'l1a_data')
     rdrdatapath = os.path.join(datapath, 'opsRDR')
 else:
-    datapath = os.path.join('/'+hostname, os.environ['USER'])
+    datapath = os.path.join(os.path.sep, hostname, user)
     outpath = os.path.join(datapath, 'rdr_out')
     kernelpath = os.path.join(datapath, 'kernels')
     codepath = os.path.join(os.environ['HOME'], 'src/diviner')
-    l1adatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsL1A/data')
-    rdrdatapath = os.path.join('/luna1', 'marks/feidata/DIV:opsRdr/data')
+    feipath = os.path.join(os.path.sep, 'luna1', 'marks','feidata')
+    l1adatapath = os.path.join(feipath, 'DIV:opsL1A', 'data')
+    rdrdatapath = os.path.join(feipath, 'DIV:opsRdr', 'data')
 
 
 ###
@@ -900,12 +902,18 @@ class RDRxReader(object):
 
 
 class RDRR_Reader(RDRxReader):
-    datapath = '/luna7/marks/rdrr_data'
+    if sys.platform == 'darwin':
+        datapath = os.path.join(os.environ['HOME'],'data','diviner','rdrr_data')
+    else:
+        datapath = '/luna7/marks/rdrr_data'
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 
 
 class RDRS_Reader(RDRxReader):
-    datapath = '/luna7/marks/rdrs_data'
+    if sys.platform == 'darwin':
+        datapath = os.path.join(os.environ['HOME'],'data','diviner','rdrr_data')
+    else:
+        datapath = '/luna7/marks/rdrs_data'
     descriptorpath = os.path.join(datapath, 'rdrs.des')
     extension = '.rdrs'
