@@ -36,8 +36,11 @@ def process_one_timestring(t, path, region, kwargs):
 
 
 if __name__ == '__main__':
-    root = '/raid1/maye/coldregions/no_rad_correction_padded_bbtemps'
-    logging.basicConfig(filename='log_coldregions_no_rad_corr.log', level=logging.INFO)
+    session_name = 'my_calib'
+    root = os.path.join('/raid1/maye/coldregions', session_name)
+    if not os.path.exists(root):
+        os.mkdir(root)
+    logging.basicConfig(filename='log_coldregions_'+session_name+'.log', level=logging.INFO)
     
     for region_no in [1,3,5]:
         print("Processing region {}".format(region_no))
@@ -48,7 +51,8 @@ if __name__ == '__main__':
                                               'regions_data.h5'),
                                  regionstr)
         path = os.path.join(root, regionstr)
-        
+        if not os.path.exists(path):
+            os.mkdir(path)
         timestrings = regiondata.filetimestr.unique()
         no = len(timestrings)
     
@@ -56,14 +60,14 @@ if __name__ == '__main__':
         # Control here how the calibration should be run!!
         ###
         
-        kwargs = dict(do_rad_corr=False, pad_bbtemps=True)
+        kwargs = dict(do_rad_corr=False)
         
         Parallel(n_jobs=10, 
                  verbose=3)(delayed(process_one_timestring)(tstr,
                                                             path,
                                                             regiondata,
                                                             kwargs)
-                            for tstr in timestrings[:5])
+                            for tstr in timestrings)
      
         container = []
         tstring_files = glob.glob(os.path.join(path, 'tstring_*.h5'))
@@ -71,5 +75,5 @@ if __name__ == '__main__':
             container.append(pd.read_hdf(f, 'df'))
             os.remove(f)
         df = pd.concat(container)
-        df.to_hdf(os.path.join(path, regionstr+'_no_rad_corr.h5.test'), 'df')
+        df.to_hdf(os.path.join(path, regionstr+'_'+session_name+'.h5'), 'df')
 
