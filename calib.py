@@ -405,6 +405,14 @@ class Calibrator(object):
                            new_rad_corr=True,
                            fix_noise=False,
                            do_jpl_calib=False):
+        # quick way to simulate JPL calib as good as possible
+        if do_jpl_calib:
+            pad_bbtemps = True
+            single_rbb = True
+            skipsamples = True
+            do_rad_corr = False
+            fix_noise = False
+
         if fix_noise:
             self.df = correct_noise(df)
         else:
@@ -413,13 +421,6 @@ class Calibrator(object):
         logging.info("Calibrating from {} to {}.".format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
-
-        # quick way to simulate JPL calib as good as possible
-        if do_jpl_calib:
-            pad_bbtemps = True
-            single_rbb = True
-            skipsamples = True
-            do_rad_corr = False
 
         # to control if bbtemps are interpolated or just forward-filled (=padded)
         self.pad_bbtemps = pad_bbtemps
