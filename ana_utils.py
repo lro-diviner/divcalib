@@ -41,6 +41,7 @@ class CalibHelper(object):
         self.rdr2 = calib_object
         
     def get_cdet_rad(self, c, det, tstr):
+        # the tstr is used to cut out the center-piece of a larger ROI
         data = self.rdr2.abs_radiance[fu.tstr_to_tindex(tstr)]
         cdet_str = get_mcs_detid_from_divid(c, det)
         return data[cdet_str]
