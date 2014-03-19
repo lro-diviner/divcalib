@@ -679,6 +679,7 @@ class Calibrator(object):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
 
         if self.do_rad_corr:
+            logging.info("Performing radiance correction on {}".format(df.index[0]))
             # restricting to thermal dets is not required thanks to handling
             # it upstairs, so commenting it out for now.
             # thermal_dets = get_thermal_detectors(norm_radiance)
