@@ -14,7 +14,7 @@ user = os.environ['USER']
 if sys.platform =='darwin':
     datadir = os.path.join(os.environ['HOME'], 'data', 'diviner')
 else:
-    datadir = os.path.join('raid1', 'user')
+    datadir = os.path.join('/raid1', user)
 divdata_cache = os.path.join(datadir, 'divdata')
 if not os.path.exists(divdata_cache):
     os.mkdir(divdata_cache)
@@ -55,7 +55,7 @@ def output_basename(tstr, cstart, cend, detstart, detend, ext):
 
 def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend=None,
                 create_hdf=True, drop_dates=True, keep_csv=False, save_hdf=False,
-                ignore_cache=False):
+                ignore_cache=False, get_day=False):
     """tstr in format %Y%m%d%H as usual.
 
     Parameters:
@@ -77,15 +77,19 @@ def get_divdata(tstr, cstart, detstart, savedir=divdata_cache, cend=None, detend
         cend = cstart
     if not detend:
         detend = detstart
+    if (len(tstr) < 10 and get_day==False):
+        print("If you really want data for a whole day, set 'get_day' to True")
+        return
     # define fname paths
     basetext = output_basename(tstr, cstart, cend, detstart, detend, 'tab')
     basehdf =  output_basename(tstr, cstart, cend, detstart, detend, 'h5')
     textfname = os.path.join(savedir, basetext)
     hdffname =  os.path.join(savedir, basehdf)
-    # if csv is not wanted, only the hdf is of interest, so if it's there, return that:
+    # if csv is not wanted, only the hdf is of interest, so if it's there, return that.
+    # Note that hdf's are only stored with option save_hdf=True
     if not (keep_csv or ignore_cache):
         if os.path.exists(hdffname):
-            print("Found HDF in cache. Returning that.")
+            print("Found divdata HDF in cache. Returning that.")
             df = pd.read_hdf(hdffname, 'df')
             return df
     cmd = create_cmd_string(tstr, cstart, detstart, textfname,
@@ -174,7 +178,7 @@ if __name__ == '__main__':
                         
     args = parser.parse_args()
     if len(args.timestring) != 10:
-        print("\n Nope! timestring has to be 8 characters!\n")
+        print("\n Nope! timestring has to be 10 characters!\n")
         parser.print_help()
         sys.exit()
     if args.col:
