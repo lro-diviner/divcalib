@@ -23,10 +23,10 @@ def process_one_timestring(tstr, path, region, kwargs):
     savename = os.path.join(path, 'tstring_'+tstr+'.h5')
     logging.info('Processing {}, savename: {}'.format(tstr, savename))
     region_now = region[region.filetimestr == tstr]
-    newrad = get_calib(t, 9, kwargs)
+    newrad = get_calib(tstr, 9, kwargs)
     oldrad = region_now[['det','radiance']]
     oldrad = oldrad.reset_index()
-    newregion = molten.merge(oldrad, on=['index','det']).set_index('index')
+    newregion = newrad.merge(oldrad, on=['index','det']).set_index('index')
     newregion.to_hdf(savename,'df')
 
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                                                             path,
                                                             regiondata,
                                                             kwargs)
-                                                            for tstr in timestrings[10:])
+                                                            for tstr in timestrings)
      
         container = []
         tstring_files = glob.glob(os.path.join(path, 'tstring_*.h5'))
