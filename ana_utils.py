@@ -12,8 +12,8 @@ class Channel(object):
 
     def __init__(self, c):
         if str(c).lower()[0] in ['a','b']:
-            self._mcs = c
-            self._div = self.mcs_div_mapping[c]
+            self._mcs = c[:2]
+            self._div = self.mcs_div_mapping[c[:2]]
         else:
             self._div = c
             self._mcs = self.div_mcs_mapping[c]
@@ -25,6 +25,23 @@ class Channel(object):
     @property
     def div(self):
         return self.mcs_div_mapping[self._mcs]
+
+
+class CDet(object):
+    def __init__(self, c, det=None):
+        self.c = Channel(c)
+        if not det:
+            self.det = int(c[3:])
+        else:
+            self.det = det
+    
+    @property
+    def div(self):
+        return (self.c.div, self.det)
+        
+    @property
+    def mcs(self):
+        return self.c.mcs+'_'+str(self.det).zfill(2)
 
 
 def get_mcs_detid_from_divid(c, det=None):
@@ -74,13 +91,12 @@ class CalibHelper(object):
             realdet = 22 - int(det)
         else:
             realdet = int(det)
-        cdet_str = get_mcs_detid_from_divid(c, realdet)
-        return data[cdet_str]
+        return data[CDet(c, realdet).mcs]
         
     def get_c_rad(self, c, tstr, kind='norm', invert_dets=True):
         col = getattr(self.rdr2, kind+'_radiance')
         data = col[fu.tstr_to_tindex(tstr)]
-        chdata = data.filter(regex='^'+calib.div_mcs_mapping[c])
+        chdata = data.filter(regex='^'+Channel(c).mcs)
         # invert channels if for telescope B
         renamer = lambda x: int(x[-2:])
         if (c > 6) and invert_dets:
@@ -95,7 +111,3 @@ class CalibHelper(object):
                      var_name='det',
                      value_name='newrad')
         return molten
-        
-        
-    def get_data_for_tstr(self):
-        pass
