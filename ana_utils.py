@@ -87,6 +87,15 @@ class CalibHelper(object):
             renamer = lambda x: 22 - int(x[-2:])
         return chdata.rename(columns=renamer)
 
+    def get_c_rad_molten(self, c, tstr, kind='norm', invert_dets=True):
+        newrad = self.get_c_rad(c, tstr, kind, invert_dets)
+        newrad = newrad.reset_index()
+        molten = pd.melt(newrad, id_vars=['index'], 
+                     value_vars=range(1,22),
+                     var_name='det',
+                     value_name='newrad')
+        return molten
+        
         
     def get_data_for_tstr(self):
         pass
