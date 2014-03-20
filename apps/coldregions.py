@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import pandas as pd
-from diviner import file_utils as fu, calib
+from diviner import file_utils as fu, calib, ana_utils as au
 import numpy as np
 from joblib import Parallel, delayed
 import sys
@@ -10,28 +10,28 @@ import logging
 import glob
 
 
-def get_column_from_timestr(t, col, kwargs):
+def get_calib(t, c, kwargs):
     l1a = fu.L1ADataFile.from_timestr(t)
     df = fu.open_and_accumulate(l1a.fname)
-    c = calib.Calibrator(df, **kwargs)
-    c.calibrate()
-    return getattr(c, col)
+    rdr2 = calib.Calibrator(df, **kwargs)
+    rdr2.calibrate()
+    helper = au.CalibHelper(rdr2)
+    return helper.get_c_rad(c, t, 'norm')
 
 
-def process_one_timestring(t, path, region, kwargs):
-    savename = os.path.join(path, 'tstring_'+t+'.h5')
-    logging.info('Processing {}, savename: {}'.format(t, savename))
-    region_now = region[region.filetimestr == t]
-    newrad = get_column_from_timestr(t, 'norm_radiance', kwargs)
-    dets = region_now.det.unique()
-    container = []
-    for det in dets:
-        detstr = 'b3_' + str(det).zfill(2)
-        subdf = region_now[region_now.det == det]
-        joined = subdf.join(newrad[detstr], how='inner')
-        container.append(joined.rename(
-                    columns=lambda x: 'newrad' if x.startswith('b3_') else x))
-    newregion = pd.concat(container)
+def process_one_timestring(tstr, path, region, kwargs):
+    savename = os.path.join(path, 'tstring_'+tstr+'.h5')
+    logging.info('Processing {}, savename: {}'.format(tstr, savename))
+    region_now = region[region.filetimestr == tstr]
+    newrad = get_calib(t, 9, kwargs)
+    newrad = newrad.reset_index()
+    molten = pd.melt(newrad, id_vars=['index'], 
+                 value_vars=range(1,22),
+                 var_name='det',
+                 value_name='newrad')
+    oldrad = region_now[['det','radiance']]
+    oldrad = oldrad.reset_index()
+    newregion = molten.merge(oldrad, on=['index','det']).set_index('index')
     newregion.to_hdf(savename,'df')
 
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         os.mkdir(root)
     logging.basicConfig(filename='log_coldregions_'+session_name+'.log', level=logging.INFO)
     
-    for region_no in [1,3,5]:
+    for region_no in [1]:
         print("Processing region {}".format(region_no))
         logging.info("Processing region {}".format(region_no))
         regionstr = 'region'+str(region_no)
@@ -54,20 +54,19 @@ if __name__ == '__main__':
         if not os.path.exists(path):
             os.mkdir(path)
         timestrings = regiondata.filetimestr.unique()
-        no = len(timestrings)
     
         ###
         # Control here how the calibration should be run!!
         ###
         
-        kwargs = dict(do_rad_corr=False)
+        kwargs = dict(do_jpl_calib=False)
         
         Parallel(n_jobs=10, 
                  verbose=3)(delayed(process_one_timestring)(tstr,
                                                             path,
                                                             regiondata,
                                                             kwargs)
-                            for tstr in timestrings)
+                                                            for tstr in timestrings[10:])
      
         container = []
         tstring_files = glob.glob(os.path.join(path, 'tstring_*.h5'))
