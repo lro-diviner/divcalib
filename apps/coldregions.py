@@ -16,7 +16,7 @@ def get_calib(t, c, kwargs):
     rdr2 = calib.Calibrator(df, **kwargs)
     rdr2.calibrate()
     helper = au.CalibHelper(rdr2)
-    return helper.get_c_rad(c, t, 'norm')
+    return helper.get_c_rad_molten(c, t, 'norm')
 
 
 def process_one_timestring(tstr, path, region, kwargs):
@@ -24,11 +24,6 @@ def process_one_timestring(tstr, path, region, kwargs):
     logging.info('Processing {}, savename: {}'.format(tstr, savename))
     region_now = region[region.filetimestr == tstr]
     newrad = get_calib(t, 9, kwargs)
-    newrad = newrad.reset_index()
-    molten = pd.melt(newrad, id_vars=['index'], 
-                 value_vars=range(1,22),
-                 var_name='det',
-                 value_name='newrad')
     oldrad = region_now[['det','radiance']]
     oldrad = oldrad.reset_index()
     newregion = molten.merge(oldrad, on=['index','det']).set_index('index')
