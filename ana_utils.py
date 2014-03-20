@@ -66,11 +66,27 @@ class CalibHelper(object):
     def __init__(self, calib_object):
         self.rdr2 = calib_object
         
-    def get_cdet_rad(self, c, det, tstr):
+    def get_cdet_rad(self, c, det, tstr, kind='norm'):
         # the tstr is used to cut out the center-piece of a larger ROI
-        data = self.rdr2.abs_radiance[fu.tstr_to_tindex(tstr)]
-        cdet_str = get_mcs_detid_from_divid(c, det)
+        data = self.rdr2[kind+'_radiance'][fu.tstr_to_tindex(tstr)]
+        # switch detector layout for telescope B
+        if c > 6:
+            realdet = 22 - int(det)
+        else:
+            realdet = int(det)
+        cdet_str = get_mcs_detid_from_divid(c, realdet)
         return data[cdet_str]
+        
+    def get_c_rad(self, c, tstr, kind='norm', invert_dets=True):
+        col = getattr(self.rdr2, kind+'_radiance')
+        data = col[fu.tstr_to_tindex(tstr)]
+        chdata = data.filter(regex='^'+calib.div_mcs_mapping[c])
+        # invert channels if for telescope B
+        renamer = lambda x: int(x[-2:])
+        if (c > 6) and invert_dets:
+            renamer = lambda x: 22 - int(x[-2:])
+        return chdata.rename(columns=renamer)
+
         
     def get_data_for_tstr(self):
         pass
