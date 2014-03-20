@@ -28,7 +28,7 @@ mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3,
                    'a4': 4, 'a5': 5, 'a6': 6,
                    'b1': 7, 'b2': 8, 'b3': 9}
 
-
+div_mcs_mapping = {key: value for value,key in mcs_div_mapping.iteritems()}
 
 def get_calib_blocks(df, blocktype, del_zero=True):
     "Allowed block-types: ['calib','sv','bb','st']."
@@ -680,7 +680,7 @@ class Calibrator(object):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
 
         if self.do_rad_corr:
-            logging.info("Performing radiance correction on {}".format(df.index[0]))
+            logging.info("Performing radiance correction on {}".format(self.df.index[0]))
             # restricting to thermal dets is not required thanks to handling
             # it upstairs, so commenting it out for now.
             # thermal_dets = get_thermal_detectors(norm_radiance)
