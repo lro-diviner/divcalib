@@ -1,5 +1,31 @@
 import pandas as pd
 from diviner import file_utils as fu
+from diviner import calib
+
+
+class Channel(object):
+    mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3,
+                       'a4': 4, 'a5': 5, 'a6': 6,
+                       'b1': 7, 'b2': 8, 'b3': 9}
+
+    div_mcs_mapping = {key: value for value,key in mcs_div_mapping.iteritems()}
+
+    def __init__(self, c):
+        if str(c).lower()[0] in ['a','b']:
+            self._mcs = c
+            self._div = self.mcs_div_mapping[c]
+        else:
+            self._div = c
+            self._mcs = self.div_mcs_mapping[c]
+
+    @property
+    def mcs(self):
+        return self.div_mcs_mapping[self._div]
+        
+    @property
+    def div(self):
+        return self.mcs_div_mapping[self._mcs]
+
 
 def get_mcs_detid_from_divid(c, det=None):
     """One can provide 'c_det' as input for the first parameter, for convience."""
