@@ -22,7 +22,7 @@ def main():
         sys.exit()
     todo = pump.fnames
 
-    Parallel(n_jobs=12)(delayed(check_fname)(fname) for fname in todo)
+    Parallel(n_jobs=8)(delayed(check_fname)(fname) for fname in todo)
     divtweet.tweet_machine('now really: {} checked for monotonicity.'.format(sys.argv[1]))
 
 if __name__ == '__main__':

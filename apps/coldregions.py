@@ -56,7 +56,7 @@ if __name__ == '__main__':
         
         kwargs = dict(do_jpl_calib=False)
         
-        Parallel(n_jobs=10, 
+        Parallel(n_jobs=8, 
                  verbose=3)(delayed(process_one_timestring)(tstr,
                                                             path,
                                                             regiondata,
