@@ -86,6 +86,6 @@ if __name__ == '__main__':
             mergedpath = os.path.join(path, tstr+'_merged.csv')
             if not os.path.exists(mergedpath):
                 todo.append(rad_file)
-        Parallel(n_jobs=10, verbose=3)(delayed(process_rad_file)(rad_file) \
+        Parallel(n_jobs=8, verbose=3)(delayed(process_rad_file)(rad_file) \
                                         for rad_file in todo)
     print("Done.")

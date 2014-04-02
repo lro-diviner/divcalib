@@ -68,7 +68,7 @@ def main(start, end, startover=False):
             fnames.extend(pump.fnames)
 
     print("Found",len(fnames),'files to do.')
-    Parallel(n_jobs=10)(delayed(process_fname)(fname) for fname in fnames)
+    Parallel(n_jobs=8)(delayed(process_fname)(fname) for fname in fnames)
     #divtweet.tweet_machine("Finished processing {0}, {1} files.".format(month,
     #                                                            len(fnames)))
 

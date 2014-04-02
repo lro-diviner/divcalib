@@ -866,9 +866,13 @@ class L1ADataPump(DivXDataPump):
 
 class RDRxReader(object):
     """docstring for RDRxReader"""
-    def __init__(self, tstr):
+    def __init__(self, tstr_or_fname):
         super(RDRxReader, self).__init__()
-        fname = os.path.join(self.datapath, tstr + self.extension)
+        if os.path.exists(tstr_or_fname):
+            fname = tstr_or_fname
+        else:
+            fname = os.path.join(self.datapath, 
+                                 tstr_or_fname + self.extension)
         dtypes, keys = parse_descriptor(self.descriptorpath)
         self.df = fname_to_df(fname, dtypes, keys)
 

@@ -2,7 +2,8 @@ from pds.core.parser import Parser
 import StringIO
 from collections import OrderedDict, namedtuple
 
-def parse_rdr_col_file(fname=None):
+def get_columns_from_rdr_columns(fname=None):
+    "Generator to yield items of the rdr_columns file."
     RDRColumn = namedtuple('RDRColumn', 'colno, colname, type_format, desc')
     if not fname:
         fname = '../../data/rdr_columns.txt'
@@ -24,7 +25,7 @@ def parse_rdr_col_file(fname=None):
 
 def get_formats_dict():
     dic = OrderedDict()
-    for col in parse_rdr_col_file():
+    for col in get_columns_from_rdr_columns():
         dic[col.colname] = col
     return dic
 
