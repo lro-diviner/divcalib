@@ -8,7 +8,7 @@ import sys
 import os
 import logging
 import glob
-
+import argparse
 
 def get_calib(t, c, kwargs):
     l1a = fu.L1ADataFile.from_timestr(t)
@@ -31,13 +31,28 @@ def process_one_timestring(tstr, path, region, kwargs):
 
 
 if __name__ == '__main__':
-    session_name = 'my_calib'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('session_name', help='session name. determines folder'
+                        ' name for storage as well.')
+    parser.add_argument('--do_jpl',help='do JPl calib simulation',
+                        action='store_true')
+    parser.add_argument('--no_rad_corr', help='switch off rad_corr for calib.')
+    parser.add_argument('--regions', help='determine what regions to do.',
+                        choices=[1,3,5], default=0, type=int)
+    args = parser.parse_args()
+
+
+    session_name = args.session_name
     root = os.path.join('/raid1/maye/coldregions', session_name)
     if not os.path.exists(root):
         os.mkdir(root)
     logging.basicConfig(filename='log_coldregions_'+session_name+'.log', level=logging.INFO)
     
-    for region_no in [1]:
+    if args.regions == 0:
+        todo = [1,3,5]
+    else:
+        todo = [args.regions]
+    for region_no in todo:
         print("Processing region {}".format(region_no))
         logging.info("Processing region {}".format(region_no))
         regionstr = 'region'+str(region_no)
@@ -53,8 +68,12 @@ if __name__ == '__main__':
         ###
         # Control here how the calibration should be run!!
         ###
-        
-        kwargs = dict(do_jpl_calib=False)
+        if args.do_jpl:
+            kwargs = dict(do_jpl_calib=True)
+        elif args.no_rad_corr:
+            kwargs = dict(do_rad_corr=False)
+        else:
+            kwargs = dict(do_jpl_calib=False)
         
         Parallel(n_jobs=10, 
                  verbose=3)(delayed(process_one_timestring)(tstr,
