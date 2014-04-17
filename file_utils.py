@@ -93,6 +93,9 @@ def tstr_to_tindex(tstr):
     return tstr[:8]+' '+tstr[8:]
 
 
+def tstr_to_l1a_fname(tstr):
+    return os.path.join(l1adatapath, tstr+'_L1A.TAB')
+
 ###
 ### divdata related
 ###
