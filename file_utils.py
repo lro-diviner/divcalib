@@ -93,6 +93,9 @@ def tstr_to_tindex(tstr):
     return tstr[:8]+' '+tstr[8:]
 
 
+def tstr_to_l1a_fname(tstr):
+    return os.path.join(l1adatapath, tstr+'_L1A.TAB')
+
 ###
 ### divdata related
 ###
@@ -725,7 +728,10 @@ class L1ADataFile(object):
         "Globbing for matching files to timestr and opening first one."
         fnames = glob.glob(os.path.join(cls.datapath,
                                         timestr + '*' + cls.this_ext))
-        return cls(fname=fnames[0])
+        try:
+            return cls(fname=fnames[0])
+        except IndexError:
+            return None
 
     def __init__(self, fname):
         self.fname = fname
@@ -794,6 +800,8 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
         centerfile = L1ADataFile.from_timestr(tstr)
     else:
         centerfile = L1ADataFile(fname)
+    if not centerfile:
+        return None
     dataframes = deque()
     dataframes.append(centerfile.open_dirty())
     # append previous hours until calib blocks found

@@ -1,9 +1,5 @@
 from pds.core.parser import Parser
 import StringIO
-from collections import OrderedDict, namedtuple
-import diviner
-import os
-
 
 
 def create_formatdic_for_dataframe():
