@@ -1,7 +1,22 @@
+from __future__ import division, print_function
 from diviner import calib
 from diviner import file_utils as fu
 from diviner import ana_utils as au
+from joblib import Parallel, delayed
+import pandas as pd
+import logging
+import os
+import sys
 import rdrx
+
+
+def get_tb_savename(savedir, tstr):
+    return os.path.join(savedir, tstr+'_tb.hdf')
+
+
+def get_rad_savename(savedir, tstr):
+    return os.path.join(savedir, tstr+'_radiance.hdf')
+
 
 def get_example_data():
     tstr = '2013031707'
