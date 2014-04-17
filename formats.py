@@ -1,33 +1,5 @@
 from pds.core.parser import Parser
 import StringIO
-from collections import OrderedDict, namedtuple
-
-def get_columns_from_rdr_columns(fname=None):
-    "Generator to yield items of the rdr_columns file."
-    RDRColumn = namedtuple('RDRColumn', 'colno, colname, type_format, desc')
-    if not fname:
-        fname = '../../data/rdr_columns.txt'
-    with open(fname) as f:
-        data = f.readlines()
-    # use this counter to know when 4 items were collected
-    counter = 0
-    container = []
-    for line in data:
-        if not line.strip():
-            continue
-        container.append(line.strip())
-        counter += 1
-        if counter == 4:
-            yield RDRColumn(*container)
-            counter = 0
-            container = []
-
-
-def get_formats_dict():
-    dic = OrderedDict()
-    for col in get_columns_from_rdr_columns():
-        dic[col.colname] = col
-    return dic
 
 
 def create_formatdic_for_dataframe():
