@@ -1,5 +1,13 @@
 from pds.core.parser import Parser
 import StringIO
+import os
+import diviner
+import pandas as pd
+
+
+def read_csv_format_file():
+    fname = os.path.join(diviner.__path__[0], 'data', 'joined_format_file.csv'))
+    return pd.read_csv(fname)
 
 
 def create_formatdic_for_dataframe():
