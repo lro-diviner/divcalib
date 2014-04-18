@@ -97,9 +97,6 @@ def tstr_to_tindex(tstr):
 def tstr_to_l1a_fname(tstr):
     return os.path.join(l1adatapath, tstr+'_L1A.TAB')
 
-###
-### divdata related
-###
 
 ###
 ### Tools for data output to tables
@@ -130,6 +127,22 @@ class DivHour(DivTime):
     fmt = '%Y%m%d%H'
     lentstr = 10
 
+    @property
+    def _previous_dtime(self):
+        return self.time - timedelta(hours=1)
+
+    def previous(self):
+        previous_tstr = self._previous_dtime.strftime(self.fmt)
+        return DivHour(previous_tstr)
+
+    @property
+    def _next_dtime(self):
+        return self.time + timedelta(hours=1)
+
+    def next(self):
+        next_tstr = self._next_dtime.strftime(self.fmt)
+        return DivHour(next_tstr)
+
 
 class DivDay(DivTime):
     """Class for a full day of Diviner data."""
@@ -144,11 +157,11 @@ class FileName(object):
         self.basename = os.path.basename(fname)
         self.dirname = os.path.dirname(fname)
         self.file_id, self.ext = os.path.splitext(self.basename)
-        self.tstr= self.file_id.split('_')[0]
+        tstr= self.file_id.split('_')[0]
         # as Diviner FILES only exist in separations of hours I use DivHour here:
         self.divtime = DivHour(tstr)
         # save everything after the first '_' as rest
-        self.rest = self.basename[len(self.tstr):]
+        self.rest = self.basename[len(tstr):]
 
     @property
     def previous_dtime(self):

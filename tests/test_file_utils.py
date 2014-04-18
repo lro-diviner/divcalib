@@ -32,14 +32,6 @@ def test_get_rdr_headers():
     assert rdr.headers == answer_ops
 
 
-def test_get_fname_hour():
-    fname = '/Users/maye/data/diviner/opsRDR/2013052205_RDR.TAB'
-    fnameC = fu.FileName(fname)
-    assert fnameC.year == '2013'
-    assert fnameC.month == '05'
-    assert fnameC.day == '22'
-    assert fnameC.hour == '05'
-
 
 def test_parse_times():
     val = '01-Apr-2011 00:00:01.978000'
@@ -88,3 +80,15 @@ class TestDivTime:
         assert divday.day == '01'
         assert divday.year == '2012'
         assert divday.month == '07'
+
+    def test_DivHour_previous(self):
+        tstr = '2012010210'
+        divhour = fu.DivHour(tstr)
+        previous = divhour.previous()
+        assert previous.tstr == '2012010209'
+
+    def test_DivHour_next(self):
+        tstr = '2012010210'
+        divhour = fu.DivHour(tstr)
+        next = divhour.next()
+        assert next.tstr == '2012010211'
