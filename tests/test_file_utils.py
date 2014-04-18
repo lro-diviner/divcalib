@@ -2,7 +2,14 @@ from diviner import file_utils as fu
 import datetime as dt
 import pandas as pd
 import os
-from nose.tools import assert_equals
+import pytest
+from diviner.exceptions import DivTimeLengthError
+
+# define a time string that connects to an L1A file that is also available on laptop
+tstr = '2012010100'
+
+# get slow marker to exclude some tests on laptop
+slow = pytest.mark.slow
 
 
 class TestDiv247DataPump():
@@ -14,7 +21,7 @@ class TestDiv247DataPump():
     def test_find_fnames(self):
         pass
 
-
+@slow
 def test_get_rdr_headers():
     fname_ops = os.path.join(fu.datapath,'rdr_data','2013052205_RDR.TAB.zip')
     rdr = fu.RDRReader(fname_ops)
@@ -22,16 +29,16 @@ def test_get_rdr_headers():
               'sclat', 'sclon', 'scrad', 'scalt', 'el_cmd', 'az_cmd', 'af', 'orientlat', 
               'orientlon', 'c', 'det', 'vlookx', 'vlooky', 'vlookz', 'radiance', 'tb', 
               'clat', 'clon', 'cemis', 'csunzen', 'csunazi', 'cloctime', 'qca', 'qge', 'qmi']
-    assert_equals(rdr.headers, answer_ops)
+    assert rdr.headers == answer_ops
 
 
 def test_get_fname_hour():
     fname = '/Users/maye/data/diviner/opsRDR/2013052205_RDR.TAB'
     fnameC = fu.FileName(fname)
-    assert_equals(fnameC.year, '2013')
-    assert_equals(fnameC.month, '05')
-    assert_equals(fnameC.day, '22')
-    assert_equals(fnameC.hour, '05')
+    assert fnameC.year == '2013'
+    assert fnameC.month == '05'
+    assert fnameC.day == '22'
+    assert fnameC.hour == '05'
 
 
 def test_parse_times():
@@ -44,5 +51,40 @@ def test_parse_times():
     df = df.T
     df.columns = ['date','utc']
     parsed = fu.parse_times(df).index[0].to_datetime()
-    assert_equals(parsed, dtime)
+    assert parsed == dtime
 
+
+class TestDivTime:
+    def test_DivHour_failshort(self):
+        with pytest.raises(DivTimeLengthError):
+            fu.DivHour('20121201')
+
+    def test_DivHour_faillong(self):
+        with pytest.raises(DivTimeLengthError):
+            fu.DivHour('201212011012')
+
+    def test_DivHour(self):
+        fmt = '%Y%m%d%H'
+        tstr = '2012070110'
+        divhour = fu.DivHour(tstr)
+        assert divhour.hour == '10'
+        assert divhour.day == '01'
+        assert divhour.month == '07'
+        assert divhour.year == '2012'
+        assert divhour.time == dt.datetime.strptime(tstr, fmt)
+    
+    def test_DivDay_faillong(self):
+        with pytest.raises(DivTimeLengthError):
+            fu.DivDay('2012120110')
+
+    def test_DivDay_failshort(self):
+        with pytest.raises(DivTimeLengthError):
+            fu.DivDay('201201')
+
+    def test_DivDay(self):
+        fmt = '%Y%m%d'
+        tstr = '20120701'
+        divday = fu.DivDay(tstr)
+        assert divday.day == '01'
+        assert divday.year == '2012'
+        assert divday.month == '07'

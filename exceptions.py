@@ -52,6 +52,16 @@ class WrongTypeError(DivCalibError):
 
 class MeanTimeCalcError(DivCalibError):
     def __init__(self, t):
-	self.t = t
+        self.t = t
     def __str__(self):
-	return "Problem calculating mean time at hour {}".format(self.t)
+        return "Problem calculating mean time at hour {}".format(self.t)
+
+
+class DivTimeLengthError(Exception):
+    def __init__(self, tstr, expected):
+        self.tstr = tstr
+        self.expected = expected
+    def __str__(self):
+        return "Length of tstr {0} does not fit expected format {1}.".format(
+                                                self.tstr,
+                                                self.expected)

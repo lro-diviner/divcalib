@@ -14,6 +14,7 @@ from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 import logging
 from subprocess import call
+from diviner.exceptions import DivTimeLengthError
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -107,6 +108,33 @@ def tstr_to_l1a_fname(tstr):
 
 def get_month_sample_path_from_mode(mode):
     return os.path.join(datapath, 'rdr20_month_samples', mode)
+
+class DivTime():
+    fmt = '' # set in derived class!
+    @classmethod
+    def from_fname(cls, fname):
+        return cls()
+
+    def __init__(self, tstr):
+        if len(tstr) != self.lentstr:
+            raise DivTimeLengthError(tstr, self.fmt)
+        self.tstr = tstr
+        self.year = self.tstr[:4]
+        self.month = self.tstr[4:6]
+        self.day = self.tstr[6:8]
+        if self.lentstr > 8:
+            self.hour = self.tstr[8:10]
+        self.time = dt.strptime(self.tstr, self.fmt)
+
+
+class DivHour(DivTime):
+    fmt = '%Y%m%d%H'
+    lentstr = 10
+
+
+class DivDay(DivTime):
+    fmt = '%Y%m%d'
+    lentstr = 8
 
 
 class FileName(object):
