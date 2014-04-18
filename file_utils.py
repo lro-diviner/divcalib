@@ -62,7 +62,7 @@ def scp_opsRDR_file(tstr):
 ### general utilities
 ###
 
-def get_timestr(indata):
+def get_tstr(indata):
     # datetime type
     if hasattr(indata, 'strftime'):
         return indata.strftime("%Y%m%d%H")
@@ -110,10 +110,8 @@ def get_month_sample_path_from_mode(mode):
     return os.path.join(datapath, 'rdr20_month_samples', mode)
 
 class DivTime():
+    """Manage time-related metadata for Diviner observations."""
     fmt = '' # set in derived class!
-    @classmethod
-    def from_fname(cls, fname):
-        return cls()
 
     def __init__(self, tstr):
         if len(tstr) != self.lentstr:
@@ -128,11 +126,13 @@ class DivTime():
 
 
 class DivHour(DivTime):
+    """Class for the usual hour-strings."""
     fmt = '%Y%m%d%H'
     lentstr = 10
 
 
 class DivDay(DivTime):
+    """Class for a full day of Diviner data."""
     fmt = '%Y%m%d'
     lentstr = 8
 
@@ -144,44 +144,28 @@ class FileName(object):
         self.basename = os.path.basename(fname)
         self.dirname = os.path.dirname(fname)
         self.file_id, self.ext = os.path.splitext(self.basename)
-        self.timestr= self.file_id.split('_')[0]
+        self.tstr= self.file_id.split('_')[0]
+        # as Diviner FILES only exist in separations of hours I use DivHour here:
+        self.divtime = DivHour(tstr)
         # save everything after the first '_' as rest
-        self.rest = self.basename[len(self.timestr):]
-        # split of the time elements
-        self.year = self.timestr[:4]
-        self.month = self.timestr[4:6]
-        self.day = self.timestr[6:8]
-        # if timestr is not long enough, self.hour will be empty string ''
-        self.hour = self.timestr[8:10]
-        # set time member
-        self.set_time()
-
-    def set_time(self):
-        if len(self.timestr) == 8:
-            format = '%Y%m%d'
-        elif len(self.timestr) == 10:
-            format = "%Y%m%d%H"
-        else:
-            format = '%Y%m%d%H%M'
-        self.time = dt.strptime(self.timestr, format)
-        self.format = format
+        self.rest = self.basename[len(self.tstr):]
 
     @property
     def previous_dtime(self):
         return self.time - timedelta(hours=1)
 
     @property
-    def previous_timestr(self):
+    def previous_tstr(self):
         return self.previous_dtime.strftime(self.format)
 
     @property
     def previous_fname(self):
-        timestr = self.previous_dtime.strftime(self.format)
-        return os.path.join(self.dirname, timestr + self.rest)
+        tstr = self.previous_dtime.strftime(self.format)
+        return os.path.join(self.dirname, tstr + self.rest)
 
     def set_previous_hour(self):
         self.time = self.previous_dtime
-        self.timestr = self.time.strftime(self.format)
+        self.tstr = self.time.strftime(self.format)
         return self.fname
 
     @property
@@ -189,22 +173,22 @@ class FileName(object):
         return self.time + timedelta(hours=1)
 
     @property
-    def next_timestr(self):
+    def next_tstr(self):
         return self.next_dtime.strftime(self.format)
 
     @property
     def next_fname(self):
-        timestr = self.next_dtime.strftime(self.format)
-        return os.path.join(self.dirname, timestr + self.rest)
+        tstr = self.next_dtime.strftime(self.format)
+        return os.path.join(self.dirname, tstr + self.rest)
 
     def set_next_hour(self):
         self.time = self.next_dtime
-        self.timestr = self.time.strftime(self.format)
+        self.tstr = self.time.strftime(self.format)
         return self.fname
 
     @property
     def fname(self):
-        return os.path.join(self.dirname, self.timestr + self.rest)
+        return os.path.join(self.dirname, self.tstr + self.rest)
 
 
 ####
@@ -300,9 +284,9 @@ class RDRReader(object):
     datapath = rdrdatapath
 
     @classmethod
-    def from_timestr(cls, timestr):
+    def from_tstr(cls, tstr):
         fnames = glob.glob(os.path.join(cls.datapath,
-                                        timestr + '*_RDR.TAB.zip'))
+                                        tstr + '*_RDR.TAB.zip'))
         return cls(fname=fnames[0])
 
     def __init__(self, fname, nrows=None):
@@ -314,7 +298,7 @@ class RDRReader(object):
         
     def find_fnames(self):
         self.fnames = glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*_RDR.TAB.zip'))
+                                      self.tstr + '*_RDR.TAB.zip'))
 
     def open_file(self):
         if self.fname.lower().endswith('.zip'):
@@ -567,7 +551,7 @@ class DataPump(object):
     rec_dtype, keys = get_div247_dtypes()
     datapath = '/luna4/maye/data/div247/'
 
-    def __init__(self, fname_pattern=None, timestr=None, fnames_only=False):
+    def __init__(self, fname_pattern=None, tstr=None, fnames_only=False):
         self.fnames_only = fnames_only
         if fname_pattern and os.path.exists(fname_pattern):
             if os.path.isfile(fname_pattern):
@@ -575,8 +559,8 @@ class DataPump(object):
             elif os.path.isdir(fname_pattern):
                 pass
 
-        self.timestr = timestr
-        self.current_time = dateparser(timestr)
+        self.tstr = tstr
+        self.current_time = dateparser(tstr)
         self.fname = os.path.join(datapath,
                                   self.current_time.strftime("%Y%m%d%H"))
         self.increment = timedelta(hours=1)
@@ -613,15 +597,15 @@ class DataPump(object):
 class H5DataPump(object):
     datapath = os.path.join(datapath, 'h5_div247')
 
-    def __init__(self, timestr):
-        self.timestr = timestr
+    def __init__(self, tstr):
+        self.tstr = tstr
         self.fnames = self.get_fnames()
         if len(self.fnames) == 0:
             print("No files found.")
         self.fnames.sort()
 
     def get_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.timestr[:4] + '*'))
+        return glob.glob(os.path.join(self.datapath, self.tstr[:4] + '*'))
 
     def store_generator(self):
         for fname in self.fnames:
@@ -642,28 +626,28 @@ class DivXDataPump(object):
     Needs to be completed in derived class.
     Things missing is self.datapath to be set in deriving class.
     """
-    timestr_parser = {4: '%Y', 6: '%Y%m',
+    tstr_parser = {4: '%Y', 6: '%Y%m',
                       8: '%Y%m%d', 10: '%Y%m%d%H'}
 
     #overwrite in child class!!
     this_ext = '...'
 
-    def __init__(self, timestr):
-        """timestr is of format yyyymm[dd[hh]], used directly by glob.
+    def __init__(self, tstr):
+        """tstr is of format yyyymm[dd[hh]], used directly by glob.
 
-        This means, less files are found if the timestr is longer, as it
+        This means, less files are found if the tstr is longer, as it
         is then more restrictive.
         """
-        self.timestr = timestr
-        self.time = dt.strptime(timestr,
-                                self.timestr_parser[len(timestr)])
+        self.tstr = tstr
+        self.time = dt.strptime(tstr,
+                                self.tstr_parser[len(tstr)])
         self.fnames = self.find_fnames()
         self.fname = FileName(self.fnames[0])
         self.fnames.sort()
 
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
-        searchpath = os.path.join(self.datapath, self.timestr[:6], self.timestr + '*')
+        searchpath = os.path.join(self.datapath, self.tstr[:6], self.tstr + '*')
         fnames = glob.glob(searchpath)
         if not fnames:
             print("No files found. Searched like this:\n")
@@ -740,7 +724,7 @@ class Div38DataPump(DivXDataPump):
     rec_dtype, keys = get_div38_dtypes()
     this_ext = '.div38'
     def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.timestr + '*'))
+        return glob.glob(os.path.join(self.datapath, self.tstr + '*'))
 
 
 class L1ADataFile(object):
@@ -752,10 +736,10 @@ class L1ADataFile(object):
     this_ext = '_L1A.TAB'
 
     @classmethod
-    def from_timestr(cls, timestr):
-        "Globbing for matching files to timestr and opening first one."
+    def from_tstr(cls, tstr):
+        "Globbing for matching files to tstr and opening first one."
         fnames = glob.glob(os.path.join(cls.datapath,
-                                        timestr + '*' + cls.this_ext))
+                                        tstr + '*' + cls.this_ext))
         try:
             return cls(fname=fnames[0])
         except IndexError:
@@ -795,18 +779,18 @@ class L1ADataFile(object):
         return self.df
 
 
-def get_clean_l1a(timestr):
-    l1afile = L1ADataFile.from_timestr(timestr)
+def get_clean_l1a(tstr):
+    l1afile = L1ADataFile.from_tstr(tstr)
     return l1afile.open()
 
 
-def get_dirty_l1a(timestr):
-    l1afile = L1ADataFile.from_timestr(timestr)
+def get_dirty_l1a(tstr):
+    l1afile = L1ADataFile.from_tstr(tstr)
     return l1afile.open_dirty()
 
 
-def get_raw_l1a(timestr):
-    l1afile = L1ADataFile.from_timestr(timestr)
+def get_raw_l1a(tstr):
+    l1afile = L1ADataFile.from_tstr(tstr)
     l1afile.parse_tab()
     return l1afile.df
 
@@ -825,7 +809,7 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
                       "fu.open_and_accumulate().")
         sys.exit()
     if tstr:
-        centerfile = L1ADataFile.from_timestr(tstr)
+        centerfile = L1ADataFile.from_tstr(tstr)
     else:
         centerfile = L1ADataFile(fname)
     if not centerfile:
@@ -838,7 +822,7 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     while True:
         fn_handler.set_previous_hour()
         f = L1ADataFile(fn_handler.fname)
-        logging.debug("Appending {0} on the left.".format(fn_handler.timestr))
+        logging.debug("Appending {0} on the left.".format(fn_handler.tstr))
         try:
             dataframes.appendleft(f.open_dirty())
         except IOError:
@@ -852,7 +836,7 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
     while True:
         fn_handler.set_next_hour()
         f = L1ADataFile(fn_handler.fname)
-        logging.debug("Appending {0} on the right.".format(fn_handler.timestr))
+        logging.debug("Appending {0} on the right.".format(fn_handler.tstr))
         try:
             dataframes.append(f.open_dirty())
         except IOError:
@@ -875,7 +859,7 @@ class L1ADataPump(DivXDataPump):
 
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath,
-                                      self.timestr + '*' + self.this_ext))
+                                      self.tstr + '*' + self.this_ext))
 
     def clean_final_df(self, df):
         df = prepare_data(df)
