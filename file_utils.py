@@ -30,6 +30,8 @@ if sys.platform == 'darwin':
     codepath = os.path.join(home, 'Dropbox','src', 'diviner')
     l1adatapath = os.path.join(datapath, 'l1a_data')
     rdrdatapath = os.path.join(datapath, 'opsRDR')
+    rdrrdatapath = os.path.join(os.environ['HOME'],'data','diviner','rdrr_data')
+    rdrsdatapath = os.path.join(os.environ['HOME'],'data','diviner','rdrs_data')
 else:
     datapath = os.path.join(os.path.sep, hostname, user)
     outpath = os.path.join(datapath, 'rdr_out')
@@ -38,6 +40,8 @@ else:
     feipath = os.path.join(os.path.sep, 'luna1', 'marks','feidata')
     l1adatapath = os.path.join(feipath, 'DIV:opsL1A', 'data')
     rdrdatapath = os.path.join(feipath, 'DIV:opsRdr', 'data')
+    rdrrdatapath = '/luna7/marks/rdrr_data'
+    rdrsdatapath = '/luna7/marks/rdrs_data'
 
 
 ###
@@ -863,10 +867,7 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
 
 
 class L1ADataPump(DivXDataPump):
-    if sys.platform != 'darwin':
-        datapath = l1adatapath
-    else:
-        datapath = '/Users/maye/data/diviner/l1a_data'
+    datapath = l1adatapath
 
     this_ext = '_L1A.TAB'
 
@@ -881,16 +882,6 @@ class L1ADataPump(DivXDataPump):
 
     def process_one_file(self, f):
         return read_l1a_data(f)
-
-    def get_3_hour_block(self, fname):
-        fnobj = FileName(fname)
-        self.fnobj = fnobj
-        l = []
-        l.append(read_l1a_data(fnobj.previous_fname))
-        l.append(read_l1a_data(fnobj.fname))
-        l.append(read_l1a_data(fnobj.next_fname))
-        df = pd.concat(l)
-        return self.clean_final_df(df)
 
     def get_default(self):
         df = read_l1a_data(self.fnames[0])
@@ -939,18 +930,11 @@ class RDRxReader(object):
 
 
 class RDRR_Reader(RDRxReader):
-    if sys.platform == 'darwin':
-        datapath = os.path.join(os.environ['HOME'],'data','diviner','rdrr_data')
-    else:
-        datapath = '/luna7/marks/rdrr_data'
+    datapath = rdrrdatapath
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 
 
 class RDRS_Reader(RDRxReader):
-    if sys.platform == 'darwin':
-        datapath = os.path.join(os.environ['HOME'],'data','diviner','rdrr_data')
-    else:
-        datapath = '/luna7/marks/rdrs_data'
     descriptorpath = os.path.join(datapath, 'rdrs.des')
     extension = '.rdrs'
