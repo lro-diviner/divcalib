@@ -110,9 +110,13 @@ def tstr_to_l1a_fname(tstr):
 def get_month_sample_path_from_mode(mode):
     return os.path.join(datapath, 'rdr20_month_samples', mode)
 
-class DivTime():
+class DivTime(object):
     """Manage time-related metadata for Diviner observations."""
     fmt = '' # set in derived class!
+    @classmethod
+    def from_dtime(cls, dtime):
+        tstr = dtime.strftime(cls.fmt)
+        return cls(tstr)
 
     def __init__(self, tstr):
         if len(tstr) != self.lentstr:
@@ -123,7 +127,7 @@ class DivTime():
         self.day = self.tstr[6:8]
         if self.lentstr > 8:
             self.hour = self.tstr[8:10]
-        self.time = dt.strptime(self.tstr, self.fmt)
+        self.dtime = dt.strptime(self.tstr, self.fmt)
 
 
 class DivHour(DivTime):
@@ -132,20 +136,14 @@ class DivHour(DivTime):
     lentstr = 10
 
     @property
-    def _previous_dtime(self):
-        return self.time - timedelta(hours=1)
+    def tindex(self):
+        return self.tstr[:8] + ' ' + self.tstr[8:]
 
     def previous(self):
-        previous_tstr = self._previous_dtime.strftime(self.fmt)
-        return DivHour(previous_tstr)
-
-    @property
-    def _next_dtime(self):
-        return self.time + timedelta(hours=1)
+        return DivHour.from_dtime(self.dtime - timedelta(hours=1))
 
     def next(self):
-        next_tstr = self._next_dtime.strftime(self.fmt)
-        return DivHour(next_tstr)
+        return DivHour.from_dtime(self.dtime + timedelta(hours=1))
 
 
 class DivDay(DivTime):
@@ -154,58 +152,67 @@ class DivDay(DivTime):
     lentstr = 8
 
 
+class DivObs(object):
+    def __init__(self, tstr):
+        self.time = DivHour(tstr)
+        self.l1afname = L1AFileName.from_tstr(tstr)
+        self.rdrrfname = RDRRFileName.from_tstr(tstr)
+        self.rdrsfname = RDRSFileName.from_tstr(tstr)
+
+    def next(self):
+        nexthour = self.time.next()
+        return DivObs(nexthour.tstr)
+
+    def previous(self):
+        prevhour = self.time.previous()
+        return DivObs(prevhour.tstr)
+
+
 class FileName(object):
     """Managing class for file name attributes """
+    ext = '' # fill in child class !
+    datapath = '' # fill in child class !
+
+    @classmethod
+    def from_tstr(cls, tstr):
+        fname = os.path.join(cls.datapath, tstr + cls.ext)
+        return cls(fname)
+ 
     def __init__(self, fname):
         super(FileName, self).__init__()
         self.basename = os.path.basename(fname)
         self.dirname = os.path.dirname(fname)
         self.file_id, self.ext = os.path.splitext(self.basename)
-        tstr= self.file_id.split('_')[0]
+        self.tstr= self.file_id.split('_')[0]
         # as Diviner FILES only exist in separations of hours I use DivHour here:
-        self.divtime = DivHour(tstr)
+        self.divhour = DivHour(self.tstr)
         # save everything after the first '_' as rest
-        self.rest = self.basename[len(tstr):]
+        self.rest = self.basename[len(self.tstr):]
+
 
     @property
-    def previous_dtime(self):
-        return self.time - timedelta(hours=1)
-
-    @property
-    def previous_tstr(self):
-        return self.previous_dtime.strftime(self.format)
-
-    @property
-    def previous_fname(self):
-        tstr = self.previous_dtime.strftime(self.format)
-        return os.path.join(self.dirname, tstr + self.rest)
-
-    def set_previous_hour(self):
-        self.time = self.previous_dtime
-        self.tstr = self.time.strftime(self.format)
-        return self.fname
-
-    @property
-    def next_dtime(self):
-        return self.time + timedelta(hours=1)
-
-    @property
-    def next_tstr(self):
-        return self.next_dtime.strftime(self.format)
-
-    @property
-    def next_fname(self):
-        tstr = self.next_dtime.strftime(self.format)
-        return os.path.join(self.dirname, tstr + self.rest)
-
-    def set_next_hour(self):
-        self.time = self.next_dtime
-        self.tstr = self.time.strftime(self.format)
+    def name(self):
         return self.fname
 
     @property
     def fname(self):
         return os.path.join(self.dirname, self.tstr + self.rest)
+
+
+
+class L1AFileName(FileName):
+    ext = '_L1A.TAB'
+    datapath = l1adatapath
+
+
+class RDRRFileName(FileName):
+    ext = '.rdrr'
+    datapath = rdrrdatapath
+
+
+class RDRSFileName(FileName):
+    ext = '.rdrs'
+    datapath = rdrsdatapath
 
 
 ####
@@ -745,10 +752,7 @@ class Div38DataPump(DivXDataPump):
 
 
 class L1ADataFile(object):
-    if sys.platform != 'darwin':
-        datapath = l1adatapath
-    else:
-        datapath = '/Users/maye/data/diviner/l1a_data'
+    datapath = l1adatapath
 
     this_ext = '_L1A.TAB'
 
@@ -785,11 +789,17 @@ class L1ADataFile(object):
         self.df = df
 
     def open_dirty(self):
+        self.read_dirty()
+
+    def read_dirty(self):
         self.parse_tab()
         self.parse_times()
         return self.df
 
     def open(self):
+        self.read()
+
+    def read(self):
         self.parse_tab()
         self.parse_times()
         self.clean()

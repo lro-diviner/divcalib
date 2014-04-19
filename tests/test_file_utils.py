@@ -7,6 +7,9 @@ from diviner.exceptions import DivTimeLengthError
 
 # define a time string that connects to an L1A file that is also available on laptop
 tstr = '2012010100'
+l1aext = '_L1A.TAB'
+rdrrext = '.rdrr'
+rdrsext = '.rdrs'
 
 # get slow marker to exclude some tests on laptop
 slow = pytest.mark.slow
@@ -63,7 +66,7 @@ class TestDivTime:
         assert divhour.day == '01'
         assert divhour.month == '07'
         assert divhour.year == '2012'
-        assert divhour.time == dt.datetime.strptime(tstr, fmt)
+        assert divhour.dtime == dt.datetime.strptime(tstr, fmt)
     
     def test_DivDay_faillong(self):
         with pytest.raises(DivTimeLengthError):
@@ -92,3 +95,22 @@ class TestDivTime:
         divhour = fu.DivHour(tstr)
         next = divhour.next()
         assert next.tstr == '2012010211'
+
+    def test_DivTime_from_dtime(self):
+        now = dt.datetime(2012, 10, 1, 17)
+        divhour = fu.DivHour.from_dtime(now)
+        assert divhour.dtime == now
+
+    def test_DivObs(self):
+        obs = fu.DivObs(tstr)
+        assert obs.time.hour == '00'
+
+    def test_DivObs_l1a(self):
+        obs = fu.DivObs(tstr)
+        assert obs.l1afname.name == os.path.join(fu.l1adatapath, tstr + l1aext)
+
+    def test_FileName_from_tstr(self):
+        fname = fu.L1AFileName.from_tstr(tstr)
+        assert fname.name == os.path.join(fu.l1adatapath, tstr + l1aext)
+
+
