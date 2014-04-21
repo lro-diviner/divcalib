@@ -90,7 +90,7 @@ def tstr_to_datetime(tstr):
 
 def fname_to_tstr(fname):
     return os.path.basename(fname)[:10]
-    
+
 def fname_to_tindex(fname):
     "Convert a filename to a dataframe-index string to get the hour indicated by the filename."
     tstr = fname_to_tstr(fname)
@@ -173,12 +173,17 @@ class DivObs(object):
     def get_l1a(self):
         return L1ADataFile(self.l1afname.path).open()
 
+    def get_l1a_dirty(self):
+        return L1ADataFile(self.l1afname.path).open_dirty()
+
     def get_rdrr(self):
         return RDRR_Reader(self.rdrrfname.path).open()
 
     def get_rdrs(self):
         return RDRS_Reader(self.rdrsfname.path).open()
 
+    def copy(self):
+        return DivObs(self.time.tstr)
 
 
 class FileName(object):
@@ -190,7 +195,7 @@ class FileName(object):
     def from_tstr(cls, tstr):
         fname = os.path.join(cls.datapath, tstr + cls.ext)
         return cls(fname)
- 
+
     def __init__(self, fname):
         super(FileName, self).__init__()
         self.basename = os.path.basename(fname)
@@ -336,7 +341,7 @@ class RDRReader(object):
         self.get_rdr_headers()
         # to not break existing code refererring to self.open
         self.read_df = self.open
-        
+
     def find_fnames(self):
         self.fnames = glob.glob(os.path.join(self.datapath,
                                       self.tstr + '*_RDR.TAB.zip'))
@@ -848,35 +853,46 @@ def open_and_accumulate(tstr, minimum_number=3):
         raise L1ANotFoundError(obs.l1afname.path)
 
     dataframes = deque()
-    dataframes.append(centerfile.open_dirty())
+    dataframes.append(obs.get_l1a_dirty())
+
     # append previous hours until calib blocks found
     # start with center file:
-    fn_handler = FileName(centerfile.fname)
+    # fn_handler = FileName(centerfile.fname)
+    current = obs.copy()
+
     while True:
-        fn_handler.set_previous_hour()
-        f = L1ADataFile(fn_handler.fname)
-        logging.debug("Appending {0} on the left.".format(fn_handler.tstr))
+        previous = current.previous()
         try:
-            dataframes.appendleft(f.open_dirty())
-        except IOError:
-            logging.warning('Could not find previous file {}'.format(fn_handler.fname))
+            dataframes.appendleft(previous.get_l1a_dirty())
+        except L1ANotFoundError:
+            logging.warning('Could not find previous L1A file {}'.format(
+                                                  previous.time.tstr))
             break
-        if any(f.open().is_calib):
+        else:
+            logging.debug("Appending {0} on the left.".format(previous.time.tstr))
+
+        if any(previous.get_l1a().is_calib):
             break
+        current = previous.copy()
+
     # append next hours until calib blocks found
     # go back to center file name
-    fn_handler = FileName(centerfile.fname)
+    current = obs.copy()
     while True:
-        fn_handler.set_next_hour()
-        f = L1ADataFile(fn_handler.fname)
-        logging.debug("Appending {0} on the right.".format(fn_handler.tstr))
+        next = current.next()
         try:
-            dataframes.append(f.open_dirty())
+            dataframes.append(next.get_l1a_dirty())
         except IOError:
-            logging.warning('Could not find following file {}'.format(fn_handler.fname))
+            logging.warning('Could not find following file {}'.format(
+                                                next.time.tstr))
             break
-        if any(f.open().is_calib):
+        else:
+            logging.debug("Appending {0} on the right.".format(next.time.tstr))
+
+        if any(next.get_l1a().is_calib):
             break
+        current = next.copy()
+
     df = prepare_data(pd.concat(list(dataframes)))
     define_sdtype(df)
     return df

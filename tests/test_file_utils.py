@@ -19,25 +19,15 @@ tstr_accumulate = '2010011315'
 slow = pytest.mark.slow
 
 
-class TestDiv247DataPump():
-    """docstring for test_Div247DataPump"""
-    @classmethod
-    def setup_class(cls):
-        pump = fu.Div247DataPump('20110416')
-        
-    def test_find_fnames(self):
-        pass
-
 @slow
 def test_get_rdr_headers():
     fname_ops = os.path.join(fu.datapath,'rdr_data','2013052205_RDR.TAB.zip')
     rdr = fu.RDRReader(fname_ops)
-    answer_ops = ['date', 'utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk', 
-              'sclat', 'sclon', 'scrad', 'scalt', 'el_cmd', 'az_cmd', 'af', 'orientlat', 
-              'orientlon', 'c', 'det', 'vlookx', 'vlooky', 'vlookz', 'radiance', 'tb', 
+    answer_ops = ['date', 'utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk',
+              'sclat', 'sclon', 'scrad', 'scalt', 'el_cmd', 'az_cmd', 'af', 'orientlat',
+              'orientlon', 'c', 'det', 'vlookx', 'vlooky', 'vlookz', 'radiance', 'tb',
               'clat', 'clon', 'cemis', 'csunzen', 'csunazi', 'cloctime', 'qca', 'qge', 'qmi']
     assert rdr.headers == answer_ops
-
 
 
 def test_parse_times():
@@ -71,7 +61,7 @@ class TestDivTime:
         assert divhour.month == '07'
         assert divhour.year == '2012'
         assert divhour.dtime == dt.datetime.strptime(tstr, fmt)
-    
+
     def test_DivDay_faillong(self):
         with pytest.raises(DivTimeLengthError):
             fu.DivDay('2012120110')
@@ -145,6 +135,9 @@ def test_open_and_accumulate_fail():
     with pytest.raises(L1ANotFoundError):
         fu.open_and_accumulate(tstr_fail)
 
+def test_open_and_accumulate():
+    fu.open_and_accumulate(tstr_accumulate)
+
 class TestRDRXReader:
     def test_RDRR_Reader_init(self):
         obs = fu.DivObs(tstr)
@@ -154,4 +147,3 @@ class TestRDRXReader:
         obs = fu.DivObs(tstr_fail)
         with pytest.raises(RDRR_NotFoundError):
             rdrr = fu.RDRR_Reader(obs.rdrrfname.path)
-
