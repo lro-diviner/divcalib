@@ -3,10 +3,12 @@ import datetime as dt
 import pandas as pd
 import os
 import pytest
-from diviner.exceptions import DivTimeLengthError
+from diviner.exceptions import DivTimeLengthError, RDRR_NotFoundError,\
+                               RDRS_NotFoundError, L1ANotFoundError
 
 # define a time string that connects to an L1A file that is also available on laptop
 tstr = '2012010100'
+tstr_fail ='2006120123'
 l1aext = '_L1A.TAB'
 rdrrext = '.rdrr'
 rdrsext = '.rdrs'
@@ -113,4 +115,30 @@ class TestDivTime:
         fname = fu.L1AFileName.from_tstr(tstr)
         assert fname.name == os.path.join(fu.l1adatapath, tstr + l1aext)
 
+
+    def test_DivObs_general(self):
+        obs = fu.DivObs(tstr)
+
+    def test_DivObs_get_fail(self):
+        obs = fu.DivObs(tstr_fail)
+        with pytest.raises(RDRR_NotFoundError):
+            rdrr = obs.get_rdrr()
+
+
+class TestL1ADataFile:
+    def test_open_fail(self):
+        obs = fu.DivObs(tstr_fail)
+        with pytest.raises(L1ANotFoundError):
+            l1a = fu.L1ADataFile(obs.l1afname.path).open()
+
+
+class TestRDRXReader:
+    def test_RDRR_Reader_init(self):
+        obs = fu.DivObs(tstr)
+        rdrr = obs.get_rdrr()
+
+    def test_RDRR_Reader_init_fail(self):
+        obs = fu.DivObs(tstr_fail)
+        with pytest.raises(RDRR_NotFoundError):
+            rdrr = fu.RDRR_Reader(obs.rdrrfname.path)
 

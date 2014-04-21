@@ -14,7 +14,10 @@ from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 import logging
 from subprocess import call
-from diviner.exceptions import DivTimeLengthError
+from diviner.exceptions import DivTimeLengthError,\
+                               RDRR_NotFoundError,\
+                               RDRS_NotFoundError,\
+                               L1ANotFoundError
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -167,6 +170,16 @@ class DivObs(object):
         prevhour = self.time.previous()
         return DivObs(prevhour.tstr)
 
+    def get_l1a(self):
+        return L1ADataFile(self.l1afname.path).open()
+
+    def get_rdrr(self):
+        return RDRR_Reader(self.rdrrfname.path).open()
+
+    def get_rdrs(self):
+        return RDRS_Reader(self.rdrsfname.path).open()
+
+
 
 class FileName(object):
     """Managing class for file name attributes """
@@ -189,6 +202,10 @@ class FileName(object):
         # save everything after the first '_' as rest
         self.rest = self.basename[len(self.tstr):]
 
+
+    @property
+    def path(self):
+        return self.fname
 
     @property
     def name(self):
@@ -752,20 +769,6 @@ class Div38DataPump(DivXDataPump):
 
 
 class L1ADataFile(object):
-    datapath = l1adatapath
-
-    this_ext = '_L1A.TAB'
-
-    @classmethod
-    def from_tstr(cls, tstr):
-        "Globbing for matching files to tstr and opening first one."
-        fnames = glob.glob(os.path.join(cls.datapath,
-                                        tstr + '*' + cls.this_ext))
-        try:
-            return cls(fname=fnames[0])
-        except IndexError:
-            return None
-
     def __init__(self, fname):
         self.fname = fname
         self.fn_handler = FileName(fname)
@@ -774,11 +777,14 @@ class L1ADataFile(object):
     def parse_tab(self, fname=None):
         if not fname:
             fname = self.fname
-        self.df = pd.io.parsers.read_csv(fname,
-                                    names=self.header.columns,
-                                    na_values='-9999',
-                                    skiprows=8,
-                                    skipinitialspace=True)
+        try:
+            self.df = pd.io.parsers.read_csv(fname,
+                                        names=self.header.columns,
+                                        na_values='-9999',
+                                        skiprows=8,
+                                        skipinitialspace=True)
+        except IOError as e:
+            raise L1ANotFoundError(e)
 
     def parse_times(self):
         self.df = parse_times(self.df)
@@ -900,15 +906,13 @@ class L1ADataPump(DivXDataPump):
 
 class RDRxReader(object):
     """docstring for RDRxReader"""
-    def __init__(self, tstr_or_fname):
+    def __init__(self, fname):
         super(RDRxReader, self).__init__()
-        if os.path.exists(tstr_or_fname):
-            fname = tstr_or_fname
-        else:
-            fname = os.path.join(self.datapath, 
-                                 tstr_or_fname + self.extension)
         dtypes, keys = parse_descriptor(self.descriptorpath)
-        self.df = fname_to_df(fname, dtypes, keys)
+        try:
+            self.df = fname_to_df(fname, dtypes, keys)
+        except IOError as e:
+            raise self.exception(e)
 
     def parse_times(self):
         df = self.df
@@ -940,11 +944,14 @@ class RDRxReader(object):
 
 
 class RDRR_Reader(RDRxReader):
+    exception = RDRR_NotFoundError
     datapath = rdrrdatapath
     descriptorpath = os.path.join(datapath, 'rdrr.des')
     extension = '.rdrr'
 
 
 class RDRS_Reader(RDRxReader):
+    exception = RDRS_NotFoundError
+
     descriptorpath = os.path.join(datapath, 'rdrs.des')
     extension = '.rdrs'

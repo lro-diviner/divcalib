@@ -65,3 +65,13 @@ class DivTimeLengthError(Exception):
         return "Length of tstr {0} does not fit expected format {1}.".format(
                                                 self.tstr,
                                                 self.expected)
+
+
+class RDRR_NotFoundError(Exception):
+    pass
+
+class RDRS_NotFoundError(Exception):
+    pass
+
+class L1ANotFoundError(Exception):
+    pass
