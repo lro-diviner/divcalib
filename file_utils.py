@@ -778,38 +778,42 @@ class L1ADataFile(object):
         if not fname:
             fname = self.fname
         try:
-            self.df = pd.io.parsers.read_csv(fname,
+            df = pd.io.parsers.read_csv(fname,
                                         names=self.header.columns,
                                         na_values='-9999',
                                         skiprows=8,
                                         skipinitialspace=True)
         except IOError as e:
             raise L1ANotFoundError(e)
+        return df
 
-    def parse_times(self):
-        self.df = parse_times(self.df)
+    def parse_times(self, df=None):
+        if df is None:
+            df = self.df
+        return parse_times(df)
 
-    def clean(self):
-        df = prepare_data(self.df)
+    def clean(self, df=None):
+        if df is None:
+            df = self.df
+        df = prepare_data(df)
         define_sdtype(df)
-        self.df = df
+        return df
 
     def open_dirty(self):
-        self.read_dirty()
+        return self.read_dirty()
 
     def read_dirty(self):
-        self.parse_tab()
-        self.parse_times()
-        return self.df
+        df = self.parse_tab()
+        df = self.parse_times(df)
+        return df
 
     def open(self):
-        self.read()
+        return self.read()
 
-    def read(self):
-        self.parse_tab()
-        self.parse_times()
-        self.clean()
-        return self.df
+    def read(self, fname=None):
+        df = self.parse_tab(fname)
+        df = self.parse_times(df)
+        return self.clean(df)
 
 
 def get_clean_l1a(tstr):
@@ -828,7 +832,7 @@ def get_raw_l1a(tstr):
     return l1afile.df
 
 
-def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
+def open_and_accumulate(tstr, minimum_number=3):
     """Open L1A datafile fname and accumulate neighboring data.
 
     One CAN NOT accumulate cleaned data files, because I rely on the numbering of
@@ -837,16 +841,12 @@ def open_and_accumulate(fname=None, tstr=None, minimum_number=3):
 
     minimum_number controls how many files are attached as one block.
     """
-    if not (fname or tstr):
-        logging.error("One of fname or tstr has to be provided in "
-                      "fu.open_and_accumulate().")
-        sys.exit()
-    if tstr:
-        centerfile = L1ADataFile.from_tstr(tstr)
-    else:
-        centerfile = L1ADataFile(fname)
-    if not centerfile:
-        return None
+
+    # centerfile = L1ADataFile.from_tstr(tstr)
+    obs = DivObs(tstr)
+    if not os.path.exists(obs.l1afname.path):
+        raise L1ANotFoundError(obs.l1afname.path)
+
     dataframes = deque()
     dataframes.append(centerfile.open_dirty())
     # append previous hours until calib blocks found

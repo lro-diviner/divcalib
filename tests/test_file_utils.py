@@ -7,11 +7,13 @@ from diviner.exceptions import DivTimeLengthError, RDRR_NotFoundError,\
                                RDRS_NotFoundError, L1ANotFoundError
 
 # define a time string that connects to an L1A file that is also available on laptop
-tstr = '2012010100'
+tstr = '2013031707'
 tstr_fail ='2006120123'
 l1aext = '_L1A.TAB'
 rdrrext = '.rdrr'
 rdrsext = '.rdrs'
+tstr_accumulate = '2010011315'
+
 
 # get slow marker to exclude some tests on laptop
 slow = pytest.mark.slow
@@ -105,7 +107,7 @@ class TestDivTime:
 
     def test_DivObs(self):
         obs = fu.DivObs(tstr)
-        assert obs.time.hour == '00'
+        assert obs.time.hour == '07'
 
     def test_DivObs_l1a(self):
         obs = fu.DivObs(tstr)
@@ -126,11 +128,22 @@ class TestDivTime:
 
 
 class TestL1ADataFile:
+    def test_open(self):
+        obs = fu.DivObs(tstr)
+        df = fu.L1ADataFile(obs.l1afname.path).open()
+
     def test_open_fail(self):
         obs = fu.DivObs(tstr_fail)
         with pytest.raises(L1ANotFoundError):
             l1a = fu.L1ADataFile(obs.l1afname.path).open()
 
+
+# def test_open_and_accumulate():
+#     fu.open_and_accumulate(tstr=tstr_accumulate)
+
+def test_open_and_accumulate_fail():
+    with pytest.raises(L1ANotFoundError):
+        fu.open_and_accumulate(tstr_fail)
 
 class TestRDRXReader:
     def test_RDRR_Reader_init(self):
