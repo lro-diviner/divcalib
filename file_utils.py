@@ -156,6 +156,11 @@ class DivDay(DivTime):
 
 
 class DivObs(object):
+    @classmethod
+    def from_fname(cls, fname):
+        basename = os.path.basename(fname)
+        return cls(basename[:10])
+
     def __init__(self, tstr):
         self.time = DivHour(tstr)
         self.l1afname = L1AFileName.from_tstr(tstr)

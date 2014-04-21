@@ -7,11 +7,11 @@ def df():
     return fu.L1ADataFile.from_timestr('2012012414').open()
 
 def pytest_addoption(parser):
-    parser.addoption("--runslow", action="store_true",
-        help="run slow tests")
+    parser.addoption("--runluna", action="store_true",
+        help="run luna tests")
+
 
 def pytest_runtest_setup(item):
-    if 'slow' in item.keywords and not item.config.getoption("--runslow"):
-        pytest.skip("need --runslow option to run")
+    if 'luna' in item.keywords and not item.config.getoption("--runluna"):
+        pytest.skip("need --runluna option to run")
 
-    

@@ -13,13 +13,13 @@ l1aext = '_L1A.TAB'
 rdrrext = '.rdrr'
 rdrsext = '.rdrs'
 tstr_accumulate = '2010011315'
+l1afname = '/Users/maye/data/diviner/l1a_data/2013052205_L1A.TAB'
+
+# get luna marker to exclude some tests on laptop
+luna = pytest.mark.luna
 
 
-# get slow marker to exclude some tests on laptop
-slow = pytest.mark.slow
-
-
-@slow
+@luna
 def test_get_rdr_headers():
     fname_ops = os.path.join(fu.datapath,'rdr_data','2013052205_RDR.TAB.zip')
     rdr = fu.RDRReader(fname_ops)
@@ -95,6 +95,7 @@ class TestDivTime:
         divhour = fu.DivHour.from_dtime(now)
         assert divhour.dtime == now
 
+class TestDivObs:
     def test_DivObs(self):
         obs = fu.DivObs(tstr)
         assert obs.time.hour == '07'
@@ -107,7 +108,6 @@ class TestDivTime:
         fname = fu.L1AFileName.from_tstr(tstr)
         assert fname.name == os.path.join(fu.l1adatapath, tstr + l1aext)
 
-
     def test_DivObs_general(self):
         obs = fu.DivObs(tstr)
 
@@ -116,6 +116,8 @@ class TestDivTime:
         with pytest.raises(RDRR_NotFoundError):
             rdrr = obs.get_rdrr()
 
+    def test_DivObs_from_fname(self):
+        obs = fu.DivObs.from_fname(l1afname)
 
 class TestL1ADataFile:
     def test_open(self):
