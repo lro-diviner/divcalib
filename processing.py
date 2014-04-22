@@ -1,7 +1,6 @@
 from __future__ import print_function
 from diviner import file_utils as fu, calib
 from os.path import join as pjoin
-import divtweet
 import sys
 from datetime import timedelta
 import logging
@@ -16,20 +15,21 @@ logging.basicConfig(filename=logname,
 
 root = '/raid1/maye/l1b_production'
 
+
 def process_fname(fname):
     tstr = fu.get_timestr(fname)
     print(tstr)
     sys.stdout.flush()
     df = fu.open_and_accumulate(fname)
     if not df.index.is_monotonic:
-	logging.error("Founid non-monotonic 3-hour index at {}".format(fname))
-	return
+        logging.error("Founid non-monotonic 3-hour index at {}".format(fname))
+        return
     c = calib.Calibrator(df)
     try:
-	c.calibrate()
+        c.calibrate()
     except Exception as e:
-	print("Caught error", e)
-	logging.error("{} did not calibrate!!!".format(fname))
+        print("Caught error", e)
+        logging.error("{} did not calibrate!!!".format(fname))
         return
     hdfname = pjoin(root, tstr + '.h5')
     tstamp = fu.tstr_to_datetime(tstr)
@@ -50,8 +50,8 @@ def main(start, end, startover=False):
     on a month precision, because I decided to do it monthly later on
     TODO: Create more user-friendly options here.
     """
-    months = pd.date_range(start, end , freq='M')
-    print("Created date range:",months)
+    months = pd.date_range(start, end, freq='M')
+    print("Created date range:", months)
     fnames = []
     for month in months:
         m = month.strftime('%Y%m')
@@ -67,19 +67,20 @@ def main(start, end, startover=False):
             print("Starting over.")
             fnames.extend(pump.fnames)
 
-    print("Found",len(fnames),'files to do.')
+    print("Found", len(fnames), 'files to do.')
     Parallel(n_jobs=8)(delayed(process_fname)(fname) for fname in fnames)
     #divtweet.tweet_machine("Finished processing {0}, {1} files.".format(month,
     #                                                            len(fnames)))
+
 
 def usage():
     print("Usage: {} start end [new|skip]".format(sys.argv[0]))
     sys.exit()
 
-if __name__=='__main__':
+if __name__ == '__main__':
     start, end = sys.argv[1:3]
-    # if user provided only 6 digits like 201001 as input, add another 01 for the date
-    # because above code requires it.
+    # if user provided only 6 digits like 201001 as input, add another 01 for
+    # the date, because above code requires it.
     if len(start) == 6:
         start += '01'
     if len(end) == 6:
@@ -95,4 +96,3 @@ if __name__=='__main__':
     except IndexError:
         usage()
     main(start, end, startover)
-
