@@ -4,11 +4,12 @@ import pandas as pd
 import os
 import pytest
 from diviner.exceptions import DivTimeLengthError, RDRR_NotFoundError,\
-                               RDRS_NotFoundError, L1ANotFoundError
+    RDRS_NotFoundError, L1ANotFoundError
 
-# define a time string that connects to an L1A file that is also available on laptop
+# define a time string that connects to an L1A file that is also available
+# on laptop
 tstr = '2013031707'
-tstr_fail ='2006120123'
+tstr_fail = '2006120123'
 l1aext = '_L1A.TAB'
 rdrrext = '.rdrr'
 rdrsext = '.rdrs'
@@ -21,12 +22,14 @@ luna = pytest.mark.luna
 
 @luna
 def test_get_rdr_headers():
-    fname_ops = os.path.join(fu.datapath,'rdr_data','2013052205_RDR.TAB.zip')
+    fname_ops = os.path.join(fu.datapath, 'rdr_data', '2013052205_RDR.TAB.zip')
     rdr = fu.RDRReader(fname_ops)
-    answer_ops = ['date', 'utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk',
-              'sclat', 'sclon', 'scrad', 'scalt', 'el_cmd', 'az_cmd', 'af', 'orientlat',
-              'orientlon', 'c', 'det', 'vlookx', 'vlooky', 'vlookz', 'radiance', 'tb',
-              'clat', 'clon', 'cemis', 'csunzen', 'csunazi', 'cloctime', 'qca', 'qge', 'qmi']
+    answer_ops = [
+        'date', 'utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk',
+        'sclat', 'sclon', 'scrad', 'scalt', 'el_cmd', 'az_cmd', 'af',
+        'orientlat', 'orientlon', 'c', 'det', 'vlookx', 'vlooky', 'vlookz',
+        'radiance', 'tb', 'clat', 'clon', 'cemis', 'csunzen', 'csunazi',
+        'cloctime', 'qca', 'qge', 'qmi']
     assert rdr.headers == answer_ops
 
 
@@ -34,16 +37,18 @@ def test_parse_times():
     val = '01-Apr-2011 00:00:01.978000'
     format = '%d-%b-%Y %H:%M:%S.%f'
     dtime = dt.datetime.strptime(val, format)
-    l = [dtime.strftime('%d-%b-%Y'),dtime.strftime('%H:%M:%S.%f')]
+    l = [dtime.strftime('%d-%b-%Y'), dtime.strftime('%H:%M:%S.%f')]
     df = pd.DataFrame(l)
-    # previous assignment just provides 1 column with 2 values, need .T(ransform)
+    # previous assignment just provides 1 column with 2 values, need
+    # .T(ransform)
     df = df.T
-    df.columns = ['date','utc']
+    df.columns = ['date', 'utc']
     parsed = fu.parse_times(df).index[0].to_datetime()
     assert parsed == dtime
 
 
 class TestDivTime:
+
     def test_DivHour_failshort(self):
         with pytest.raises(DivTimeLengthError):
             fu.DivHour('20121201')
@@ -71,7 +76,6 @@ class TestDivTime:
             fu.DivDay('201201')
 
     def test_DivDay(self):
-        fmt = '%Y%m%d'
         tstr = '20120701'
         divday = fu.DivDay(tstr)
         assert divday.day == '01'
@@ -95,7 +99,9 @@ class TestDivTime:
         divhour = fu.DivHour.from_dtime(now)
         assert divhour.dtime == now
 
+
 class TestDivObs:
+
     def test_DivObs(self):
         obs = fu.DivObs(tstr)
         assert obs.time.hour == '07'
@@ -109,25 +115,27 @@ class TestDivObs:
         assert fname.name == os.path.join(fu.l1adatapath, tstr + l1aext)
 
     def test_DivObs_general(self):
-        obs = fu.DivObs(tstr)
+        fu.DivObs(tstr)
 
     def test_DivObs_get_fail(self):
         obs = fu.DivObs(tstr_fail)
         with pytest.raises(RDRR_NotFoundError):
-            rdrr = obs.get_rdrr()
+            obs.get_rdrr()
 
     def test_DivObs_from_fname(self):
-        obs = fu.DivObs.from_fname(l1afname)
+        fu.DivObs.from_fname(l1afname)
+
 
 class TestL1ADataFile:
+
     def test_open(self):
         obs = fu.DivObs(tstr)
-        df = fu.L1ADataFile(obs.l1afname.path).open()
+        fu.L1ADataFile(obs.l1afname.path).open()
 
     def test_open_fail(self):
         obs = fu.DivObs(tstr_fail)
         with pytest.raises(L1ANotFoundError):
-            l1a = fu.L1ADataFile(obs.l1afname.path).open()
+            fu.L1ADataFile(obs.l1afname.path).open()
 
 
 # def test_open_and_accumulate():
@@ -137,15 +145,18 @@ def test_open_and_accumulate_fail():
     with pytest.raises(L1ANotFoundError):
         fu.open_and_accumulate(tstr_fail)
 
+
 def test_open_and_accumulate():
     fu.open_and_accumulate(tstr_accumulate)
 
+
 class TestRDRXReader:
+
     def test_RDRR_Reader_init(self):
         obs = fu.DivObs(tstr)
-        rdrr = obs.get_rdrr()
+        obs.get_rdrr()
 
     def test_RDRR_Reader_init_fail(self):
         obs = fu.DivObs(tstr_fail)
         with pytest.raises(RDRR_NotFoundError):
-            rdrr = fu.RDRR_Reader(obs.rdrrfname.path)
+            fu.RDRR_Reader(obs.rdrrfname.path)
