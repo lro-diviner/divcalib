@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 from diviner import calib
 from diviner import file_utils as fu
-from diviner import ana_utils as au
 from joblib import Parallel, delayed
 import pandas as pd
 import logging

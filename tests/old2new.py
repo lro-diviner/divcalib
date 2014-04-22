@@ -1,3 +1,6 @@
+"""This module calculates and plots the difference between ord and new
+radiance.
+"""
 from diviner import calib, file_utils as fu
 from diviner import ana_utils as au
 from diviner import get_divdata as gd

@@ -15,9 +15,9 @@ from collections import deque
 import logging
 from subprocess import call
 from diviner.exceptions import DivTimeLengthError,\
-                               RDRR_NotFoundError,\
-                               RDRS_NotFoundError,\
-                               L1ANotFoundError
+    RDRR_NotFoundError,\
+    RDRS_NotFoundError,\
+    L1ANotFoundError
 
 # from plot_utils import ProgressBar
 import zipfile
@@ -27,29 +27,31 @@ hostname = hostname.split('.')[0]
 user = os.environ['USER']
 home = os.environ['HOME']
 if sys.platform == 'darwin':
-    datapath = os.path.join(home, 'data','diviner')
+    datapath = os.path.join(home, 'data', 'diviner')
     outpath = os.path.join(datapath, 'out')
-    kernelpath = os.path.join(home, 'data','spice', 'diviner')
-    codepath = os.path.join(home, 'Dropbox','src', 'diviner')
+    kernelpath = os.path.join(home, 'data', 'spice', 'diviner')
+    codepath = os.path.join(home, 'Dropbox', 'src', 'diviner')
     l1adatapath = os.path.join(datapath, 'l1a_data')
     rdrdatapath = os.path.join(datapath, 'opsRDR')
-    rdrrdatapath = os.path.join(os.environ['HOME'],'data','diviner','rdrr_data')
-    rdrsdatapath = os.path.join(os.environ['HOME'],'data','diviner','rdrs_data')
+    rdrrdatapath = os.path.join(
+        os.environ['HOME'], 'data', 'diviner', 'rdrr_data')
+    rdrsdatapath = os.path.join(
+        os.environ['HOME'], 'data', 'diviner', 'rdrs_data')
 else:
     datapath = os.path.join(os.path.sep, hostname, user)
     outpath = os.path.join(datapath, 'rdr_out')
     kernelpath = os.path.join(datapath, 'kernels')
     codepath = os.path.join(os.environ['HOME'], 'src/diviner')
-    feipath = os.path.join(os.path.sep, 'luna1', 'marks','feidata')
+    feipath = os.path.join(os.path.sep, 'luna1', 'marks', 'feidata')
     l1adatapath = os.path.join(feipath, 'DIV:opsL1A', 'data')
     rdrdatapath = os.path.join(feipath, 'DIV:opsRdr', 'data')
     rdrrdatapath = '/luna7/marks/rdrr_data'
     rdrsdatapath = '/luna7/marks/rdrs_data'
 
 
-###
-### data transport utilities
-###
+#
+# data transport utilities
+#
 def scp_l1a_file(tstr):
     src_host = 'luna4'
     target_path = os.path.join(datapath, 'l1a_data')
@@ -65,10 +67,10 @@ def scp_opsRDR_file(tstr):
                                                    tstr, target_path)
     call(cmd, shell=True)
 
-###
-### general utilities
-###
 
+#
+# general utilities
+#
 def get_tstr(indata):
     # datetime type
     if hasattr(indata, 'strftime'):
@@ -91,31 +93,35 @@ def tstr_to_datetime(tstr):
 def fname_to_tstr(fname):
     return os.path.basename(fname)[:10]
 
+
 def fname_to_tindex(fname):
-    "Convert a filename to a dataframe-index string to get the hour indicated by the filename."
+    """Convert filename to time-index for indexing pd.DataFrame.
+
+    Convert a filename to a dataframe-index string to get the hour indicated by the filename.
+    """
     tstr = fname_to_tstr(fname)
     return tstr_to_tindex(tstr)
 
 
 def tstr_to_tindex(tstr):
-    return tstr[:8]+' '+tstr[8:]
+    return tstr[:8] + ' ' + tstr[8:]
 
 
 def tstr_to_l1a_fname(tstr):
-    return os.path.join(l1adatapath, tstr+'_L1A.TAB')
+    return os.path.join(l1adatapath, tstr + '_L1A.TAB')
 
 
-###
-### Tools for data output to tables
-###
-
-
+#
+# Tools for data output to tables
+#
 def get_month_sample_path_from_mode(mode):
     return os.path.join(datapath, 'rdr20_month_samples', mode)
 
+
 class DivTime(object):
     """Manage time-related metadata for Diviner observations."""
-    fmt = '' # set in derived class!
+    fmt = ''  # set in derived class!
+
     @classmethod
     def from_dtime(cls, dtime):
         tstr = dtime.strftime(cls.fmt)
@@ -192,9 +198,10 @@ class DivObs(object):
 
 
 class FileName(object):
-    """Managing class for file name attributes """
-    ext = '' # fill in child class !
-    datapath = '' # fill in child class !
+    """Managing class for file name attributes."""
+
+    ext = ''  # fill in child class !
+    datapath = ''  # fill in child class !
 
     @classmethod
     def from_tstr(cls, tstr):
@@ -206,12 +213,12 @@ class FileName(object):
         self.basename = os.path.basename(fname)
         self.dirname = os.path.dirname(fname)
         self.file_id, self.ext = os.path.splitext(self.basename)
-        self.tstr= self.file_id.split('_')[0]
-        # as Diviner FILES only exist in separations of hours I use DivHour here:
+        self.tstr = self.file_id.split('_')[0]
+        # as Diviner FILES only exist in separations of hours I use DivHour
+        # here:
         self.divhour = DivHour(self.tstr)
         # save everything after the first '_' as rest
         self.rest = self.basename[len(self.tstr):]
-
 
     @property
     def path(self):
@@ -224,7 +231,6 @@ class FileName(object):
     @property
     def fname(self):
         return os.path.join(self.dirname, self.tstr + self.rest)
-
 
 
 class L1AFileName(FileName):
@@ -242,10 +248,9 @@ class RDRSFileName(FileName):
     datapath = rdrsdatapath
 
 
-####
-#### Tools for parsing text files of data
-####
-
+#
+# Tools for parsing text files of data
+#
 def split_by_n(seq, n):
     while seq:
         yield seq[:n]
@@ -276,16 +281,17 @@ def parse_header_line(line):
 
 class L1AHeader(object):
     headerstring = "Q, DATE, UTC, SCLK, SOUNDING, FROM_PKT, PKT_COUNT, SAFING, SAFED, FREEZING, FROZEN, ROLLING, DUMPING, MOVING, TEMP_FAULT,   SC_TIME_SECS,   SC_TIME_SUBS, TICKS_PKT_START, TICKS_AT_SC_TIME, OST_INDEX, EST_INDEX, SST_INDEX, LAST_AZ_CMD, LAST_EL_CMD, FPA_TEMP, FPB_TEMP, BAFFLE_A_TEMP, BAFFLE_B_TEMP, BB_1_TEMP, OBA_1_TEMP, ERROR_TIME, ERROR_ID,  ERROR_DETAIL , ERROR_COUNT, COMMANDS_RECEIVED, COMMANDS_EXECUTED, COMMANDS_REJECTED,    LAST_COMMAND_REC ,      CMD,  REQ_ID , LAST_TIME_COMMAND, LAST_EQX_PREDICTION, HYBRID_TEMP, FPA_TEMP_CYC, FPB_TEMP_CYC, BAFFLE_A_TEMP_CYC, BAFFLE_B_TEMP_CYC, OBA_1_TEMP_CYC, OBA_2_TEMP, BB_1_TEMP_CYC, BB_2_TEMP, SOLAR_TARGET_TEMP, YOKE_TEMP, EL_ACTUATOR_TEMP, AZ_ACTUATOR_TEMP,  MIN_15V, PLU_15V, SOLAR_BASE_TEMP, PLU_5V, "\
-    "A1_01, A1_02, A1_03, A1_04, A1_05, A1_06, A1_07, A1_08, A1_09, A1_10, A1_11, A1_12, A1_13, A1_14, A1_15, A1_16, A1_17, A1_18, A1_19, A1_20, A1_21, A2_01, A2_02, A2_03, A2_04, A2_05, A2_06, A2_07, A2_08, A2_09, A2_10, A2_11, A2_12, A2_13, A2_14, A2_15, A2_16, A2_17, A2_18, A2_19, A2_20, A2_21, A3_01, A3_02, A3_03, A3_04, A3_05, A3_06, A3_07, A3_08, A3_09, A3_10, A3_11, A3_12, A3_13, A3_14, A3_15, A3_16, A3_17, A3_18, A3_19, A3_20, A3_21, A4_01, A4_02, A4_03, A4_04, A4_05, A4_06, A4_07, A4_08, A4_09, A4_10, A4_11, A4_12, A4_13, A4_14, A4_15, A4_16, A4_17, A4_18, A4_19, A4_20, A4_21, A5_01, A5_02, A5_03, A5_04, A5_05, A5_06, A5_07, A5_08, A5_09, A5_10, A5_11, A5_12, A5_13, A5_14, A5_15, A5_16, A5_17, A5_18, A5_19, A5_20, A5_21, A6_01, A6_02, A6_03, A6_04, A6_05, A6_06, A6_07, A6_08, A6_09, A6_10, A6_11, A6_12, A6_13, A6_14, A6_15, A6_16, A6_17, A6_18, A6_19, A6_20, A6_21, B1_01, B1_02, B1_03, B1_04, B1_05, B1_06, B1_07, B1_08, B1_09, B1_10, B1_11, B1_12, B1_13, B1_14, B1_15, B1_16, B1_17, B1_18, B1_19, B1_20, B1_21, B2_01, B2_02, B2_03, B2_04, B2_05, B2_06, B2_07, B2_08, B2_09, B2_10, B2_11, B2_12, B2_13, B2_14, B2_15, B2_16, B2_17, B2_18, B2_19, B2_20, B2_21, B3_01, B3_02, B3_03, B3_04, B3_05, B3_06, B3_07, B3_08, B3_09, B3_10, B3_11, B3_12, B3_13, B3_14, B3_15, B3_16, B3_17, B3_18, B3_19, B3_20, B3_21"
+        "A1_01, A1_02, A1_03, A1_04, A1_05, A1_06, A1_07, A1_08, A1_09, A1_10, A1_11, A1_12, A1_13, A1_14, A1_15, A1_16, A1_17, A1_18, A1_19, A1_20, A1_21, A2_01, A2_02, A2_03, A2_04, A2_05, A2_06, A2_07, A2_08, A2_09, A2_10, A2_11, A2_12, A2_13, A2_14, A2_15, A2_16, A2_17, A2_18, A2_19, A2_20, A2_21, A3_01, A3_02, A3_03, A3_04, A3_05, A3_06, A3_07, A3_08, A3_09, A3_10, A3_11, A3_12, A3_13, A3_14, A3_15, A3_16, A3_17, A3_18, A3_19, A3_20, A3_21, A4_01, A4_02, A4_03, A4_04, A4_05, A4_06, A4_07, A4_08, A4_09, A4_10, A4_11, A4_12, A4_13, A4_14, A4_15, A4_16, A4_17, A4_18, A4_19, A4_20, A4_21, A5_01, A5_02, A5_03, A5_04, A5_05, A5_06, A5_07, A5_08, A5_09, A5_10, A5_11, A5_12, A5_13, A5_14, A5_15, A5_16, A5_17, A5_18, A5_19, A5_20, A5_21, A6_01, A6_02, A6_03, A6_04, A6_05, A6_06, A6_07, A6_08, A6_09, A6_10, A6_11, A6_12, A6_13, A6_14, A6_15, A6_16, A6_17, A6_18, A6_19, A6_20, A6_21, B1_01, B1_02, B1_03, B1_04, B1_05, B1_06, B1_07, B1_08, B1_09, B1_10, B1_11, B1_12, B1_13, B1_14, B1_15, B1_16, B1_17, B1_18, B1_19, B1_20, B1_21, B2_01, B2_02, B2_03, B2_04, B2_05, B2_06, B2_07, B2_08, B2_09, B2_10, B2_11, B2_12, B2_13, B2_14, B2_15, B2_16, B2_17, B2_18, B2_19, B2_20, B2_21, B3_01, B3_02, B3_03, B3_04, B3_05, B3_06, B3_07, B3_08, B3_09, B3_10, B3_11, B3_12, B3_13, B3_14, B3_15, B3_16, B3_17, B3_18, B3_19, B3_20, B3_21"
 
     # beware: parse_header_line converts to lower case!
     columns = parse_header_line(headerstring)
 
-    tel1cols = ["a{0}_{1}".format(i, str(j).zfill(2)) for i in range(1,7) for j in range(1,22)]
-    tel2cols = ['b{0}_{1}'.format(i, str(j).zfill(2)) for i in range(1,4) for j in range(1,22)]
+    tel1cols = ["a{0}_{1}".format(i, str(j).zfill(2))
+                for i in range(1, 7) for j in range(1, 22)]
+    tel2cols = ['b{0}_{1}'.format(i, str(j).zfill(2))
+                for i in range(1, 4) for j in range(1, 22)]
 
     datacols = tel1cols + tel2cols
-
 
     metadatacols = list(set(columns) - set(datacols))
     metadatacols.sort()
@@ -322,16 +328,16 @@ class GroundCalibFile(file):
     def read_data(self, nrows=None):
         self.seek(0)
         df = pd.io.parsers.read_csv(self,
-                                    skiprows=self.skip+1,
+                                    skiprows=self.skip + 1,
                                     skipinitialspace=True,
                                     names=self.headers,
                                     nrows=nrows)
         return parse_times(df)
 
 
-
 class RDRReader(object):
     """RDRs are usually zipped, so this wrapper takes care of that."""
+
     datapath = rdrdatapath
 
     @classmethod
@@ -349,7 +355,7 @@ class RDRReader(object):
 
     def find_fnames(self):
         self.fnames = glob.glob(os.path.join(self.datapath,
-                                      self.tstr + '*_RDR.TAB.zip'))
+                                             self.tstr + '*_RDR.TAB.zip'))
 
     def open_file(self):
         if self.fname.lower().endswith('.zip'):
@@ -383,7 +389,6 @@ class RDRReader(object):
         self.f.close()
         return parse_times(df) if do_parse_times else df
 
-
     def gen_open(self):
         for fname in self.fnames:
             zfile = zipfile.ZipFile(fname)
@@ -396,7 +401,7 @@ def parse_times(df):
     # already a 3-digit millisecond string: '19:00:00.793'
     times = pd.to_datetime(df.date + ' ' + df.utc, format=format, utc=False)
     df.set_index(times, inplace=True)
-    return df.drop(['date','utc'], axis=1)
+    return df.drop(['date', 'utc'], axis=1)
 
 
 def read_l1a_data(fname, nrows=None):
@@ -465,9 +470,9 @@ def read_div_data(fname):
             return read_pprint(fname)
 
 
-####
-#### tools for parsing binary data of Diviner
-####
+#
+# tools for parsing binary data of Diviner
+#
 
 
 def parse_descriptor(fpath):
@@ -502,12 +507,12 @@ def get_div38_dtypes():
     if 'darwin' in sys.platform:
         despath = '/Users/maye/data/diviner/div38/div38.des'
     else:
-        despath = os.path.join(codepath,'data/div38.des')
+        despath = os.path.join(codepath, 'data/div38.des')
     return parse_descriptor(despath)
 
-###
-### rdrplus tools
-###
+#
+# rdrplus tools
+#
 
 
 def read_rdrplus(fpath, nrows):
@@ -516,7 +521,7 @@ def read_rdrplus(fpath, nrows):
         headers = parse_header_line(line)
 
     return pd.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
-                                      skiprows=1, nrows=nrows)
+                                  skiprows=1, nrows=nrows)
 
 
 def fname_to_df(fname, rec_dtype, keys):
@@ -616,7 +621,7 @@ class DataPump(object):
                                   self.current_time.strftime("%Y%m%d%H"))
         self.increment = timedelta(hours=1)
 
-    #def gen_fnames(self, pattern, top):
+    # def gen_fnames(self, pattern, top):
     #    for path, dirlist, filelist in os.walk(top)
 
     def get_fnames(self):
@@ -680,7 +685,7 @@ class DivXDataPump(object):
     tstr_parser = {4: '%Y', 6: '%Y%m',
                       8: '%Y%m%d', 10: '%Y%m%d%H'}
 
-    #overwrite in child class!!
+    # overwrite in child class!!
     this_ext = '...'
 
     def __init__(self, tstr):
@@ -698,7 +703,8 @@ class DivXDataPump(object):
 
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
-        searchpath = os.path.join(self.datapath, self.tstr[:6], self.tstr + '*')
+        searchpath = os.path.join(
+            self.datapath, self.tstr[:6], self.tstr + '*')
         fnames = glob.glob(searchpath)
         if not fnames:
             print("No files found. Searched like this:\n")
@@ -713,7 +719,7 @@ class DivXDataPump(object):
             yield open(fname)
 
     def get_fname_from_time(self, time):
-        return time.strftime("%Y%m%d%H"+ self.this_ext)
+        return time.strftime("%Y%m%d%H" + self.this_ext)
 
     def process_one_file(self, f):
         data = np.fromfile(f, dtype=self.rec_dtype)
@@ -721,7 +727,7 @@ class DivXDataPump(object):
 
     def gen_dataframes(self, n=None):
         # caller actually doesn't allow n=None anyways. FIX?
-        if n == None:
+        if n is None:
             n = len(self.fnames)
         openfiles = self.gen_open()
         i = 0
@@ -774,6 +780,7 @@ class Div38DataPump(DivXDataPump):
     datapath = os.path.join(datapath, 'div38')
     rec_dtype, keys = get_div38_dtypes()
     this_ext = '.div38'
+
     def find_fnames(self):
         return glob.glob(os.path.join(self.datapath, self.tstr + '*'))
 
@@ -845,8 +852,8 @@ def get_raw_l1a(tstr):
 def open_and_accumulate(tstr, minimum_number=3):
     """Open L1A datafile fname and accumulate neighboring data.
 
-    One CAN NOT accumulate cleaned data files, because I rely on the numbering of
-    calib-blocks to be unique!
+    One CAN NOT accumulate cleaned data files, because I rely on the numbering
+    of calib-blocks to be unique!
     Each cleaning operation starts the numbering from 1 again!
 
     minimum_number controls how many files are attached as one block.
@@ -870,11 +877,12 @@ def open_and_accumulate(tstr, minimum_number=3):
         try:
             dataframes.appendleft(previous.get_l1a_dirty())
         except L1ANotFoundError:
-            logging.warning('Could not find previous L1A file {}'.format(
-                                                  previous.time.tstr))
+            logging.warning('Could not find previous L1A file {}'
+                            .format(previous.time.tstr))
             break
         else:
-            logging.debug("Appending {0} on the left.".format(previous.time.tstr))
+            logging.debug("Appending {0} on the left."
+                          .format(previous.time.tstr))
 
         if any(previous.get_l1a().is_calib):
             break
@@ -888,8 +896,8 @@ def open_and_accumulate(tstr, minimum_number=3):
         try:
             dataframes.append(next.get_l1a_dirty())
         except IOError:
-            logging.warning('Could not find following file {}'.format(
-                                                next.time.tstr))
+            logging.warning('Could not find following file {}'
+                            .format(next.time.tstr))
             break
         else:
             logging.debug("Appending {0} on the right.".format(next.time.tstr))
@@ -926,7 +934,6 @@ class L1ADataPump(DivXDataPump):
 
 
 class RDRxReader(object):
-    """docstring for RDRxReader"""
     def __init__(self, fname):
         super(RDRxReader, self).__init__()
         dtypes, keys = parse_descriptor(self.descriptorpath)
@@ -941,12 +948,12 @@ class RDRxReader(object):
         secs_only = df.ss.astype('int')
         msecs = (df.ss - secs_only).round(3)
         mapper = lambda x: str(int(x)).zfill(2)
-        times = pd.to_datetime(df.yyyy.astype('int').astype('str')+
-                               df.mm.map(mapper)+
-                               df.dd.map(mapper)+
-                               df.hh.map(mapper)+
-                               df.mn.map(mapper)+
-                               df.ss.map(mapper)+
+        times = pd.to_datetime(df.yyyy.astype('int').astype('str') +
+                               df.mm.map(mapper) +
+                               df.dd.map(mapper) +
+                               df.hh.map(mapper) +
+                               df.mn.map(mapper) +
+                               df.ss.map(mapper) +
                                (msecs).astype('str').str[1:],
                                format='%Y%m%d%H%M%S.%f',
                                utc=False)
@@ -966,13 +973,11 @@ class RDRxReader(object):
 
 class RDRR_Reader(RDRxReader):
     exception = RDRR_NotFoundError
-    datapath = rdrrdatapath
-    descriptorpath = os.path.join(datapath, 'rdrr.des')
+    descriptorpath = os.path.join(rdrrdatapath, 'rdrr.des')
     extension = '.rdrr'
 
 
 class RDRS_Reader(RDRxReader):
     exception = RDRS_NotFoundError
-
-    descriptorpath = os.path.join(datapath, 'rdrs.des')
+    descriptorpath = os.path.join(rdrsdatapath, 'rdrs.des')
     extension = '.rdrs'
