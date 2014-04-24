@@ -55,8 +55,21 @@ def only_calibrate():
                         (tstr.strip(), savedir) for tstr in timestrings)
 
 
-def merge_rdr1_rdr2(tstr, calibhelper):
-# def merge_with_rdrr(tstr, savedir):
+def get_rdr1_columns(rdrxfile, ch):
+    formats = pd.read_csv('./data/joined_format_file.csv')
+    to_copy = []
+    for col in formats.colname:
+        if col in rdrx.no_melt:
+            to_copy.append(col)
+    first_bunch = rdrxfile.df[to_copy]
+    first_bunch = first_bunch.reset_index()
+    rest = set(formats.colname) - set(to_copy)
+    for col in rest:
+        print(col)
+        rdrxfile.merge_with_molten(col, ch, first_bunch)
+
+
+def merge_rdr1_rdr2(tstr):
     rdr1 = rdrx.RDRR(tstr)
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
