@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 from diviner import calib
 from diviner import file_utils as fu
-from diviner import ana_utils as au
 from joblib import Parallel, delayed
 import pandas as pd
 import logging
@@ -11,11 +10,11 @@ import rdrx
 
 
 def get_tb_savename(savedir, tstr):
-    return os.path.join(savedir, tstr+'_tb.hdf')
+    return os.path.join(savedir, tstr + '_tb.hdf')
 
 
 def get_rad_savename(savedir, tstr):
-    return os.path.join(savedir, tstr+'_radiance.hdf')
+    return os.path.join(savedir, tstr + '_radiance.hdf')
 
 
 def get_example_data():
@@ -24,7 +23,7 @@ def get_example_data():
     rdr2 = calib.Calibrator(df)
     rdr2.calibrate()
     rdr1 = rdrx.RDRR(tstr)
-    return rdr1,rdr2
+    return rdr1, rdr2
 
 
 def calibrate_fname(tstr, savedir):
@@ -51,14 +50,26 @@ def only_calibrate():
         timestrings = f.readlines()
 
     savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Parallel(n_jobs=8, 
-             verbose=5)(delayed(calibrate_fname)(tstr.strip(),
-                                                        savedir)
-                                                        for tstr in timestrings)
-                                                        
+    Parallel(n_jobs=8,
+             verbose=5)(delayed(calibrate_fname)
+                        (tstr.strip(), savedir) for tstr in timestrings)
 
-def merge_rdr1_rdr2(tstr, calibhelper):
-#def merge_with_rdrr(tstr, savedir):
+
+def get_rdr1_columns(rdrxfile, ch):
+    formats = pd.read_csv('./data/joined_format_file.csv')
+    to_copy = []
+    for col in formats.colname:
+        if col in rdrx.no_melt:
+            to_copy.append(col)
+    first_bunch = rdrxfile.df[to_copy]
+    first_bunch = first_bunch.reset_index()
+    rest = set(formats.colname) - set(to_copy)
+    for col in rest:
+        print(col)
+        rdrxfile.merge_with_molten(col, ch, first_bunch)
+
+
+def merge_rdr1_rdr2(tstr):
     rdr1 = rdrx.RDRR(tstr)
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
@@ -73,20 +84,19 @@ def write_rdr2(df, formatter, fname):
 
     # read in old RDR
     print("Reading old RDR file.")
-    rdr = fu.RDRReader('/u/paige/maye/rdr_data/'+timestr+'_RDR.TAB.zip')
+    rdr = fu.RDRReader('/u/paige/maye/rdr_data/' + timestr + '_RDR.TAB.zip')
     df = rdr.read_df(do_parse_times=False)
     print("Done reading.")
 
-
     # add cphase and roi
-    df['cphase']=123.45678
-    df['roi' ] = 1234
+    df['cphase'] = 123.45678
+    df['roi'] = 1234
 
-    ### adapt to new format
+    # adapt to new format
     # drop the old quality flags
-    df = df.drop(['qca','qge','qmi'],axis=1)
+    df = df.drop(['qca', 'qge', 'qmi'], axis=1)
 
-    # flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n', 
+    # flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n',
     #          's', 'a', 'b']
 
     set_orientation(df)
@@ -102,9 +112,8 @@ def write_rdr2(df, formatter, fname):
     for flag in flags:
         df[flag] = 0
 
-
     # filter for the channel requested:
-    df_ch = df[df.c==int(ch)]
+    df_ch = df[df.c == int(ch)]
 
     # fill the nan values of your tb and radiance calculations with -9999.0
     df_ch.fillna(-9999.0, inplace=True)
@@ -113,37 +122,35 @@ def write_rdr2(df, formatter, fname):
     chid = 'C' + ch
 
     # open file and start write-loop
-    f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'),'w')
+    f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'), 'w')
 
     # header defined above, globally for this file.
     print("Starting the write-out.")
-    f.write(header+'\r\n')
-    for i,data in enumerate(df_ch.values):
+    f.write(header + '\r\n')
+    for i, data in enumerate(df_ch.values):
         if all(data[22:30] < -5000):
             fmt = formatter.nan
         # spaceview
         elif (all(data[22:24] > -5000)) and (all(data[24:30] < -5000)):
             fmt = formatter.space
         # solartarget view
-        elif (all(data[22:24] > -5000) and (all(data[24:27] < -5000)) \
-                                       and (all(data[27:29] > -5000))):
+        elif (all(data[22:24] > -5000) and (all(data[24:27] < -5000))
+                and (all(data[27:29] > -5000))):
             fmt = formatter.solartarget
         # nominal
         elif all(data[22:30] > -5000):
             fmt = formatter.nominal
         # uncaught case, raise exception to notify user!
         else:
-            print(i) # which line
-            print(data) # print whole row
-            print("af:",data[14]) # point out af status, might help to understand
-            for j,item in enumerate(data[22:30]):
-                print(j+22, item)
+            print(i)  # which line
+            print(data)  # print whole row
+            # point out af status, might help to understand
+            print("af:", data[14])
+            for j, item in enumerate(data[22:30]):
+                print(j + 22, item)
             raise Exception
-        f.write(', '.join(fmt).format(*data)+'\r\n')
+        f.write(', '.join(fmt).format(*data) + '\r\n')
     f.close()
-    
-    
-    
 
 
 if __name__ == '__main__':
