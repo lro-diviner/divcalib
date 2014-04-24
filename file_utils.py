@@ -97,7 +97,8 @@ def fname_to_tstr(fname):
 def fname_to_tindex(fname):
     """Convert filename to time-index for indexing pd.DataFrame.
 
-    Convert a filename to a dataframe-index string to get the hour indicated by the filename.
+    Convert a filename to a dataframe-index string to get the hour indicated by
+    the filename.
     """
     tstr = fname_to_tstr(fname)
     return tstr_to_tindex(tstr)
@@ -963,9 +964,10 @@ class RDRxReader(object):
     def open(self):
         self.df[self.df == -9999] = np.nan
         self.parse_times()
-        df = prepare_data(self.df)
-        define_sdtype(df)
-        return df
+        # df = prepare_data(self.df)
+        # define_sdtype(df)
+        # self.df = df
+        return self.df
 
     def open_raw(self):
         return self.df
