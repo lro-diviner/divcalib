@@ -21,6 +21,7 @@ def collect_data(pump):
         df = pump.process_one_file(fname)
         frames.append(df[metadatacols])
     print("Concatting...")
+    sys.stdout.flush()
     df = pd.concat(frames)
     return df
 
@@ -28,7 +29,7 @@ def collect_data(pump):
 def produce_store_file(timestr):
     pump = fu.Div247DataPump(timestr)
     print("Found {0} files.".format(len(pump.fnames)))
-
+    sys.stdout.flush()
     if len(pump.fnames) == 0:
         return
 
@@ -37,8 +38,10 @@ def produce_store_file(timestr):
     df = collect_data(pump)
 
     print("Polishing...")
+    sys.stdout.flush()
     final = pump.clean_final_df(df)
     print("Writing to store...")
+    sys.stdout.flush()
     final.to_hdf(savepath, 'df')
     print("Done.")
 
