@@ -32,7 +32,7 @@ def produce_store_file(timestr):
     if len(pump.fnames) == 0:
         return
 
-    savepath = os.path.join(savedir, timestr+'.h5')
+    savepath = os.path.join(savedir, timestr + '.h5')
 
     df = collect_data(pump)
 
@@ -49,7 +49,7 @@ def produce_store_file_main():
     except IndexError:
         print("Usage: {0} year(yyyy)".format(sys.argv[0]))
         sys.exit()
-    months = range(1,13)
+    months = range(1, 13)
     for month in months:
         timestr = year + str(month).zfill(2)
         divtweet.tweet_machine("Producing metadata for {0}".format(timestr))
@@ -61,27 +61,34 @@ def divmetadata():
     if len(sys.argv) < 3:
         print("Usage: {0} month_start month_end [YYYYMM]".format(sys.argv[0]))
         sys.exit()
-    months = pd.period_range(sys.argv[1],sys.argv[2], freq='M')
-    cmd_middle = ("clat=-90,90 c=3,3 det=11,11 | pextract extract=year,month,date,hour,"
-      "minute,second,jdate,orbit,sundst,sunlat,sunlon,sclk,sclat,sclon,scrad,scalt,"
-      "el_cmd,az_cmd,af,vert_lat,vert_lon,vlookx,vlooky,vlookz,clat,clon,cemis,"
-      "csunzen,csunazi,cloctime,qca,qge,qmi,qual | pprint titles=0 > ")
+    months = pd.period_range(sys.argv[1], sys.argv[2], freq='M')
+    cmd_middle = (
+        "clat=-90,90 c=3,3 det=11,11 | "
+        "pextract extract=year,month,date,hour,minute,second,jdate,orbit,"
+        "sundst,sunlat,sunlon,sclk,sclat,sclon,scrad,scalt,"
+        "el_cmd,az_cmd,af,vert_lat,vert_lon,vlookx,vlooky,vlookz,clat,clon,"
+        "cemis,csunzen,csunazi,cloctime,qca,qge,qmi,qual | "
+        "pprint titles=0 > ")
     for month in months:
         print("Producing metadata for month {0}".format(month))
         ts = month.to_timestamp()
         cmd_base = 'divdata daterange={0}'.format(ts.strftime('%Y%m '))
         outfname = os.path.join(savedir,
-                                '{0}_divmetadata.csv'.format(ts.strftime('%Y%m')))
+                                '{0}_divmetadata.csv'
+                                .format(ts.strftime('%Y%m')))
         cmd = cmd_base + cmd_middle + outfname
         call(cmd, shell=True)
-        divtweet.tweet_machine("Metadata for month {0} finished.".format(month))
+        divtweet.tweet_machine(
+            "Metadata for month {0} finished.".format(month))
 
 
 def resampler(year, interval):
-    """Resample the full resolution metadata files of year <year> down to <interval>.
-    
-    <interval> can be format strings like '1d' for downsampling to days, '1h' for hours,
-    '1min' for minutes, etc.
+    """Resample the full resolution metadata files of year down to <interval>.
+
+    Resample the full resolution metadata files of year <year> down to
+    <interval>.
+    <interval> can be format strings like '1d' for downsampling to days,
+    '1h' for hours, '1min' for minutes, etc.
     <year> can be given as string or int.
     """
     fnames = glob.glob(pjoin(savedir, str(year) + '??.h5'))
@@ -95,7 +102,8 @@ def resampler(year, interval):
     hdf_fname = pjoin(savedir, str(year) + '_daily_means.h5')
     df.to_hdf(hdf_fname, 'df')
     print("Created {}.".format(hdf_fname))
-    divtweet.tweet_machine("Fininshed resampling {0} to {1}".format(year, interval))
+    divtweet.tweet_machine(
+        "Fininshed resampling {0} to {1}".format(year, interval))
 
 
 def get_all_df():
@@ -107,7 +115,6 @@ def get_all_df():
         l.append(store['df'])
         store.close()
     return pd.concat(l)
-
 
 
 if __name__ == '__main__':
