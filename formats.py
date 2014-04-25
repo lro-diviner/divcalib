@@ -1,5 +1,13 @@
 from pds.core.parser import Parser
 import StringIO
+import os
+import diviner
+import pandas as pd
+
+
+def read_csv_format_file():
+    fname = os.path.join(diviner.__path__[0], 'data', 'joined_format_file.csv'))
+    return pd.read_csv(fname)
 
 
 def create_formatdic_for_dataframe():
@@ -249,27 +257,5 @@ class Formatter(object):
     space       = [i[2] for i in format_space]
     solartarget = [i[2] for i in format_solartarget]
     nan         = [i[2] for i in format_nan]
-
-
-# def parse_rdr_format_file(fname=None):
-#     if not fname:
-#         fname = '../../data/rdr_format.txt'
-#     parser = Parser()
-#     with open(fname) as f:
-#         rdrformat = f.readlines()
-#     s = ''
-#     for line in rdrformat:
-#         if line == '\n':
-#             sio = StringIO.StringIO(s)
-#             yield parser.parse(sio)['COLUMN']
-#             s = ''
-#         s += line
-#         
-#     
-# def get_formats_dic():
-#     dic = OrderedDict()
-#     for col in parse_rdr_format_file():
-#         dic[col['NAME']] = col
-#     return dic
 
 
