@@ -41,11 +41,6 @@ def colnames(colbase, channel=None):
     return colnames
 
 
-# def renamer(colname):
-#     cdetstr = '_'.join(colname.split('_')[1:])
-#     cdet = au.CDet(cdetstr)
-#     return cdet.
-
 class RDRR(object):
 
     """Class to enable extracting data from RDRx."""
