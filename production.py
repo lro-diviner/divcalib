@@ -7,6 +7,17 @@ import logging
 import os
 import sys
 import rdrx
+import diviner
+
+
+formats = pd.read_csv(os.path.join(diviner.__path__[0],
+                      'data',
+                      'joined_format_file.csv'))
+
+cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
+cols_skip = 'c det tb radiance'.split()
+cols_to_melt = set(formats.colname) - set(cols_no_melt) - set(cols_skip)
+cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
 
 
 def get_tb_savename(savedir, tstr):
@@ -55,18 +66,38 @@ def only_calibrate():
                         (tstr.strip(), savedir) for tstr in timestrings)
 
 
-def get_rdr1_columns(rdrxfile, ch):
-    formats = pd.read_csv('./data/joined_format_file.csv')
-    to_copy = []
-    for col in formats.colname:
-        if col in rdrx.no_melt:
-            to_copy.append(col)
-    first_bunch = rdrxfile.df[to_copy]
-    first_bunch = first_bunch.reset_index()
-    rest = set(formats.colname) - set(to_copy)
-    for col in rest:
-        print(col)
-        rdrxfile.merge_with_molten(col, ch, first_bunch)
+def melt_and_merge_rdr1(rdrxfile, c):
+    """Melt and merge required columns out of RDRx file.
+
+    Above defined formats file defines what columns are required for this
+    production function.
+    """
+    # first get the columns that do not need melting
+    no_melts = rdrxfile.df[cols_no_melt]
+
+    # now go through each column of format that needs melting and save it in
+    # a temp. container
+    container = []
+    for col in cols_to_melt:
+        container.append(rdrxfile.get_molten_col(col, c))
+
+    # now merge each entry of the container, until it's empty (IndexError)
+    mergecols = 'index det'.split()
+    res = None
+    while True:
+        try:
+            if res is None:
+                res = container.pop()
+            res = res.merge(container.pop(),
+                            left_on=mergecols,
+                            right_on=mergecols)
+        except IndexError:
+            break
+    final = pd.merge(no_melts.reset_index(),
+                     res,
+                     left_on='index',
+                     right_on='index')
+    return final
 
 
 def merge_rdr1_rdr2(tstr):
