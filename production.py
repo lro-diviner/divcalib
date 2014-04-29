@@ -136,8 +136,9 @@ def melt_and_merge_rdr1(rdrxfile, c):
     return final
 
 
-def merge_rdr1_rdr2(tstr):
+def merge_rdr1_rdr2(tstr, c):
     rdr1 = rdrx.RDRR(tstr)
+    rdr1_merged = melt_and_merge_rdr1(rdr1, c)
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
 
