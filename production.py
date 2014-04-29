@@ -3,6 +3,7 @@ from diviner import calib
 from diviner import file_utils as fu
 from joblib import Parallel, delayed
 import pandas as pd
+import diviner
 import logging
 import os
 import sys
@@ -18,6 +19,41 @@ cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
 cols_skip = 'c det tb radiance'.split()
 cols_to_melt = set(formats.colname) - set(cols_no_melt) - set(cols_skip)
 cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
+
+
+def read_and_clean(fname):
+    with open(fname) as f:
+        tstrings = f.readlines()
+    return [i.strip() for i in tstrings]
+
+
+def beta_0_circular_orbit():
+    fname = os.path.join(diviner.__path__[0],
+                         'data',
+                         '2009082321_2009092002.txt')
+    return read_and_clean(fname)
+
+
+def beta_0_elliptical_orbit():
+    fname = os.path.join(diviner.__path__[0],
+                         'data',
+                         '2012022408_2012032323.txt')
+
+    return read_and_clean(fname)
+
+
+def beta_90_circular_orbit():
+    fname = os.path.join(diviner.__path__[0],
+                         'data',
+                         '2010120102_2010122712.txt')
+    return read_and_clean(fname)
+
+
+def beta_90_elliptical_orbit():
+    fname = os.path.join(diviner.__path__[0],
+                         'data',
+                         '2012061211_2012062602.txt')
+    return read_and_clean(fname)
 
 
 def get_tb_savename(savedir, tstr):
