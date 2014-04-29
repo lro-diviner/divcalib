@@ -3,7 +3,7 @@ from diviner import file_utils as fu
 import pandas as pd
 
 # this list are the column names in rdrr that have detector specific data.
-list_to_melt = [
+to_melt = [
     'cemis',
     'radiance',
     'csunazi',
@@ -29,7 +29,7 @@ def get_example_rdrx():
 
 
 def colnames(colbase, channel=None):
-    "create rdrx column names for one or all channels."
+    """create rdrx column names for one or all channels."""
     if not channel:
         channels = range(1, 10)
     else:
@@ -42,7 +42,6 @@ def colnames(colbase, channel=None):
 
 
 class RDRR(object):
-
     """Class to enable extracting data from RDRx."""
 
     def __init__(self, tstr_or_filename):
@@ -177,15 +176,16 @@ no_melt = [
     'edr_aref1',
     'edr_aref2',
     'edr_bref',
-    'sdtype',
-    'calib_block_labels',
-    'space_block_labels',
-    'bb_block_labels',
-    'st_block_labels',
-    'is_spaceview',
-    'is_bbview',
-    'is_stview',
-    'is_moving',
-    'is_stowed',
-    'is_calib'
     ]
+    # 'sdtype',
+    # 'calib_block_labels',
+    # 'space_block_labels',
+    # 'bb_block_labels',
+    # 'st_block_labels',
+    # 'is_spaceview',
+    # 'is_bbview',
+    # 'is_stview',
+    # 'is_moving',
+    # 'is_stowed',
+    # 'is_calib'
+    # ]
