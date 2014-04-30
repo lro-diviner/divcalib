@@ -93,20 +93,6 @@ def calibrate_tstr(tstr, savedir):
     rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), 'df')
 
 
-def only_calibrate():
-    logging.basicConfig(filename='divcalib_only_calibrate.log',
-                        format='%(asctime)s %(message)s',
-                        level=logging.INFO)
-
-    with open('/u/paige/maye/src/diviner/data/2010120102_2010122712.txt') as f:
-        timestrings = f.readlines()
-
-    savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Parallel(n_jobs=8,
-             verbose=5)(delayed(calibrate_tstr)
-                        (tstr.strip(), savedir) for tstr in timestrings)
-
-
 def melt_and_merge_rdr1(rdrxobject, c):
     """Melt and merge required columns out of RDRx file.
 
@@ -179,12 +165,45 @@ def merge_rdr1_rdr2(tstr, c, savedir):
                              right_on=mergecols)
     rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
     add_time_columns(rdr2)
+    rdr2.orbit = rdr2.orbit.astype('int')
+    rdr2.det = rdr2.det.astype('int')
+    rdr2.drop('index', inplace=True, axis=1)
+    if write:
+        rdr2savedir = '/raid1/maye/rdr_out/verification'
+        fname = get_rdr2_savename(rdr2savedir, tstr, c)
+        rdr2.to_csv(fname, index=False)
     return rdr2
 
 
+def only_calibrate():
+    logging.basicConfig(filename='divcalib_only_calibrate.log',
+                        format='%(asctime)s -%(levelname)s- %(message)s',
+                        level=logging.INFO)
+
+    with open('/u/paige/maye/src/diviner/data/2010120102_2010122712.txt') as f:
+        timestrings = f.readlines()
+
+    savedir = '/raid1/maye/rdr_out/only_calibrate'
+    Parallel(n_jobs=8,
+             verbose=5)(delayed(calibrate_tstr)
+                        (tstr.strip(), savedir) for tstr in timestrings)
+
+
+def verification_production():
+    logging.basicConfig(filename='divcalib_verification_run.log',
+                        format='%(asctime)s -%(levelname)s- %(message)s',
+                        level=logging.INFO)
+
+    tstrings = beta_90_circular_orbit()
+    savedir = '/raid1/maye/rdr_out/only_calibrate'
+    Paralel(n_jobs=8,
+            verbose=5)(delayed(merge_rdr1_rdr2)
+                       (tstr, 7, savedir) for tstr in tstrings[:2])
+
 
 if __name__ == '__main__':
-    only_calibrate()
+    #only_calibrate()
+    verification_production()
 
 # def prepare_rdr2_write(df):
 #     pass
