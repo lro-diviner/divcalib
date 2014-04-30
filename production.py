@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 from diviner import calib
 from diviner import file_utils as fu
+from diviner import ana_utils as au
 from joblib import Parallel, delayed
 import pandas as pd
 import diviner
@@ -73,7 +74,7 @@ def get_example_data():
     return rdr1, rdr2
 
 
-def calibrate_fname(tstr, savedir):
+def calibrate_tstr(tstr, savedir):
     print(tstr)
     sys.stdout.flush()
     df = fu.open_and_accumulate(tstr=tstr)
@@ -98,24 +99,24 @@ def only_calibrate():
 
     savedir = '/raid1/maye/rdr_out/only_calibrate'
     Parallel(n_jobs=8,
-             verbose=5)(delayed(calibrate_fname)
+             verbose=5)(delayed(calibrate_tstr)
                         (tstr.strip(), savedir) for tstr in timestrings)
 
 
-def melt_and_merge_rdr1(rdrxfile, c):
+def melt_and_merge_rdr1(rdrxobject, c):
     """Melt and merge required columns out of RDRx file.
 
     Above defined formats file defines what columns are required for this
     production function.
     """
     # first get the columns that do not need melting
-    no_melts = rdrxfile.df[cols_no_melt]
+    no_melts = rdrxobject.df[cols_no_melt]
 
     # now go through each column of format that needs melting and save it in
     # a temp. container
     container = []
     for col in cols_to_melt:
-        container.append(rdrxfile.get_molten_col(col, c))
+        container.append(rdrxobject.get_molten_col(col, c))
 
     # now merge each entry of the container, until it's empty (IndexError)
     mergecols = 'index det'.split()
@@ -136,11 +137,32 @@ def melt_and_merge_rdr1(rdrxfile, c):
     return final
 
 
-def merge_rdr1_rdr2(tstr, c):
-    rdr1 = rdrx.RDRR(tstr)
-    rdr1_merged = melt_and_merge_rdr1(rdr1, c)
+def grep_channel_and_melt(indf, colname, channel, obs):
+    c = indf.filter(regex=channel.mcs+'_')[obs.time.tindex]
+    c = c.rename(columns=lambda x: int(x.split('_')[1]))
+    c_molten = pd.melt(c.reset_index(), id_vars=['index'], var_name='det',
+                       value_name=colname)
+    return c_molten
+
+
+def merge_rdr1_rdr2(tstr, c, savedir):
+    channel = au.Channel(c)
+    obs = fu.DivObs(tstr)
+    rdr1 = rdrx.RDRR(obs.rdrrfname.path)
+    rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
+    if not os.path.exists(get_tb_savename(savedir, tstr)):
+        calibrate_tstr(tstr, savedir)
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
+
+    tb_molten_c = grep_channel_and_melt(tb, 'tb', channel, obs)
+    rad_molten_c = grep_channel_and_melt(rad, 'radiance', channel, obs)
+
+    mergecols = 'index det'.split()
+    rdr2 = rdr1_merged.merge(tb_molten_c, left_on=mergecols,
+                             right_on=mergecols)
+    rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
+    return rdr2
 
 
 def prepare_rdr2_write(df):
