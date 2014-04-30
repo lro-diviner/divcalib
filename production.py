@@ -136,24 +136,29 @@ def grep_channel_and_melt(indf, colname, channel, obs):
 
 
 def add_time_columns(df):
-    df.set_index('index', inplace=True)
-    df['hour'] = df.index.hour
-    df['minute'] = df.index.minute
-    df['second'] = df.index.second
-    df['micro'] = df.index.microsecond / 1000
-    df['year'] = df.index.year
-    df['month'] = df.index.month
-    df['date'] = df.index.day
+    tindex = pd.DatetimeIndex(df['index'])
+    df['hour'] = tindex.hour
+    df['minute'] = tindex.minute
+    df['second'] = tindex.second
+    df['micro'] = tindex.microsecond // 1000
+    df['year'] = tindex.year
+    df['month'] = tindex.month
+    df['date'] = tindex.day
     df['second'] = df.second.astype('str') + '.' + df.micro.astype('str')
+    df.drop('micro', axis=1, inplace=True)
 
 
-def merge_rdr1_rdr2(tstr, c, savedir):
+def merge_rdr1_rdr2(tstr, c, savedir, write=True):
     channel = au.Channel(c)
     obs = fu.DivObs(tstr)
     rdr1 = rdrx.RDRR(obs.rdrrfname.path)
     rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
     if not os.path.exists(get_tb_savename(savedir, tstr)):
-        calibrate_tstr(tstr, savedir)
+        try:
+            calibrate_tstr(tstr, savedir)
+        except:
+            logging.error('Calibration failed for {}'.format(tstr))
+            return
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
 
