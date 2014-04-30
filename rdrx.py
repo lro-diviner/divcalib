@@ -61,8 +61,7 @@ class RDRR(object):
         rdr1 = self.df
         df = rdr1[colnames(colbase, channel)]
         df = df.rename(columns=lambda x: int(x.split('_')[-1]))
-        df = df.reset_index()
-        return pd.melt(df, id_vars=['index'],
+        return pd.melt(df.reset_index(), id_vars=['index'],
                        var_name='det', value_name=colbase)
 
     def merge_with_molten(self, colbase, channel, target_df):
