@@ -65,6 +65,10 @@ def get_rad_savename(savedir, tstr):
     return os.path.join(savedir, tstr + '_radiance.hdf')
 
 
+def get_rdr2_savename(savedir, tstr, c):
+    return os.path.join(savedir, '{0}_C{1}_RDR_2.CSV'.format(tstr, c))
+
+
 def get_example_data():
     tstr = '2013031707'
     df = fu.get_clean_l1a(tstr)
