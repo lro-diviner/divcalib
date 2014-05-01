@@ -15,6 +15,7 @@ class Channel(object):
             self._mcs = c[:2]
             self._div = self.mcs_div_mapping[c[:2]]
         else:
+            c = int(c)
             self._div = c
             self._mcs = self.div_mcs_mapping[c]
 
