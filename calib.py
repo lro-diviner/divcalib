@@ -11,9 +11,8 @@ import file_utils as fu
 from exceptions import *
 from div_l1a_fix import correct_noise
 
-#logging.basicConfig(filename='divcalib.log',
-#	   	    format='%(asctime)s %(message)s',
-#		    level=logging.INFO)
+module_logger = logging.getLogger(name='diviner.calib')
+module_logger.setLevel(logging.INFO)
 
 channels = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']
 thermal_channels = channels[2:]
@@ -276,24 +275,24 @@ class CalBlock(object):
     def logging(self):
         "Perform sanity checks and log anomalies"
         if len(self.unique_bb_labels) > 1:
-            logging.info("Found more than one BB label in CalBlock"
-                         " at {}.".format(self.df.index[0]))
+            module_logger.info("Found more than one BB label in CalBlock"
+                               " at {}.".format(self.df.index[0]))
         if len(self.unique_st_labels) > 1:
-            logging.info("Found more than one ST label in CalBlock"
-                         " at {}.".format(self.df.index[0]))
+            module_logger.info("Found more than one ST label in CalBlock"
+                               " at {}.".format(self.df.index[0]))
         if len(self.unique_space_labels) < 2:
-            logging.info("Found less than 2 SPACE labels in CalBlock"
-                         " at {}.".format(self.df.index[0]))
+            module_logger.info("Found less than 2 SPACE labels in CalBlock"
+                               " at {}.".format(self.df.index[0]))
         if np.any(self.st_grouped.size() > config.ST_LENGTH):
-            logging.info("ST views larger than {} at {}."
+            module_logger.info("ST views larger than {} at {}."
                          .format(config.ST_LENGTH,
                                  self.df.index[0]))
         if np.any(self.space_grouped.size() > config.SPACE_LENGTH):
-            logging.info("Space-view larger than {} at {}."
+            module_logger.info("Space-view larger than {} at {}."
                          .format(config.SPACE_LENGTH,
                                  self.df.index[0]))
         if len(self.bbviews) > config.BB_LENGTH:
-            logging.info("BB-view larger than {} at {}."
+            module_logger.info("BB-view larger than {} at {}."
                          .format(config.BB_LENGTH,
                                  self.df.index[0]))
 
@@ -362,10 +361,10 @@ class CalBlock(object):
             offsets = pd.DataFrame(self.get_offsets()).T
             time = self.offsets_time
             if time == np.nan:
-                logging.error("Found no offset time at  {}. Should not even "
-                              "reached this point, as calblock must "
-                              "has_complete_spaceview."
-                              .format(self.df.index[0]))
+                module_logger.error(
+                    "Found no offset time at  {}. Should not even reached this"
+                    " point, as calblock must has_complete_spaceview."
+                    .format(self.df.index[0]))
                 return
             offsets.index = [self.offsets_time]
         return offsets
@@ -440,8 +439,8 @@ class Calibrator(object):
         else:
             self.df = df.copy()
 
-        logging.info("Calibrating from {} to {}.".format(df.index[0],
-                                                         df.index[-1]))
+        module_logger.info("Calibrating from {} to {}."
+                           .format(df.index[0], df.index[-1]))
         self.caldata = self.df[self.df.is_calib]
         self.calgrouped = self.caldata.groupby(self.df.calib_block_labels)
 
@@ -596,12 +595,13 @@ class Calibrator(object):
         gain_container = []
         offset_container = []
         for label, calblock in calblocks.iteritems():
-            logging.debug("Processing label {}".format(label))
+            module_logger.debug("Processing label {}".format(label))
             if not np.any(calblock[calblock.is_calib]):
                 n_moving = len(calblock[calblock.is_moving])
-                logging.warning("No caldata in calib_label at {}.  "
-                                "Found only {} moving samples."
-                                .format(self.df.index[0], n_moving))
+                module_logger.warning(
+                    "No caldata in calib_label at {}. "
+                    "Found only {} moving samples."
+                    .format(self.df.index[0], n_moving))
                 continue
             cb = CalBlock(calblock)
             gain_container.append(cb.get_gains())
@@ -680,9 +680,9 @@ class Calibrator(object):
         all_times = sdata.index.values.astype('float64')
 
         if len(self.gains) == 1:
-            logging.warning("Only one gain found. Propagating over whole hour "
-                            "at {}."
-                            .format(self.df.index[0]))
+            module_logger.warning("Only one gain found. "
+                                  "Propagating over whole hour at {}."
+                                  .format(self.df.index[0]))
             gains_interp = pd.DataFrame(index=sdata.index)
             for col in self.gains.columns:
                 gains_interp[col] = self.gains[col].values[0]
@@ -691,9 +691,9 @@ class Calibrator(object):
             gains_interp = self.interpolate_gains(bbcal_times, all_times)
 
         if len(self.offsets) == 1:
-            logging.warning("Only one offsets found. Propagating over whole "
-                            "hour at {}."
-                            .format(self.df.index[0]))
+            module_logger.warning("Only one offsets found. "
+                                  "Propagating over whole hour at {}."
+                                  .format(self.df.index[0]))
             offsets_interp = pd.DataFrame(index=sdata.index)
             for col in self.offsets.columns:
                 offsets_interp[col] = self.offsets[col].values[0]
@@ -709,7 +709,7 @@ class Calibrator(object):
         norm_radiance = (self.sdata - self.offsets_interp) * self.gains_interp
 
         if self.do_rad_corr:
-            logging.info("Performing radiance correction on {}"
+            module_logger.info("Performing radiance correction on {}"
                          .format(self.df.index[0]))
             # restricting to thermal dets is not required thanks to handling
             # it upstairs, so commenting it out for now.
@@ -730,7 +730,7 @@ class Calibrator(object):
                 self.norm_to_abs_converter.get_value(2, channel)
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
-        logging.debug('Calculated radiances.')
+        module_logger.debug('Calculated radiances.')
 
     def calc_tb(self):
         container = []
@@ -742,4 +742,4 @@ class Calibrator(object):
         self.tb = pd.concat(container, axis=1)
         # to not render existing code useless
         self.Tb = self.tb
-        logging.debug("Calculated brightness temperatures.")
+        module_logger.debug("Calculated brightness temperatures.")
