@@ -9,7 +9,8 @@ import logging
 import os
 import sys
 import rdrx
-import diviner
+import gc
+from diviner.exceptions import RDRR_NotFoundError
 
 
 formats = pd.read_csv(os.path.join(diviner.__path__[0],
@@ -148,11 +149,15 @@ def add_time_columns(df):
     df.drop('micro', axis=1, inplace=True)
 
 
-def merge_rdr1_rdr2(tstr, c, savedir, write=True):
-    channel = au.Channel(c)
+def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
+    logging.info('Processing {0}'.format(tstr))
+    rdr2savedir = '/raid1/maye/rdr_out/verification/beta_0_circular'
     obs = fu.DivObs(tstr)
-    rdr1 = rdrx.RDRR(obs.rdrrfname.path)
-    rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
+    try:
+        rdr1 = rdrx.RDRR(obs.rdrrfname.path)
+    except RDRR_NotFoundError:
+        logging.warning('RDRR not found for {}'.format(tstr))
+        return
     if not os.path.exists(get_tb_savename(savedir, tstr)):
         try:
             calibrate_tstr(tstr, savedir)
@@ -161,23 +166,30 @@ def merge_rdr1_rdr2(tstr, c, savedir, write=True):
             return
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
-
-    tb_molten_c = grep_channel_and_melt(tb, 'tb', channel, obs)
-    rad_molten_c = grep_channel_and_melt(rad, 'radiance', channel, obs)
-
     mergecols = 'index det'.split()
-    rdr2 = rdr1_merged.merge(tb_molten_c, left_on=mergecols,
-                             right_on=mergecols)
-    rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
-    add_time_columns(rdr2)
-    rdr2.orbit = rdr2.orbit.astype('int')
-    rdr2.det = rdr2.det.astype('int')
-    rdr2.drop('index', inplace=True, axis=1)
-    if write:
-        rdr2savedir = '/raid1/maye/rdr_out/verification'
+    for c in range(3, 10):
+        logging.debug('Processing channel {}'.format(c))
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
+        if os.path.exists(fname) and (not overwrite):
+            logging.debug("Found existing RDR2, skipping: {}"
+                          .format(os.path.basename(fname)))
+            return
+        channel = au.Channel(c)
+        rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
+
+        tb_molten_c = grep_channel_and_melt(tb, 'tb', channel, obs)
+        rad_molten_c = grep_channel_and_melt(rad, 'radiance', channel, obs)
+
+        rdr2 = rdr1_merged.merge(tb_molten_c, left_on=mergecols,
+                                 right_on=mergecols)
+        rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
+        add_time_columns(rdr2)
+        rdr2.orbit = rdr2.orbit.astype('int')
+        rdr2.det = rdr2.det.astype('int')
+        rdr2.drop('index', inplace=True, axis=1)
+        rdr2['c'] = channel.div
         rdr2.to_csv(fname, index=False)
-    return rdr2
+    gc.collect()
 
 
 def only_calibrate():
@@ -189,26 +201,28 @@ def only_calibrate():
         timestrings = f.readlines()
 
     savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Parallel(n_jobs=8,
+    Parallel(n_jobs=4,
              verbose=5)(delayed(calibrate_tstr)
                         (tstr.strip(), savedir) for tstr in timestrings)
 
 
 def verification_production():
-    logging.basicConfig(filename='divcalib_verification_run.log',
+    logging.basicConfig(filename='divcalib_verif_beta0circ.log',
                         format='%(asctime)s -%(levelname)s- %(message)s',
-                        level=logging.INFO)
+                        level=logging.DEBUG)
 
-    tstrings = beta_90_circular_orbit()
+    tstrings = beta_0_circular_orbit()
     savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Paralel(n_jobs=8,
-            verbose=5)(delayed(merge_rdr1_rdr2)
-                       (tstr, 7, savedir) for tstr in tstrings[:2])
+    Parallel(n_jobs=1,
+             verbose=5)(delayed(merge_rdr1_rdr2)
+                        (tstr, savedir, overwrite=False)
+                        for tstr in tstrings[:10])
 
 
 if __name__ == '__main__':
     #only_calibrate()
     verification_production()
+
 
 # def prepare_rdr2_write(df):
 #     pass
