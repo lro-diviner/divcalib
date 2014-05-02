@@ -12,7 +12,7 @@ import rdrx
 import gc
 from diviner.exceptions import RDRR_NotFoundError
 
-
+module_logger = logging.getLogger(name='diviner.production')
 formats = pd.read_csv(os.path.join(diviner.__path__[0],
                       'data',
                       'joined_format_file.csv'))
@@ -150,30 +150,37 @@ def add_time_columns(df):
 
 
 def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
-    logging.info('Processing {0}'.format(tstr))
-    rdr2savedir = '/raid1/maye/rdr_out/verification/beta_0_circular'
+    # hacky setup
+    rdr2savedir = '/raid1/maye/rdr_out/verification/beta_90_circular'
+
+    # quick check if all channel RDR2 already exist:
+    for c in range(8, 10):
+        fname = get_rdr2_savename(rdr2savedir, tstr, c)
+        if os.path.exists(fname) and (not overwrite):
+            module_logger.debug("Found existing RDR2, skipping: {}"
+                                .format(os.path.basename(fname)))
+            return
+
+    # start processing
+    module_logger.info('Processing {0}'.format(tstr))
     obs = fu.DivObs(tstr)
     try:
         rdr1 = rdrx.RDRR(obs.rdrrfname.path)
     except RDRR_NotFoundError:
-        logging.warning('RDRR not found for {}'.format(tstr))
+        module_logger.warning('RDRR not found for {}'.format(tstr))
         return
     if not os.path.exists(get_tb_savename(savedir, tstr)):
         try:
             calibrate_tstr(tstr, savedir)
         except:
-            logging.error('Calibration failed for {}'.format(tstr))
+            module_logger.error('Calibration failed for {}'.format(tstr))
             return
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
     mergecols = 'index det'.split()
-    for c in range(3, 10):
-        logging.debug('Processing channel {}'.format(c))
+    for c in range(8, 10):
+        module_logger.debug('Processing channel {}'.format(c))
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
-        if os.path.exists(fname) and (not overwrite):
-            logging.debug("Found existing RDR2, skipping: {}"
-                          .format(os.path.basename(fname)))
-            return
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
 
@@ -184,7 +191,11 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
                                  right_on=mergecols)
         rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
         add_time_columns(rdr2)
-        rdr2.orbit = rdr2.orbit.astype('int')
+        try:
+            rdr2.orbit = rdr2.orbit.astype('int')
+        except ValueError:
+            if len(rdr2.orbit.value_counts() == 0):  # all NaNs
+                rdr2.orbit = -9999
         rdr2.det = rdr2.det.astype('int')
         rdr2.drop('index', inplace=True, axis=1)
         rdr2['c'] = channel.div
@@ -193,10 +204,6 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
 
 
 def only_calibrate():
-    logging.basicConfig(filename='divcalib_only_calibrate.log',
-                        format='%(asctime)s -%(levelname)s- %(message)s',
-                        level=logging.INFO)
-
     with open('/u/paige/maye/src/diviner/data/2010120102_2010122712.txt') as f:
         timestrings = f.readlines()
 
@@ -207,20 +214,33 @@ def only_calibrate():
 
 
 def verification_production():
-    logging.basicConfig(filename='divcalib_verif_beta0circ.log',
-                        format='%(asctime)s -%(levelname)s- %(message)s',
-                        level=logging.DEBUG)
-
-    tstrings = beta_0_circular_orbit()
+    tstrings = beta_90_circular_orbit()
+    # l1a save folder
     savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Parallel(n_jobs=1,
-             verbose=5)(delayed(merge_rdr1_rdr2)
-                        (tstr, savedir, overwrite=False)
-                        for tstr in tstrings[:10])
+    Parallel(n_jobs=6,
+             verbose=8)(delayed(merge_rdr1_rdr2)
+                        (tstr, savedir, overwrite=True)
+                        for tstr in tstrings)
 
 
 if __name__ == '__main__':
     #only_calibrate()
+    logger = logging.getLogger(name='diviner')
+    logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler('divcalib_verif_beta90circ.log')
+    fh.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler(stream=None)
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
+                                  '%(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    #
+    # set rdr2 folder above!!
+    #
     verification_production()
 
 
