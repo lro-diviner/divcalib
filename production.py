@@ -12,7 +12,11 @@ import rdrx
 import gc
 from diviner.exceptions import RDRR_NotFoundError
 
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
+                              '%(message)s')
+
 module_logger = logging.getLogger(name='diviner.production')
+module_logger.setFormatter(formatter)
 formats = pd.read_csv(os.path.join(diviner.__path__[0],
                       'data',
                       'joined_format_file.csv'))
@@ -80,7 +84,7 @@ def get_example_data():
 
 
 def calibrate_tstr(tstr, savedir):
-    print(tstr)
+    module_logger.info('Calibrating {}'.format(tstr))
     sys.stdout.flush()
     df = fu.open_and_accumulate(tstr=tstr)
     try:
@@ -233,8 +237,6 @@ if __name__ == '__main__':
     ch = logging.StreamHandler(stream=None)
     ch.setLevel(logging.INFO)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
-                                  '%(message)s')
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     logger.addHandler(fh)
