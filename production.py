@@ -94,6 +94,14 @@ def calibrate_tstr(tstr, savedir):
     rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), 'df')
 
 
+def only_calibrate(timestrings):
+
+    savedir = '/raid1/maye/rdr_out/only_calibrate'
+    Parallel(n_jobs=4,
+             verbose=5)(delayed(calibrate_tstr)
+                        (tstr.strip(), savedir) for tstr in timestrings)
+
+
 def melt_and_merge_rdr1(rdrxobject, c):
     """Melt and merge required columns out of RDRx file.
 
@@ -150,11 +158,13 @@ def add_time_columns(df):
 
 
 def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
+    c_start = 3
+    c_end = 9
     # hacky setup
-    rdr2savedir = '/raid1/maye/rdr_out/verification/beta_90_circular'
+    rdr2savedir = '/raid1/maye/rdr_out/verification/beta_0_elliptical'
 
     # quick check if all channel RDR2 already exist:
-    for c in range(8, 10):
+    for c in range(c_start, c_end+1):
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
         if os.path.exists(fname) and (not overwrite):
             module_logger.debug("Found existing RDR2, skipping: {}"
@@ -178,7 +188,7 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
     mergecols = 'index det'.split()
-    for c in range(8, 10):
+    for c in range(c_start, c_end+1):
         module_logger.debug('Processing channel {}'.format(c))
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
         channel = au.Channel(c)
@@ -203,18 +213,9 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
     gc.collect()
 
 
-def only_calibrate():
-    with open('/u/paige/maye/src/diviner/data/2010120102_2010122712.txt') as f:
-        timestrings = f.readlines()
-
-    savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Parallel(n_jobs=4,
-             verbose=5)(delayed(calibrate_tstr)
-                        (tstr.strip(), savedir) for tstr in timestrings)
-
 
 def verification_production():
-    tstrings = beta_90_circular_orbit()
+    tstrings = beta_0_elliptical_orbit()
     # l1a save folder
     savedir = '/raid1/maye/rdr_out/only_calibrate'
     Parallel(n_jobs=6,
@@ -227,7 +228,7 @@ if __name__ == '__main__':
     #only_calibrate()
     logger = logging.getLogger(name='diviner')
     logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler('divcalib_verif_beta90circ.log')
+    fh = logging.FileHandler('divcalib_verif_beta0ellipt.log')
     fh.setLevel(logging.DEBUG)
     ch = logging.StreamHandler(stream=None)
     ch.setLevel(logging.INFO)
