@@ -33,6 +33,20 @@ def read_and_clean(fname):
     return [i.strip() for i in tstrings]
 
 
+def Ben_2010():
+    fname = os.path.join(diviner.__path__[0],
+                         'data',
+                         'A14D2010.txt')
+    return read_and_clean(fname)
+
+
+def Ben_2012():
+    fname = os.path.join(diviner.__path__[0],
+                         'data',
+                         'A14D2012.txt')
+    return read_and_clean(fname)
+
+
 def beta_0_circular_orbit():
     fname = os.path.join(diviner.__path__[0],
                          'data',
@@ -165,7 +179,7 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
     c_start = 3
     c_end = 9
     # hacky setup
-    rdr2savedir = '/raid1/maye/rdr_out/verification/beta_0_elliptical'
+    rdr2savedir = '/raid1/maye/rdr_out/verification/Ben_2010'
 
     # quick check if all channel RDR2 already exist:
     for c in range(c_start, c_end+1):
@@ -219,7 +233,7 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
 
 
 def verification_production():
-    tstrings = beta_0_elliptical_orbit()
+    tstrings = Ben_2010()
     # l1a save folder
     savedir = '/raid1/maye/rdr_out/only_calibrate'
     Parallel(n_jobs=6,
@@ -232,7 +246,7 @@ if __name__ == '__main__':
     #only_calibrate()
     logger = logging.getLogger(name='diviner')
     logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler('divcalib_verif_beta0ellipt.log')
+    fh = logging.FileHandler('divcalib_verif_ben_2010.log')
     fh.setLevel(logging.DEBUG)
     ch = logging.StreamHandler(stream=None)
     ch.setLevel(logging.INFO)
