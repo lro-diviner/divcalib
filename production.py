@@ -16,7 +16,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
                               '%(message)s')
 
 module_logger = logging.getLogger(name='diviner.production')
-module_logger.setFormatter(formatter)
+
 formats = pd.read_csv(os.path.join(diviner.__path__[0],
                       'data',
                       'joined_format_file.csv'))
