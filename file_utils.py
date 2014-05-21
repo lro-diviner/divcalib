@@ -46,7 +46,7 @@ else:
     l1adatapath = os.path.join(feipath, 'DIV:opsL1A', 'data')
     rdrdatapath = os.path.join(feipath, 'DIV:opsRdr', 'data')
     rdrrdatapath = '/luna7/marks/rdrr_data'
-    rdrsdatapath = '/luna7/marks/rdrs_data'
+    rdrsdatapath = '/luna6/marks/rdrs_data'
 
 
 #
