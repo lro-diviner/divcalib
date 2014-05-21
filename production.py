@@ -33,47 +33,79 @@ def read_and_clean(fname):
     return [i.strip() for i in tstrings]
 
 
-def Ben_2010():
-    fname = os.path.join(diviner.__path__[0],
-                         'data',
-                         'A14D2010.txt')
-    return read_and_clean(fname)
+class Configurator(object):
+    def __init__(self, run_name, overwrite=False, c_start=3, c_end=9,
+                 return_df=False):
+        self.run_name = run_name
+        self.tstrings = getattr(self, run_name)
+        self.overwrite = overwrite
+        self.c_start = c_start
+        self.c_end = c_end
+        self.return_df = return_df
+        # l1a save folder
+        self.savedir = '/raid1/maye/rdr_out/only_calibrate'
 
+        logger = logging.getLogger(name='diviner')
+        logger.setLevel(logging.DEBUG)
+        logfname = 'divcalib_verif_' + run_name + '.log'
+        fh = logging.FileHandler(logfname)
+        fh.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler(stream=None)
+        ch.setLevel(logging.DEBUG)
 
-def Ben_2012():
-    fname = os.path.join(diviner.__path__[0],
-                         'data',
-                         'A14D2012.txt')
-    return read_and_clean(fname)
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        logger.addHandler(fh)
+        logger.addHandler(ch)
 
+    @property
+    def rdr2savedir(self):
+        return '/raid1/maye/rdr_out/verification/' + self.run_name
 
-def beta_0_circular_orbit():
-    fname = os.path.join(diviner.__path__[0],
-                         'data',
-                         '2009082321_2009092002.txt')
-    return read_and_clean(fname)
+    @property
+    def Ben_2010(self):
+        fname = os.path.join(diviner.__path__[0],
+                             'data',
+                             'A14D2010.txt')
+        return read_and_clean(fname)
 
+    @property
+    def Ben_2012(self):
+        fname = os.path.join(diviner.__path__[0],
+                             'data',
+                             'A14D2012.txt')
+        return read_and_clean(fname)
 
-def beta_0_elliptical_orbit():
-    fname = os.path.join(diviner.__path__[0],
-                         'data',
-                         '2012022408_2012032323.txt')
+    @property
+    def beta_0_circular(self):
+        "low beta, circular orbit."
+        fname = os.path.join(diviner.__path__[0],
+                             'data',
+                             '2009082321_2009092002.txt')
+        return read_and_clean(fname)
 
-    return read_and_clean(fname)
+    @property
+    def beta_0_elliptical(self):
+        "low beta, elliptical orbit"
+        fname = os.path.join(diviner.__path__[0],
+                             'data',
+                             '2012022408_2012032323.txt')
 
+        return read_and_clean(fname)
 
-def beta_90_circular_orbit():
-    fname = os.path.join(diviner.__path__[0],
-                         'data',
-                         '2010120102_2010122712.txt')
-    return read_and_clean(fname)
+    @property
+    def beta_90_circular(self):
+        fname = os.path.join(diviner.__path__[0],
+                             'data',
+                             '2010120102_2010122712.txt')
+        return read_and_clean(fname)
 
-
-def beta_90_elliptical_orbit():
-    fname = os.path.join(diviner.__path__[0],
-                         'data',
-                         '2012061211_2012062602.txt')
-    return read_and_clean(fname)
+    @property
+    def beta_90_elliptical(self):
+        fname = os.path.join(diviner.__path__[0],
+                             'data',
+                             '2012061211_2012062602.txt')
+        return read_and_clean(fname)
 
 
 def get_tb_savename(savedir, tstr):
@@ -175,19 +207,28 @@ def add_time_columns(df):
     df.drop('micro', axis=1, inplace=True)
 
 
-def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
-    c_start = 3
-    c_end = 9
+def merge_rdr1_rdr2(tstr, config):
+    module_logger.debug("Entered merge_rdr1_rdr2()")
+    c_start = config.c_start
+    c_end = config.c_end
     # hacky setup
-    rdr2savedir = '/raid1/maye/rdr_out/verification/Ben_2010'
+    rdr2savedir = config.rdr2savedir
+    savedir = config.savedir
+    overwrite = config.overwrite
 
-    # quick check if all channel RDR2 already exist:
+    channels_to_do = []
+    # check which channels are not done yet, if so.
+    get_out = True
     for c in range(c_start, c_end+1):
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
         if os.path.exists(fname) and (not overwrite):
             module_logger.debug("Found existing RDR2, skipping: {}"
                                 .format(os.path.basename(fname)))
-            return
+        else:
+            get_out = False
+            channels_to_do.append(c)
+    if get_out:
+        return
 
     # start processing
     module_logger.info('Processing {0}'.format(tstr))
@@ -206,8 +247,9 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
     tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
     rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
     mergecols = 'index det'.split()
-    for c in range(c_start, c_end+1):
-        module_logger.debug('Processing channel {}'.format(c))
+    to_return = []
+    for c in channels_to_do:
+        module_logger.debug('Processing channel {} of {}'.format(c, tstr))
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
@@ -227,37 +269,27 @@ def merge_rdr1_rdr2(tstr, savedir, overwrite=False):
         rdr2.det = rdr2.det.astype('int')
         rdr2.drop('index', inplace=True, axis=1)
         rdr2['c'] = channel.div
-        rdr2.to_csv(fname, index=False)
+        if config.return_df:
+            to_return.append(rdr2)
+        else:
+            rdr2.to_csv(fname, index=False, engine='fast')
     gc.collect()
-
+    if config.return_df:
+        return to_return
 
 
 def verification_production():
-    tstrings = Ben_2010()
-    # l1a save folder
-    savedir = '/raid1/maye/rdr_out/only_calibrate'
-    Parallel(n_jobs=6,
-             verbose=8)(delayed(merge_rdr1_rdr2)
-                        (tstr, savedir, overwrite=True)
-                        for tstr in tstrings)
+    config = Configurator('beta_0_circular', c_start=7, c_end=7,
+                          overwrite=True)
+    tstrings = config.tstrings
+
+    Parallel(n_jobs=8,
+             verbose=10)(delayed(merge_rdr1_rdr2)
+                        (tstr, config)
+                        for tstr in tstrings[:1])
 
 
 if __name__ == '__main__':
-    #only_calibrate()
-    logger = logging.getLogger(name='diviner')
-    logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler('divcalib_verif_ben_2010.log')
-    fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler(stream=None)
-    ch.setLevel(logging.INFO)
-
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    #
-    # set rdr2 folder above!!
-    #
     verification_production()
 
 
