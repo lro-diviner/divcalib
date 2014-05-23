@@ -35,6 +35,19 @@ def read_and_clean(fname):
 
 
 class Configurator(object):
+    test_names = [
+        'Ben_2010',
+        'Ben_2012',
+        'beta_0_circular',
+        'beta_0_elliptical',
+        'beta_90_circular',
+        'beta_90_elliptical'
+    ]
+
+    savedir = '/raid1/maye/rdr_out/only_calibrate'
+
+    rdr2_root = '/raid1/maye/rdr_out/verification'
+
     def __init__(self, run_name, overwrite=False, c_start=3, c_end=9,
                  return_df=False):
         self.run_name = run_name
@@ -44,7 +57,6 @@ class Configurator(object):
         self.c_end = c_end
         self.return_df = return_df
         # l1a save folder
-        self.savedir = '/raid1/maye/rdr_out/only_calibrate'
 
         logger = logging.getLogger(name='diviner')
         logger.setLevel(logging.DEBUG)
@@ -58,6 +70,13 @@ class Configurator(object):
         ch.setFormatter(formatter)
         logger.addHandler(fh)
         logger.addHandler(ch)
+
+    def get_other_folders(self):
+        others = []
+        for f in self.test_names:
+            if f != self.run_name:
+                others.append(f)
+        return others
 
     @property
     def rdr2savedir(self):
@@ -212,27 +231,52 @@ def add_time_columns(df):
     df.drop('micro', axis=1, inplace=True)
 
 
+def check_for_existing_files(config, tstr):
+    channels_to_do = []
+    # check which channels are not done yet, if so.
+    all_done = True
+    for c in range(config.c_start, config.c_end+1):
+        fname = get_rdr2_savename(config.rdr2savedir, tstr, c)
+        if path.exists(fname) and (not config.overwrite):
+            module_logger.debug("Found existing RDR2, skipping: {}"
+                                .format(path.basename(fname)))
+        else:
+            all_done = False
+            channels_to_do.append(c)
+    return all_done, channels_to_do
+
+
+def symlink_existing_files(config, tstr):
+    """Find and symlink existing files to avoid duplication."""
+
+    for c in range(config.c_start, config.c_end+1):
+        path_here = get_rdr2_savename(config.rdr2savedir, tstr, c)
+        # if I have the file in current folder, no need to look it up in others
+        if path.exists(path_here):
+            continue
+        for folder in config.get_other_folders():
+            othersavedir = path.join(config.rdr2_root, folder)
+            otherpath = get_rdr2_savename(othersavedir, tstr, c)
+            if path.exists(otherpath):
+                os.symlink(otherpath, path_here)
+                module_logger.info("Symlinked {} into {}".
+                                   format(otherpath, path_here))
+
+
 def merge_rdr1_rdr2(tstr, config):
     module_logger.debug("Entered merge_rdr1_rdr2()")
-    c_start = config.c_start
-    c_end = config.c_end
     # hacky setup
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
-    overwrite = config.overwrite
 
-    channels_to_do = []
-    # check which channels are not done yet, if so.
-    get_out = True
-    for c in range(c_start, c_end+1):
-        fname = get_rdr2_savename(rdr2savedir, tstr, c)
-        if os.path.exists(fname) and (not overwrite):
-            module_logger.debug("Found existing RDR2, skipping: {}"
-                                .format(os.path.basename(fname)))
-        else:
-            get_out = False
-            channels_to_do.append(c)
-    if get_out:
+    # first create symlinks to avoid duplication
+    symlink_existing_files(config, tstr)
+    # now determine whatever else is left to do:
+    all_done, channels_to_do = check_for_existing_files(config, tstr)
+
+    if all_done:
+        module_logger.info("Found nothing to do for {}. Returning.".
+                           format(tstr))
         return
 
     # start processing
