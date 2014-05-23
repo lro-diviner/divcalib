@@ -7,6 +7,7 @@ import pandas as pd
 import diviner
 import logging
 import os
+from os import path
 import sys
 import rdrx
 import gc
@@ -17,9 +18,9 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
 
 module_logger = logging.getLogger(name='diviner.production')
 
-formats = pd.read_csv(os.path.join(diviner.__path__[0],
-                      'data',
-                      'joined_format_file.csv'))
+formats = pd.read_csv(path.join(diviner.__path__[0],
+                                'data',
+                                'joined_format_file.csv'))
 
 cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
 cols_skip = 'c det tb radiance'.split()
@@ -34,6 +35,19 @@ def read_and_clean(fname):
 
 
 class Configurator(object):
+    test_names = [
+        'Ben_2010',
+        'Ben_2012',
+        'beta_0_circular',
+        'beta_0_elliptical',
+        'beta_90_circular',
+        'beta_90_elliptical'
+    ]
+
+    savedir = '/raid1/maye/rdr_out/only_calibrate'
+
+    rdr2_root = '/raid1/maye/rdr_out/verification'
+
     def __init__(self, run_name, overwrite=False, c_start=3, c_end=9,
                  return_df=False):
         self.run_name = run_name
@@ -43,7 +57,6 @@ class Configurator(object):
         self.c_end = c_end
         self.return_df = return_df
         # l1a save folder
-        self.savedir = '/raid1/maye/rdr_out/only_calibrate'
 
         logger = logging.getLogger(name='diviner')
         logger.setLevel(logging.DEBUG)
@@ -51,73 +64,80 @@ class Configurator(object):
         fh = logging.FileHandler(logfname)
         fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler(stream=None)
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(logging.INFO)
 
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
         logger.addHandler(fh)
         logger.addHandler(ch)
 
+    def get_other_folders(self):
+        others = []
+        for f in self.test_names:
+            if f != self.run_name:
+                others.append(f)
+        return others
+
     @property
     def rdr2savedir(self):
-        return '/raid1/maye/rdr_out/verification/' + self.run_name
+        return path.join(self.rdr2_root, self.run_name)
 
     @property
     def Ben_2010(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             'A14D2010.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14D2010.txt')
         return read_and_clean(fname)
 
     @property
     def Ben_2012(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             'A14D2012.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14D2012.txt')
         return read_and_clean(fname)
 
     @property
     def beta_0_circular(self):
         "low beta, circular orbit."
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2009082321_2009092002.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2009082321_2009092002.txt')
         return read_and_clean(fname)
 
     @property
     def beta_0_elliptical(self):
         "low beta, elliptical orbit"
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2012022408_2012032323.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2012022408_2012032323.txt')
 
         return read_and_clean(fname)
 
     @property
     def beta_90_circular(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2010120102_2010122712.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2010120102_2010122712.txt')
         return read_and_clean(fname)
 
     @property
     def beta_90_elliptical(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2012061211_2012062602.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2012061211_2012062602.txt')
         return read_and_clean(fname)
 
 
 def get_tb_savename(savedir, tstr):
-    return os.path.join(savedir, tstr + '_tb.hdf')
+    return path.join(savedir, tstr + '_tb.hdf')
 
 
 def get_rad_savename(savedir, tstr):
-    return os.path.join(savedir, tstr + '_radiance.hdf')
+    return path.join(savedir, tstr + '_radiance.hdf')
 
 
 def get_rdr2_savename(savedir, tstr, c):
-    return os.path.join(savedir, '{0}_C{1}_RDR_2.CSV'.format(tstr, c))
+    return path.join(savedir, '{0}_C{1}_RDR_2.CSV'.format(tstr, c))
 
 
 def get_example_data():
@@ -186,9 +206,13 @@ def melt_and_merge_rdr1(rdrxobject, c):
     return final
 
 
-def grep_channel_and_melt(indf, colname, channel, obs):
+def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
     c = indf.filter(regex=channel.mcs+'_')[obs.time.tindex]
-    c = c.rename(columns=lambda x: int(x.split('_')[1]))
+    renamer = lambda x: int(x[-2:])
+    # for telescope B (channel.div > 6):
+    if (channel.div > 6) and invert_dets:
+        renamer = lambda x: 22 - int(x[-2:])
+    c = c.rename(columns=renamer)
     c_molten = pd.melt(c.reset_index(), id_vars=['index'], var_name='det',
                        value_name=colname)
     return c_molten
@@ -207,27 +231,52 @@ def add_time_columns(df):
     df.drop('micro', axis=1, inplace=True)
 
 
+def check_for_existing_files(config, tstr):
+    channels_to_do = []
+    # check which channels are not done yet, if so.
+    all_done = True
+    for c in range(config.c_start, config.c_end+1):
+        fname = get_rdr2_savename(config.rdr2savedir, tstr, c)
+        if path.exists(fname) and (not config.overwrite):
+            module_logger.debug("Found existing RDR2, skipping: {}"
+                                .format(path.basename(fname)))
+        else:
+            all_done = False
+            channels_to_do.append(c)
+    return all_done, channels_to_do
+
+
+def symlink_existing_files(config, tstr):
+    """Find and symlink existing files to avoid duplication."""
+
+    for c in range(config.c_start, config.c_end+1):
+        path_here = get_rdr2_savename(config.rdr2savedir, tstr, c)
+        # if I have the file in current folder, no need to look it up in others
+        if path.exists(path_here):
+            continue
+        for folder in config.get_other_folders():
+            othersavedir = path.join(config.rdr2_root, folder)
+            otherpath = get_rdr2_savename(othersavedir, tstr, c)
+            if path.exists(otherpath):
+                os.symlink(otherpath, path_here)
+                module_logger.info("Symlinked {} into {}".
+                                   format(otherpath, path_here))
+
+
 def merge_rdr1_rdr2(tstr, config):
     module_logger.debug("Entered merge_rdr1_rdr2()")
-    c_start = config.c_start
-    c_end = config.c_end
     # hacky setup
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
-    overwrite = config.overwrite
 
-    channels_to_do = []
-    # check which channels are not done yet, if so.
-    get_out = True
-    for c in range(c_start, c_end+1):
-        fname = get_rdr2_savename(rdr2savedir, tstr, c)
-        if os.path.exists(fname) and (not overwrite):
-            module_logger.debug("Found existing RDR2, skipping: {}"
-                                .format(os.path.basename(fname)))
-        else:
-            get_out = False
-            channels_to_do.append(c)
-    if get_out:
+    # first create symlinks to avoid duplication
+    symlink_existing_files(config, tstr)
+    # now determine whatever else is left to do:
+    all_done, channels_to_do = check_for_existing_files(config, tstr)
+
+    if all_done:
+        module_logger.info("Found nothing to do for {}. Returning.".
+                           format(tstr))
         return
 
     # start processing
@@ -238,7 +287,7 @@ def merge_rdr1_rdr2(tstr, config):
     except RDRR_NotFoundError:
         module_logger.warning('RDRR not found for {}'.format(tstr))
         return
-    if not os.path.exists(get_tb_savename(savedir, tstr)):
+    if not path.exists(get_tb_savename(savedir, tstr)):
         try:
             calibrate_tstr(tstr, savedir)
         except:
@@ -261,11 +310,12 @@ def merge_rdr1_rdr2(tstr, config):
                                  right_on=mergecols)
         rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
         add_time_columns(rdr2)
-        try:
-            rdr2.orbit = rdr2.orbit.astype('int')
-        except ValueError:
-            if len(rdr2.orbit.value_counts() == 0):  # all NaNs
-                rdr2.orbit = -9999
+        rdr2.fillna(-9999, inplace=True)
+        # try:
+        #     rdr2.orbit = rdr2.orbit.astype('int')
+        # except ValueError:
+        #     if len(rdr2.orbit.value_counts() == 0):  # all NaNs
+        #         rdr2.orbit = -9999
         rdr2.det = rdr2.det.astype('int')
         rdr2.drop('index', inplace=True, axis=1)
         rdr2['c'] = channel.div
@@ -279,14 +329,14 @@ def merge_rdr1_rdr2(tstr, config):
 
 
 def verification_production():
-    config = Configurator('beta_0_circular', c_start=7, c_end=7,
+    config = Configurator('Ben_2010', c_start=7, c_end=9,
                           overwrite=True)
     tstrings = config.tstrings
 
     Parallel(n_jobs=8,
-             verbose=10)(delayed(merge_rdr1_rdr2)
+             verbose=11)(delayed(merge_rdr1_rdr2)
                         (tstr, config)
-                        for tstr in tstrings[:1])
+                         for tstr in tstrings)
 
 
 if __name__ == '__main__':
@@ -340,7 +390,7 @@ if __name__ == '__main__':
 #     chid = 'C' + ch
 
 #     # open file and start write-loop
-#     f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'), 'w')
+#     f = open(path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'), 'w')
 
 #     # header defined above, globally for this file.
 #     print("Starting the write-out.")
