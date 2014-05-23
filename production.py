@@ -187,9 +187,13 @@ def melt_and_merge_rdr1(rdrxobject, c):
     return final
 
 
-def grep_channel_and_melt(indf, colname, channel, obs):
+def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
     c = indf.filter(regex=channel.mcs+'_')[obs.time.tindex]
-    c = c.rename(columns=lambda x: int(x.split('_')[1]))
+    renamer = lambda x: int(x[-2:])
+    # for telescope B (channel.div > 6):
+    if (channel.div > 6) and invert_dets:
+        renamer = lambda x: 22 - int(x[-2:])
+    c = c.rename(columns=renamer)
     c_molten = pd.melt(c.reset_index(), id_vars=['index'], var_name='det',
                        value_name=colname)
     return c_molten
@@ -262,11 +266,12 @@ def merge_rdr1_rdr2(tstr, config):
                                  right_on=mergecols)
         rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
         add_time_columns(rdr2)
-        try:
-            rdr2.orbit = rdr2.orbit.astype('int')
-        except ValueError:
-            if len(rdr2.orbit.value_counts() == 0):  # all NaNs
-                rdr2.orbit = -9999
+        rdr2.fillna(-9999, inplace=True)
+        # try:
+        #     rdr2.orbit = rdr2.orbit.astype('int')
+        # except ValueError:
+        #     if len(rdr2.orbit.value_counts() == 0):  # all NaNs
+        #         rdr2.orbit = -9999
         rdr2.det = rdr2.det.astype('int')
         rdr2.drop('index', inplace=True, axis=1)
         rdr2['c'] = channel.div
@@ -280,14 +285,14 @@ def merge_rdr1_rdr2(tstr, config):
 
 
 def verification_production():
-    config = Configurator('beta_0_circular', c_start=7, c_end=7,
+    config = Configurator('Ben_2010', c_start=7, c_end=9,
                           overwrite=True)
     tstrings = config.tstrings
 
     Parallel(n_jobs=8,
-             verbose=10)(delayed(merge_rdr1_rdr2)
+             verbose=11)(delayed(merge_rdr1_rdr2)
                         (tstr, config)
-                        for tstr in tstrings[:1])
+                         for tstr in tstrings)
 
 
 if __name__ == '__main__':
