@@ -7,6 +7,7 @@ import pandas as pd
 import diviner
 import logging
 import os
+from os import path
 import sys
 import rdrx
 import gc
@@ -17,9 +18,9 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
 
 module_logger = logging.getLogger(name='diviner.production')
 
-formats = pd.read_csv(os.path.join(diviner.__path__[0],
-                      'data',
-                      'joined_format_file.csv'))
+formats = pd.read_csv(path.join(diviner.__path__[0],
+                                'data',
+                                'joined_format_file.csv'))
 
 cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
 cols_skip = 'c det tb radiance'.split()
@@ -51,7 +52,7 @@ class Configurator(object):
         fh = logging.FileHandler(logfname)
         fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler(stream=None)
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(logging.INFO)
 
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
@@ -60,64 +61,64 @@ class Configurator(object):
 
     @property
     def rdr2savedir(self):
-        return '/raid1/maye/rdr_out/verification/' + self.run_name
+        return path.join(self.rdr2_root, self.run_name)
 
     @property
     def Ben_2010(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             'A14D2010.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14D2010.txt')
         return read_and_clean(fname)
 
     @property
     def Ben_2012(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             'A14D2012.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14D2012.txt')
         return read_and_clean(fname)
 
     @property
     def beta_0_circular(self):
         "low beta, circular orbit."
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2009082321_2009092002.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2009082321_2009092002.txt')
         return read_and_clean(fname)
 
     @property
     def beta_0_elliptical(self):
         "low beta, elliptical orbit"
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2012022408_2012032323.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2012022408_2012032323.txt')
 
         return read_and_clean(fname)
 
     @property
     def beta_90_circular(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2010120102_2010122712.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2010120102_2010122712.txt')
         return read_and_clean(fname)
 
     @property
     def beta_90_elliptical(self):
-        fname = os.path.join(diviner.__path__[0],
-                             'data',
-                             '2012061211_2012062602.txt')
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2012061211_2012062602.txt')
         return read_and_clean(fname)
 
 
 def get_tb_savename(savedir, tstr):
-    return os.path.join(savedir, tstr + '_tb.hdf')
+    return path.join(savedir, tstr + '_tb.hdf')
 
 
 def get_rad_savename(savedir, tstr):
-    return os.path.join(savedir, tstr + '_radiance.hdf')
+    return path.join(savedir, tstr + '_radiance.hdf')
 
 
 def get_rdr2_savename(savedir, tstr, c):
-    return os.path.join(savedir, '{0}_C{1}_RDR_2.CSV'.format(tstr, c))
+    return path.join(savedir, '{0}_C{1}_RDR_2.CSV'.format(tstr, c))
 
 
 def get_example_data():
@@ -238,7 +239,7 @@ def merge_rdr1_rdr2(tstr, config):
     except RDRR_NotFoundError:
         module_logger.warning('RDRR not found for {}'.format(tstr))
         return
-    if not os.path.exists(get_tb_savename(savedir, tstr)):
+    if not path.exists(get_tb_savename(savedir, tstr)):
         try:
             calibrate_tstr(tstr, savedir)
         except:
@@ -340,7 +341,7 @@ if __name__ == '__main__':
 #     chid = 'C' + ch
 
 #     # open file and start write-loop
-#     f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'), 'w')
+#     f = open(path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'), 'w')
 
 #     # header defined above, globally for this file.
 #     print("Starting the write-out.")
