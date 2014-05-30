@@ -30,10 +30,10 @@ setup(
     cmdclass = {'test': PyTest},
 
     #metadata
-    # author = "K.-Michael Aye",
-    # author_email = "kmichael.aye@gmail.com",
-    # description = "Software for the calibration of LRO Diviner data",
-    # license = "BSD 2-clause",
-    # keywords = "Diviner LRO calibration RDR",
-    # url = "http:www.diviner.ucla.edu",
+    author = "K.-Michael Aye",
+    author_email = "kmichael.aye@gmail.com",
+    description = "Software for the calibration of LRO Diviner data",
+    license = "BSD 2-clause",
+    keywords = "Diviner LRO calibration RDR",
+    url = "http:www.diviner.ucla.edu",
 )
