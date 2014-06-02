@@ -14,8 +14,8 @@ install:
   - conda init
   - conda update conda --yes
   - deps='pip numpy pandas pytest'
-  - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
-  - export PATH=$HOME/py/bin:$PATH
+  - conda create -p $HOME/mypy --yes $deps "python=$TRAVIS_PYTHON_VERSION"
+  - export PATH=$HOME/mypy/bin:$PATH
   # install ur own package into environment
   - python setup.py install
 
