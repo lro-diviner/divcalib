@@ -7,6 +7,8 @@ import sys
 import glob
 from dateutil.parser import parse as dateparser
 import os
+from os import path
+from os.path import join as pjoin
 import socket
 from datetime import timedelta
 from datetime import datetime as dt
@@ -27,24 +29,24 @@ hostname = hostname.split('.')[0]
 user = os.environ['USER']
 home = os.environ['HOME']
 if sys.platform == 'darwin':
-    datapath = os.path.join(home, 'data', 'diviner')
-    outpath = os.path.join(datapath, 'out')
-    kernelpath = os.path.join(home, 'data', 'spice', 'diviner')
-    codepath = os.path.join(home, 'Dropbox', 'src', 'diviner')
-    l1adatapath = os.path.join(datapath, 'l1a_data')
-    rdrdatapath = os.path.join(datapath, 'opsRDR')
-    rdrrdatapath = os.path.join(
+    datapath = pjoin(home, 'data', 'diviner')
+    outpath = pjoin(datapath, 'out')
+    kernelpath = pjoin(home, 'data', 'spice', 'diviner')
+    codepath = pjoin(home, 'Dropbox', 'src', 'diviner')
+    l1adatapath = pjoin(datapath, 'l1a_data')
+    rdrdatapath = pjoin(datapath, 'opsRDR')
+    rdrrdatapath = pjoin(
         os.environ['HOME'], 'data', 'diviner', 'rdrr_data')
-    rdrsdatapath = os.path.join(
+    rdrsdatapath = pjoin(
         os.environ['HOME'], 'data', 'diviner', 'rdrs_data')
 else:
-    datapath = os.path.join(os.path.sep, hostname, user)
-    outpath = os.path.join(datapath, 'rdr_out')
-    kernelpath = os.path.join(datapath, 'kernels')
-    codepath = os.path.join(os.environ['HOME'], 'src/diviner')
-    feipath = os.path.join(os.path.sep, 'luna1', 'marks', 'feidata')
-    l1adatapath = os.path.join(feipath, 'DIV:opsL1A', 'data')
-    rdrdatapath = os.path.join(feipath, 'DIV:opsRdr', 'data')
+    datapath = pjoin(path.sep, hostname, user)
+    outpath = pjoin(datapath, 'rdr_out')
+    kernelpath = pjoin(datapath, 'kernels')
+    codepath = pjoin(os.environ['HOME'], 'src/diviner')
+    feipath = pjoin(path.sep, 'luna1', 'marks', 'feidata')
+    l1adatapath = pjoin(feipath, 'DIV:opsL1A', 'data')
+    rdrdatapath = pjoin(feipath, 'DIV:opsRdr', 'data')
     rdrrdatapath = '/luna7/marks/rdrr_data'
     rdrsdatapath = '/luna6/marks/rdrs_data'
 
@@ -54,7 +56,7 @@ else:
 #
 def scp_l1a_file(tstr):
     src_host = 'luna4'
-    target_path = os.path.join(datapath, 'l1a_data')
+    target_path = pjoin(datapath, 'l1a_data')
     cmd = 'scp {0}:{1}/{2}_L1A.TAB {3}'.format(src_host, l1adatapath,
                                                tstr, target_path)
     call(cmd, shell=True)
@@ -62,7 +64,7 @@ def scp_l1a_file(tstr):
 
 def scp_opsRDR_file(tstr):
     src_host = 'luna4'
-    target_path = os.path.join(datapath, 'opsRDR')
+    target_path = pjoin(datapath, 'opsRDR')
     cmd = 'scp {0}:{1}/{2}_RDR.TAB.zip {3}'.format(src_host, rdrdatapath,
                                                    tstr, target_path)
     call(cmd, shell=True)
@@ -81,7 +83,7 @@ def get_tstr(indata):
         return t.strftime("%Y%m%d%H")
     else:
         # filename string
-        basename = os.path.basename(indata)
+        basename = path.basename(indata)
         return basename[:10]
 
 
@@ -91,7 +93,7 @@ def tstr_to_datetime(tstr):
 
 
 def fname_to_tstr(fname):
-    return os.path.basename(fname)[:10]
+    return path.basename(fname)[:10]
 
 
 def fname_to_tindex(fname):
@@ -109,14 +111,14 @@ def tstr_to_tindex(tstr):
 
 
 def tstr_to_l1a_fname(tstr):
-    return os.path.join(l1adatapath, tstr + '_L1A.TAB')
+    return pjoin(l1adatapath, tstr + '_L1A.TAB')
 
 
 #
 # Tools for data output to tables
 #
 def get_month_sample_path_from_mode(mode):
-    return os.path.join(datapath, 'rdr20_month_samples', mode)
+    return pjoin(datapath, 'rdr20_month_samples', mode)
 
 
 class DivTime(object):
@@ -165,7 +167,7 @@ class DivDay(DivTime):
 class DivObs(object):
     @classmethod
     def from_fname(cls, fname):
-        basename = os.path.basename(fname)
+        basename = path.basename(fname)
         return cls(basename[:10])
 
     def __init__(self, tstr):
@@ -206,14 +208,14 @@ class FileName(object):
 
     @classmethod
     def from_tstr(cls, tstr):
-        fname = os.path.join(cls.datapath, tstr + cls.ext)
+        fname = pjoin(cls.datapath, tstr + cls.ext)
         return cls(fname)
 
     def __init__(self, fname):
         super(FileName, self).__init__()
-        self.basename = os.path.basename(fname)
-        self.dirname = os.path.dirname(fname)
-        self.file_id, self.ext = os.path.splitext(self.basename)
+        self.basename = path.basename(fname)
+        self.dirname = path.dirname(fname)
+        self.file_id, self.ext = path.splitext(self.basename)
         self.tstr = self.file_id.split('_')[0]
         # as Diviner FILES only exist in separations of hours I use DivHour
         # here:
@@ -231,7 +233,7 @@ class FileName(object):
 
     @property
     def fname(self):
-        return os.path.join(self.dirname, self.tstr + self.rest)
+        return pjoin(self.dirname, self.tstr + self.rest)
 
 
 class L1AFileName(FileName):
@@ -343,7 +345,7 @@ class RDRReader(object):
 
     @classmethod
     def from_tstr(cls, tstr):
-        fnames = glob.glob(os.path.join(cls.datapath,
+        fnames = glob.glob(pjoin(cls.datapath,
                                         tstr + '*_RDR.TAB.zip'))
         return cls(fname=fnames[0])
 
@@ -355,7 +357,7 @@ class RDRReader(object):
         self.read_df = self.open
 
     def find_fnames(self):
-        self.fnames = glob.glob(os.path.join(self.datapath,
+        self.fnames = glob.glob(pjoin(self.datapath,
                                              self.tstr + '*_RDR.TAB.zip'))
 
     def open_file(self):
@@ -497,18 +499,14 @@ def parse_descriptor(fpath):
 
 
 def get_div247_dtypes():
-    if 'darwin' in sys.platform:
-        despath = '/Users/maye/data/diviner/div247/div247.des'
-    else:
-        despath = '/u/paige/maye/src/diviner/div247.des'
+    import diviner
+    despath = pjoin(diviner.__path__[0], 'data', 'div247.des')
     return parse_descriptor(despath)
 
 
 def get_div38_dtypes():
-    if 'darwin' in sys.platform:
-        despath = '/Users/maye/data/diviner/div38/div38.des'
-    else:
-        despath = os.path.join(codepath, 'data/div38.des')
+    import diviner
+    despath = pjoin(diviner.__path__[0], 'data', 'div38.des')
     return parse_descriptor(despath)
 
 #
@@ -556,10 +554,10 @@ def folder_to_df(folder, top_end=None, verbose=False):
 
 
 def get_storename(folder):
-    path = os.path.realpath(folder)
+    path = path.realpath(folder)
     dirname = '/luna4/maye/data/h5_div247'
-    basename = os.path.basename(path)
-    storename = os.path.join(dirname, basename + '.h5')
+    basename = path.basename(path)
+    storename = pjoin(dirname, basename + '.h5')
     return storename
 
 
@@ -610,15 +608,15 @@ class DataPump(object):
 
     def __init__(self, fname_pattern=None, tstr=None, fnames_only=False):
         self.fnames_only = fnames_only
-        if fname_pattern and os.path.exists(fname_pattern):
-            if os.path.isfile(fname_pattern):
+        if fname_pattern and path.exists(fname_pattern):
+            if path.isfile(fname_pattern):
                 self.get_df(fname_pattern)
-            elif os.path.isdir(fname_pattern):
+            elif path.isdir(fname_pattern):
                 pass
 
         self.tstr = tstr
         self.current_time = dateparser(tstr)
-        self.fname = os.path.join(datapath,
+        self.fname = pjoin(datapath,
                                   self.current_time.strftime("%Y%m%d%H"))
         self.increment = timedelta(hours=1)
 
@@ -626,7 +624,7 @@ class DataPump(object):
     #    for path, dirlist, filelist in os.walk(top)
 
     def get_fnames(self):
-        dirname = os.path.dirname(self.fname)
+        dirname = path.dirname(self.fname)
         fnames = glob.glob(dirname + '/*.div247')
         fnames.sort()
         self.fnames = fnames
@@ -652,7 +650,7 @@ class DataPump(object):
 
 
 class H5DataPump(object):
-    datapath = os.path.join(datapath, 'h5_div247')
+    datapath = pjoin(datapath, 'h5_div247')
 
     def __init__(self, tstr):
         self.tstr = tstr
@@ -662,7 +660,7 @@ class H5DataPump(object):
         self.fnames.sort()
 
     def get_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.tstr[:4] + '*'))
+        return glob.glob(pjoin(self.datapath, self.tstr[:4] + '*'))
 
     def store_generator(self):
         for fname in self.fnames:
@@ -704,7 +702,7 @@ class DivXDataPump(object):
 
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
-        searchpath = os.path.join(
+        searchpath = pjoin(
             self.datapath, self.tstr[:6], self.tstr + '*')
         fnames = glob.glob(searchpath)
         if not fnames:
@@ -751,8 +749,8 @@ class DivXDataPump(object):
             new_time = start_time + timedelta(hours=i)
             basename = self.get_fname_from_time(new_time)
             print(basename)
-            dirname = os.path.dirname(self.fnames[0])
-            fname = os.path.join(dirname, basename)
+            dirname = path.dirname(self.fnames[0])
+            fname = pjoin(dirname, basename)
             l.append(self.process_one_file(fname))
         df = pd.concat(l)
         return self.clean_final_df(df)
@@ -778,12 +776,12 @@ class Div247DataPump(DivXDataPump):
 
 
 class Div38DataPump(DivXDataPump):
-    datapath = os.path.join(datapath, 'div38')
+    datapath = pjoin(datapath, 'div38')
     rec_dtype, keys = get_div38_dtypes()
     this_ext = '.div38'
 
     def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath, self.tstr + '*'))
+        return glob.glob(pjoin(self.datapath, self.tstr + '*'))
 
 
 class L1ADataFile(object):
@@ -862,7 +860,7 @@ def open_and_accumulate(tstr, minimum_number=3):
 
     # centerfile = L1ADataFile.from_tstr(tstr)
     obs = DivObs(tstr)
-    if not os.path.exists(obs.l1afname.path):
+    if not path.exists(obs.l1afname.path):
         raise L1ANotFoundError(obs.l1afname.path)
 
     dataframes = deque()
@@ -918,7 +916,7 @@ class L1ADataPump(DivXDataPump):
     this_ext = '_L1A.TAB'
 
     def find_fnames(self):
-        return glob.glob(os.path.join(self.datapath,
+        return glob.glob(pjoin(self.datapath,
                                       self.tstr + '*' + self.this_ext))
 
     def clean_final_df(self, df):
@@ -975,11 +973,11 @@ class RDRxReader(object):
 
 class RDRR_Reader(RDRxReader):
     exception = RDRR_NotFoundError
-    descriptorpath = os.path.join(rdrrdatapath, 'rdrr.des')
+    descriptorpath = pjoin(rdrrdatapath, 'rdrr.des')
     extension = '.rdrr'
 
 
 class RDRS_Reader(RDRxReader):
     exception = RDRS_NotFoundError
-    descriptorpath = os.path.join(rdrsdatapath, 'rdrs.des')
+    descriptorpath = pjoin(rdrsdatapath, 'rdrs.des')
     extension = '.rdrs'
