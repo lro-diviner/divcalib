@@ -8,7 +8,16 @@ python:
     - "2.7"
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: "pip install -r requirements.txt"
+install:
+  # Install conda
+  - pip install conda
+  - conda init
+  - conda update conda --yes
+  - deps='pandas'
+  - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
+  - export PATH=$HOME/py/bin:$PATH
+  # install ur own package into environment
+  - python setup.py install
 
-# # command to run tests, e.g. python setup.py test
-script: python setup.py develop && python setup.py test
+# command to run tests, e.g. python setup.py test
+script: python setup.py test
