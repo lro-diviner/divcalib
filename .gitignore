@@ -52,3 +52,5 @@ playing\ around.ipynb
 notebooks/Badly formatted files_files
 *.swp
 .spyderworkspace
+notebooks/**/*.csv
+notebooks/**/*.txt
