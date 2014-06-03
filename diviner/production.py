@@ -331,7 +331,7 @@ def merge_rdr1_rdr2(tstr, config):
 
 
 def verification_production():
-    for name in Configurator.test_names:
+    for name in Configurator.test_names[:3]:
         config = Configurator(name, c_start=3, c_end=9,
                               overwrite=True)
         tstrings = config.tstrings
