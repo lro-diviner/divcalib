@@ -1,4 +1,3 @@
-from pds.core.parser import Parser
 import StringIO
 import os
 import diviner
@@ -6,19 +5,18 @@ import pandas as pd
 
 
 def read_csv_format_file():
-    fname = os.path.join(diviner.__path__[0], 'data', 'joined_format_file.csv'))
+    fname = os.path.join(diviner.__path__[0], 'data', 'joined_format_file.csv')
     return pd.read_csv(fname)
 
 
 def create_formatdic_for_dataframe():
     """Generate format dictionary to be used for pandas.DataFrame.to_string().
-    
+
     Currently not in use, because of DataFrame.to_string bug:
     https://github.com/pydata/pandas/issues/4158
-    
+
     Saving this part, can be used for when to_string() is being repaired.
     """
-
 
     # general formatter
     def format_general(input, prec_string, type_string):
@@ -29,10 +27,8 @@ def create_formatdic_for_dataframe():
     def format_float(input, prec_string):
         return format_general(input, prec_string, type_string='f')
 
-
     def format_integer(input, prec_string):
         return format_general(input, prec_string, type_string='d')
-
 
     def date(input):
         # return '"{:>11}",'.format(input.strip())
@@ -40,125 +36,104 @@ def create_formatdic_for_dataframe():
 
     def utc(input):
         return '"{:>12}",'.format(input.strip())
-    
 
     def jdate(input):
         return format_float(input, '17.9')
 
-
     def orbit(input):
         return format_integer(input, '5')
-
 
     def sundist(input):
         return format_float(input, '7.5')
 
-
     def sunlat(input):
         return format_float(input, '8.5')
-
 
     def sunlon(input):
         return format_float(input, '9.5')
 
-
     def sclk(input):
         return format_float(input, '16.5')
-
 
     def sclatlon(input):
         return format_float(input, '9.5')
 
-
     def scradalt(input):
         return format_float(input, '11.5')
-
 
     def elaz_cmd(input):
         return format_float(input, '7.3')
 
-
     def af(input):
         return format_integer(input, '4')
-
 
     def orientlatlon(input):
         return format_float(input, '9.5')
 
-
     def c(input):
         return format_integer(input, '1')
-
 
     def det(input):
         return format_integer(input, '3')
 
-
     def vlook(input):
         return format_float(input, '9.6')
-
 
     def radiance(input):
         return format_float(input, '10.4')
 
-
     def tb(input):
         return format_float(input, '8.3')
-
 
     def clatlonemissunzenazi(input):
         return format_float(input, '9.5')
 
-
     def cloctime(input):
         return format_float(input, '8.5')
-
 
     def cphase(input):
         return format_float(input, '9.5')
 
-
     def flag(input):
         return format_integer(input, '1')
 
-
     def roi(input):
         return format_integer(input, '4')
-    
-    # this is the formatters dictionary for the dataframe.to_string() call  
-    format_dic = {'date':date,
-                  'utc':utc,
-                  'jdate':jdate,
-                  'orbit':orbit,
-                  'sundist':sundist,
-                  'sunlat':sunlat,
-                  'sunlon':sunlon,
-                  'sclk':sclk,
-                  'sclat':sclatlon,
-                  'sclon':sclatlon,
-                  'scrad':scradalt,
-                  'scalt':scradalt,
-                  'el_cmd':elaz_cmd,
-                  'az_cmd':elaz_cmd,
-                  'af':af,
-                  'orientlat':orientlatlon,
-                  'orientlon':orientlatlon,
-                  'c':c,
-                  'det':det,
-                  'vlookx':vlook,
-                  'vlooky':vlook,
-                  'vlookz':vlook,
-                  'radiance':radiance,
-                  'tb':tb,
-                  'clat':clatlonemissunzenazi,
-                  'clon':clatlonemissunzenazi,
-                  'cemis':clatlonemissunzenazi,
-                  'csunzen':clatlonemissunzenazi,
-                  'csunazi':clatlonemissunzenazi,
-                  'cloctime':cloctime,
-                  'qca':flag,
-                  'qge':flag,
-                  'qmi':flag}
+
+    # this is the formatters dictionary for the dataframe.to_string() call
+    format_dic = {'date': date,
+                  'utc': utc,
+                  'jdate': jdate,
+                  'orbit': orbit,
+                  'sundist': sundist,
+                  'sunlat': sunlat,
+                  'sunlon': sunlon,
+                  'sclk': sclk,
+                  'sclat': sclatlon,
+                  'sclon': sclatlon,
+                  'scrad': scradalt,
+                  'scalt': scradalt,
+                  'el_cmd': elaz_cmd,
+                  'az_cmd': elaz_cmd,
+                  'af': af,
+                  'orientlat': orientlatlon,
+                  'orientlon': orientlatlon,
+                  'c': c,
+                  'det': det,
+                  'vlookx': vlook,
+                  'vlooky': vlook,
+                  'vlookz': vlook,
+                  'radiance': radiance,
+                  'tb': tb,
+                  'clat': clatlonemissunzenazi,
+                  'clon': clatlonemissunzenazi,
+                  'cemis': clatlonemissunzenazi,
+                  'csunzen': clatlonemissunzenazi,
+                  'csunazi': clatlonemissunzenazi,
+                  'cloctime': cloctime,
+                  'qca': flag,
+                  'qge': flag,
+                  'qmi': flag}
 
     return format_dic
 
@@ -190,7 +165,7 @@ class Formatter(object):
                   (19,'vlookx','{:9.6f}'),
                   (20,'vlooky','{:9.6f}'),
                   (21,'vlookz','{:9.6f}')]
-              
+
     subformat_nominal = [
                       (22,'radiance','{:10.4f}'),
                       (23,'tb','{:8.3f}'),
@@ -214,7 +189,7 @@ class Formatter(object):
                       (29,'cloctime','{:8.1f}'),
                      ]
 
-    # when looking at the solar target, we calculate csunzen and csunazi for the 
+    # when looking at the solar target, we calculate csunzen and csunazi for the
     # illumination of the target
     subformat_solartarget = [
                       (22,'radiance','{:10.4f}'),
@@ -237,17 +212,17 @@ class Formatter(object):
                       (28,'csunazi','{:9.1f}'),
                       (29,'cloctime','{:8.1f}'),
                      ]
-                 
+
     subformat_rest = [
                       (30,'cphase','{:9.5f}'),
                       (31,'roi','{:4d}'),
                      ]
-    flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n', 
+    flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n',
              's', 'a', 'b']
-         
+
     for i,flag in enumerate(flags):
         subformat_rest += [(i+32, flag, '{:1d}')]
-       
+
     format_nominal = format_list + subformat_nominal + subformat_rest
     format_space = format_list + subformat_space + subformat_rest
     format_solartarget = format_list + subformat_solartarget + subformat_rest
