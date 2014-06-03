@@ -44,9 +44,9 @@ class Configurator(object):
         'beta_90_elliptical'
     ]
 
-    savedir = '/raid1/maye/rdr_out/only_calibrate'
+    savedir = '/raid1/maye/rdr_out/no_jpl_correction'
 
-    rdr2_root = '/raid1/maye/rdr_out/verification'
+    rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
 
     def __init__(self, run_name, overwrite=False, c_start=3, c_end=9,
                  return_df=False):
@@ -299,6 +299,8 @@ def merge_rdr1_rdr2(tstr, config):
     to_return = []
     for c in channels_to_do:
         module_logger.debug('Processing channel {} of {}'.format(c, tstr))
+        if not path.exists(rdr2savedir):
+            os.mkdir(rdr2savedir)
         fname = get_rdr2_savename(rdr2savedir, tstr, c)
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
@@ -329,14 +331,15 @@ def merge_rdr1_rdr2(tstr, config):
 
 
 def verification_production():
-    config = Configurator('Ben_2010', c_start=7, c_end=9,
-                          overwrite=True)
-    tstrings = config.tstrings
+    for name in Configurator.test_names:
+        config = Configurator(name, c_start=3, c_end=9,
+                              overwrite=True)
+        tstrings = config.tstrings
 
-    Parallel(n_jobs=8,
-             verbose=11)(delayed(merge_rdr1_rdr2)
-                        (tstr, config)
-                         for tstr in tstrings)
+        Parallel(n_jobs=8,
+                 verbose=11)(delayed(merge_rdr1_rdr2)
+                            (tstr, config)
+                             for tstr in tstrings)
 
 
 if __name__ == '__main__':
