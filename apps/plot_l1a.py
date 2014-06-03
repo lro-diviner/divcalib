@@ -6,10 +6,9 @@ from matplotlib.pyplot import show
 
 tstr = sys.argv[1]
 
-df= fu.get_clean_l1a(tstr)
+obs = fu.DivObs(tstr)
+df = obs.get_l1a()
 
 df['b1_11'].plot()
 
 show()
-
-
