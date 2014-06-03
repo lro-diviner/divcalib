@@ -1,6 +1,6 @@
 import ez_setup
-import sys
 ez_setup.use_setuptools()
+import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
