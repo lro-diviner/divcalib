@@ -8,26 +8,21 @@ from diviner import calib
 def cb(df):
     """Return a CalBlock object for testing."""
     from diviner import calib
-    from diviner import divconstants as config
     calblocks = calib.get_calib_blocks(df, 'calib')
     return calib.CalBlock(calblocks[1])
 
-def get_l1a(tstr):
-    obs = fu.DivObs(tstr)
-    l1a = obs.get_l1a()
-    return l1a
-
 tstr = '2010011318'
+
 
 class TestCalBlock:
     def test_Calibrator_init(self):
         tstr = '2010011318'
-        l1a = get_l1a(tstr)
-        rdr2 = calib.Calibrator(l1a)
+        obs = fu.DivObs(tstr)
+        df = obs.get_l1a()
+        calib.Calibrator(df)
 
     def test_calibrate(self):
-        l1a = get_l1a(tstr)
-        rdr2 = calib.Calibrator(l1a)
+        tstr = '2010011318'
+        df = fu.open_and_accumulate(tstr)
+        rdr2 = calib.Calibrator(df)
         rdr2.calibrate()
-        
-
