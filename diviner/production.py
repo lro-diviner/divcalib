@@ -330,8 +330,8 @@ def merge_rdr1_rdr2(tstr, config):
         return to_return
 
 
-def verification_production():
-    for name in Configurator.test_names[:3]:
+def verification_production(start=None, end=None):
+    for name in Configurator.test_names[start:end]:
         config = Configurator(name, c_start=3, c_end=9,
                               overwrite=True)
         tstrings = config.tstrings
@@ -343,7 +343,15 @@ def verification_production():
 
 
 if __name__ == '__main__':
-    verification_production()
+    import platform
+    node = platform.node()
+    if node.startswith('luna4'):
+        start = 0
+        end = 3
+    elif node.startswith('luna6'):
+        start = 3
+        end = None  # i.e. the end
+    verification_production(start, end)
 
 
 # def prepare_rdr2_write(df):
