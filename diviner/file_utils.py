@@ -15,8 +15,9 @@ from datetime import datetime as dt
 from data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 import logging
+from diviner import __path__
 from subprocess import call
-from diviner.exceptions import DivTimeLengthError,\
+from .exceptions import DivTimeLengthError,\
     RDRR_NotFoundError,\
     RDRS_NotFoundError,\
     L1ANotFoundError
@@ -500,13 +501,13 @@ def parse_descriptor(fpath):
 
 def get_div247_dtypes():
     import diviner
-    despath = pjoin(diviner.__path__[0], 'data', 'div247.des')
+    despath = pjoin(__path__[0], 'data', 'div247.des')
     return parse_descriptor(despath)
 
 
 def get_div38_dtypes():
     import diviner
-    despath = pjoin(diviner.__path__[0], 'data', 'div38.des')
+    despath = pjoin(__path__[0], 'data', 'div38.des')
     return parse_descriptor(despath)
 
 #
@@ -617,7 +618,7 @@ class DataPump(object):
         self.tstr = tstr
         self.current_time = dateparser(tstr)
         self.fname = pjoin(datapath,
-                                  self.current_time.strftime("%Y%m%d%H"))
+                           self.current_time.strftime("%Y%m%d%H"))
         self.increment = timedelta(hours=1)
 
     # def gen_fnames(self, pattern, top):
@@ -682,7 +683,7 @@ class DivXDataPump(object):
     Things missing is self.datapath to be set in deriving class.
     """
     tstr_parser = {4: '%Y', 6: '%Y%m',
-                      8: '%Y%m%d', 10: '%Y%m%d%H'}
+                   8: '%Y%m%d', 10: '%Y%m%d%H'}
 
     # overwrite in child class!!
     this_ext = '...'
@@ -851,6 +852,7 @@ def get_raw_l1a(tstr):
 def open_and_accumulate(tstr, minimum_number=3):
     """Open L1A datafile fname and accumulate neighboring data.
 
+    To explain why I accumulate first dirty files:
     One CAN NOT accumulate cleaned data files, because I rely on the numbering
     of calib-blocks to be unique!
     Each cleaning operation starts the numbering from 1 again!
@@ -917,7 +919,7 @@ class L1ADataPump(DivXDataPump):
 
     def find_fnames(self):
         return glob.glob(pjoin(self.datapath,
-                                      self.tstr + '*' + self.this_ext))
+                               self.tstr + '*' + self.this_ext))
 
     def clean_final_df(self, df):
         df = prepare_data(df)
