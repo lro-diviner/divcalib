@@ -13,7 +13,7 @@ install:
   - pip install conda
   - conda init
   - conda update conda --yes
-  - deps='pip numpy pandas pytest'
+  - deps='pip numpy pandas pytest pytables'
   - conda create -p $HOME/mypy --yes $deps "python=$TRAVIS_PYTHON_VERSION"
   - export PATH=$HOME/mypy/bin:$PATH
   

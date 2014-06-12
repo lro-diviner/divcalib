@@ -6,6 +6,7 @@ from scipy.interpolate import UnivariateSpline as Spline
 import logging
 from numpy import poly1d
 import os
+from diviner import __path__
 import divconstants as config
 import file_utils as fu
 from exceptions import *
@@ -101,7 +102,7 @@ class RBBTable(object):
     """Table class to convert between temperatures and radiances."""
     def __init__(self):
         super(RBBTable, self).__init__()
-        self.df = pd.read_hdf(os.path.join(fu.codepath,
+        self.df = pd.read_hdf(os.path.join(__path__[0],
                                            'data',
                                            't_to_norm_rad.hdf'),
                               'df')
@@ -194,7 +195,7 @@ class RadianceCorrection(object):
     def __init__(self, new_corr=True):
         super(RadianceCorrection, self).__init__()
         self.excelfile = pd.io.excel.ExcelFile(
-            os.path.join(fu.codepath,
+            os.path.join(__path__[0],
                          'data',
                          'Rn_vs_Rn_interp_coefficients_new.xlsx'))
         # the delivered new excel file has both the old and new coeffcients on
@@ -479,7 +480,7 @@ class Calibrator(object):
 
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.read_pickle(
-            os.path.join(fu.codepath, 'data',
+            os.path.join(__path__[0], 'data',
                          'Normalized_to_Absolute_Radiance.df'))
         # rename column names to match channel names here
         self.norm_to_abs_converter.columns = thermal_channels
