@@ -337,8 +337,9 @@ def merge_rdr1_rdr2(tstr, config):
         return to_return
 
 
-def verification_production():
-    for name in Configurator.test_names[:3]:
+def verification_production(runs):
+    """runs should be a list with strings from Configurator.test_names."""
+    for name in runs:
         config = Configurator(name, c_start=3, c_end=9,
                               overwrite=True)
         tstrings = config.tstrings
@@ -350,7 +351,11 @@ def verification_production():
 
 
 if __name__ == '__main__':
-    verification_production()
+    """Provide a comma-separated list as first argument for the run names."""
+    runs = sys.argv[1].split(',')
+    if runs == ['all']:
+        runs = Configurator.test_names
+    verification_production(runs)
 
 
 # def prepare_rdr2_write(df):
