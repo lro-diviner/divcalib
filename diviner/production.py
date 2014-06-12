@@ -100,6 +100,13 @@ class Configurator(object):
         return read_and_clean(fname)
 
     @property
+    def Ben_2012_2(self):
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14_HOURS.txt')
+        return read_and_clean(fname)
+
+    @property
     def beta_0_circular(self):
         "low beta, circular orbit."
         fname = path.join(diviner.__path__[0],
@@ -333,8 +340,9 @@ def merge_rdr1_rdr2(tstr, config):
         return to_return
 
 
-def verification_production(start=None, end=None):
-    for name in Configurator.test_names[start:end]:
+def verification_production(runs):
+    """runs should be a list with strings from Configurator.test_names."""
+    for name in runs:
         config = Configurator(name, c_start=3, c_end=9,
                               overwrite=True)
         tstrings = config.tstrings
@@ -346,15 +354,14 @@ def verification_production(start=None, end=None):
 
 
 if __name__ == '__main__':
-    import platform
-    node = platform.node()
-    if node.startswith('luna4'):
-        start = 0
-        end = 3
-    elif node.startswith('luna6'):
-        start = 3
-        end = None  # i.e. the end
-    verification_production(start, end)
+    """Provide a comma-separated list as first argument for the run names."""
+    if not sys.argv[1]:
+        print("Provide comma separated list of run names as parameter.")
+        sys.exit()
+    runs = sys.argv[1].split(',')
+    if runs == ['all']:
+        runs = Configurator.test_names
+    verification_production(runs)
 
 
 # def prepare_rdr2_write(df):
