@@ -97,6 +97,13 @@ class Configurator(object):
         return read_and_clean(fname)
 
     @property
+    def Ben_2012_2(self):
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14_HOURS.txt')
+        return read_and_clean(fname)
+
+    @property
     def beta_0_circular(self):
         "low beta, circular orbit."
         fname = path.join(diviner.__path__[0],
