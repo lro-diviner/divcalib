@@ -352,6 +352,9 @@ def verification_production(runs):
 
 if __name__ == '__main__':
     """Provide a comma-separated list as first argument for the run names."""
+    if not sys.argv[1]:
+        print("Provide comma separated list of run names as parameter.")
+        sys.exit()
     runs = sys.argv[1].split(',')
     if runs == ['all']:
         runs = Configurator.test_names
