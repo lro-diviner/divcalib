@@ -45,8 +45,11 @@ class Configurator(object):
     ]
 
     savedir = '/raid1/maye/rdr_out/no_jpl_correction'
-
+    if not os.path.exists(savedir):
+        os.makedirs(savedir)
     rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
+    if not os.path.exists(rdr2_root):
+        os.makedirs(rdr2_root)
 
     def __init__(self, run_name, overwrite=False, c_start=3, c_end=9,
                  return_df=False):
@@ -158,7 +161,7 @@ def calibrate_tstr(tstr, savedir):
             return
     except TypeError:
         return
-    rdr2 = calib.Calibrator(df, fix_noise=True)
+    rdr2 = calib.Calibrator(df, fix_noise=True, do_rad_corr=False)
     rdr2.calibrate()
     rdr2.Tb.to_hdf(get_tb_savename(savedir, tstr), 'df')
     rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), 'df')
