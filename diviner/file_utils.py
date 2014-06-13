@@ -480,9 +480,12 @@ def read_div_data(fname):
 
 
 def parse_descriptor(fpath):
-    f = open(fpath)
-    lines = f.readlines()
-    f.close()
+    if isinstance(fpath, list):
+        lines = fpath
+    else:
+        f = open(fpath)
+        lines = f.readlines()
+        f.close()
     s = pd.Series(lines)
     s = s.drop(0)
     val = s[1]
