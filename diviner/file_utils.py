@@ -578,9 +578,9 @@ def folder_to_df(folder, top_end=None, verbose=False):
 
 
 def get_storename(folder):
-    path = path.realpath(folder)
+    path = os.path.realpath(folder)
     dirname = '/luna4/maye/data/h5_div247'
-    basename = path.basename(path)
+    basename = os.path.basename(path)
     storename = pjoin(dirname, basename + '.h5')
     return storename
 
