@@ -34,6 +34,12 @@ def read_and_clean(fname):
     return [i.strip() for i in tstrings]
 
 
+def timestrings_from_start_end(start, end):
+    """Provide start and end in format YYYYmmdd HH:MM:SS."""
+    s = pd.Series(pd.date_range(start, end, freq='H'))
+    return s.map(lambda x: x.strftime('%Y%m%d%H')).values
+
+
 class Configurator(object):
     test_names = [
         'Ben_2010',
@@ -279,6 +285,9 @@ def merge_rdr1_rdr2(tstr, config):
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
 
+    if not path.exists(rdr2savedir):
+        os.mkdirs(rdr2savedir)
+
     # first create symlinks to avoid duplication
     symlink_existing_files(config, tstr)
     # now determine whatever else is left to do:
@@ -323,11 +332,6 @@ def merge_rdr1_rdr2(tstr, config):
         rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
         add_time_columns(rdr2)
         rdr2.fillna(-9999, inplace=True)
-        # try:
-        #     rdr2.orbit = rdr2.orbit.astype('int')
-        # except ValueError:
-        #     if len(rdr2.orbit.value_counts() == 0):  # all NaNs
-        #         rdr2.orbit = -9999
         rdr2.det = rdr2.det.astype('int')
         rdr2.drop('index', inplace=True, axis=1)
         rdr2['c'] = channel.div
@@ -354,14 +358,25 @@ def verification_production(runs):
 
 
 if __name__ == '__main__':
-    """Provide a comma-separated list as first argument for the run names."""
-    if not sys.argv[1]:
-        print("Provide comma separated list of run names as parameter.")
-        sys.exit()
-    runs = sys.argv[1].split(',')
-    if runs == ['all']:
-        runs = Configurator.test_names
-    verification_production(runs)
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-r", "--run_name", help="use predefined run_name from"
+                        " Configurator.")
+    group.add_argument('-s','--startstop', help="provide start and stop "
+                       "string comma-separated in ISO format.")
+
+    args = parser.parse_args()
+    if args.startstop:
+        start, stop = args.startstop.split(',')
+        print(start,stop)
+    else:
+        runs = args.run_name
+
+    # if runs == ['all']:
+    #     runs = Configurator.test_names
+    # verification_production(runs)
 
 
 # def prepare_rdr2_write(df):
