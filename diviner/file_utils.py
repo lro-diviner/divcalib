@@ -478,38 +478,58 @@ def read_div_data(fname):
 # tools for parsing binary data of Diviner
 #
 
+def get_dtypes_from_columns(keys):
+    return np.dtype([(key, 'f8') for key in keys])
+
 
 def parse_descriptor(fpath):
-    if isinstance(fpath, list):
-        lines = fpath
-    else:
-        f = open(fpath)
-        lines = f.readlines()
-        f.close()
+    f = open(fpath)
+    lines = f.readlines()
+    f.close()
     s = pd.Series(lines)
     s = s.drop(0)
-    val = s[1]
-    val2 = val.split(' ')
-    [i.strip().strip("'") for i in val2]
 
     def unpack_str(value):
         val2 = value.split(' ')
         t = [i.strip().strip("'") for i in val2]
         return t[0].lower()
+
     columns = s.map(unpack_str)
     keys = columns.values
-    rec_dtype = np.dtype([(key, 'f8') for key in keys])
+    rec_dtype = get_dtypes_from_columns(keys)
     return rec_dtype, keys
 
 
+def get_dtypes_from_binary_pipe(lines):
+    first = [i.split()[0].strip("'") for i in lines]
+    second = [i for i in first if i][1:]
+    keys = second[::2][:-1]
+    rec_dtype = get_dtypes_from_columns(keys)
+    return rec_dtype, keys
+
+
+def read_binary_pipe(fpath):
+    f = open(fpath)
+    lines = []
+    while True:
+        line = f.readline()
+        lines.append(line)
+        if 'end' in line:
+            break
+
+    rec_dtype, keys = get_dtypes_from_binary_pipe(lines)
+
+    data = np.fromfile(f, dtype=rec_dtype)
+    df = pd.DataFrame(data, columns=keys)
+    return df
+
+
 def get_div247_dtypes():
-    import diviner
     despath = pjoin(__path__[0], 'data', 'div247.des')
     return parse_descriptor(despath)
 
 
 def get_div38_dtypes():
-    import diviner
     despath = pjoin(__path__[0], 'data', 'div38.des')
     return parse_descriptor(despath)
 
