@@ -54,3 +54,5 @@ notebooks/Badly formatted files_files
 .spyderworkspace
 notebooks/**/*.csv
 notebooks/**/*.txt
+notebooks/plots
+*.sublime-*
