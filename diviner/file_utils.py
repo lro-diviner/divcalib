@@ -21,12 +21,11 @@ from .exceptions import DivTimeLengthError,\
     RDRR_NotFoundError,\
     RDRS_NotFoundError,\
     L1ANotFoundError
-
+from cliutils import cliargs
 # from plot_utils import ProgressBar
 import zipfile
 
-hostname = socket.gethostname()
-hostname = hostname.split('.')[0]
+hostname = socket.gethostname().split('.')[0]
 user = os.environ['USER']
 home = os.environ['HOME']
 if sys.platform == 'darwin':
@@ -55,11 +54,14 @@ else:
 #
 # data transport utilities
 #
+@cliargs
 def scp_l1a_file(tstr):
     src_host = 'luna4'
     target_path = pjoin(datapath, 'l1a_data')
-    cmd = 'scp {0}:{1}/{2}_L1A.TAB {3}'.format(src_host, l1adatapath,
+    src_datadir = '/luna1/marks/feidata/DIV:opsL1A/data'
+    cmd = 'scp {0}:{1}/{2}_L1A.TAB {3}'.format(src_host, src_datadir,
                                                tstr, target_path)
+    print(cmd)
     call(cmd, shell=True)
 
 
@@ -347,7 +349,7 @@ class RDRReader(object):
     @classmethod
     def from_tstr(cls, tstr):
         fnames = glob.glob(pjoin(cls.datapath,
-                                        tstr + '*_RDR.TAB.zip'))
+                                 tstr + '*_RDR.TAB.zip'))
         return cls(fname=fnames[0])
 
     def __init__(self, fname, nrows=None):
@@ -359,7 +361,7 @@ class RDRReader(object):
 
     def find_fnames(self):
         self.fnames = glob.glob(pjoin(self.datapath,
-                                             self.tstr + '*_RDR.TAB.zip'))
+                                      self.tstr + '*_RDR.TAB.zip'))
 
     def open_file(self):
         if self.fname.lower().endswith('.zip'):
