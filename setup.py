@@ -24,10 +24,16 @@ setup(
     version = "2.0beta1",
     packages = find_packages(),
 
-    install_requires = ['pandas>='+pandas_version],
+    install_requires = ['pandas>='+pandas_version, 'cliutils'],
     tests_require = ['pytest'],
 
     cmdclass = {'test': PyTest},
+
+    entry_points={
+        "console_scripts": [
+            'scp_l1a = diviner.file_utils:scp_l1a_file'
+            ]
+    },
 
     #metadata
     author = "K.-Michael Aye",
