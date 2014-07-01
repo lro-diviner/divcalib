@@ -16,11 +16,8 @@ rdrsext = '.rdrs'
 tstr_accumulate = '2010011315'
 l1afname = '/Users/maye/data/diviner/l1a_data/2013052205_L1A.TAB'
 
-# get luna marker to exclude some tests on laptop
-luna = pytest.mark.luna
 
-
-@luna
+@pytest.mark.luna
 def test_get_rdr_headers():
     fname_ops = os.path.join(fu.datapath, 'rdr_data', '2013052205_RDR.TAB.zip')
     rdr = fu.RDRReader(fname_ops)
