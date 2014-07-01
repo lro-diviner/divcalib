@@ -9,7 +9,7 @@ pandas_version = '0.13.1'
 class PyTest(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
-        self.test_args = ['-v', '-k DivHour']
+        self.test_args = ['-v', '-m', 'not luna']
         self.test_suite = True
 
     def run_tests(self):
