@@ -8,7 +8,6 @@ from numpy import poly1d
 import os
 from diviner import __path__
 import divconstants as config
-import file_utils as fu
 from exceptions import *
 from div_l1a_fix import correct_noise
 
