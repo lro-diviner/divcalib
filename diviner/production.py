@@ -34,10 +34,12 @@ def read_and_clean(fname):
     return [i.strip() for i in tstrings]
 
 
-def timestrings_from_start_end(start, end):
-    """Provide start and end in format YYYYmmdd HH:MM:SS."""
-    s = pd.Series(pd.date_range(start, end, freq='H'))
-    return s.map(lambda x: x.strftime('%Y%m%d%H')).values
+def calc_daterange(start, end):
+    """Return list of YYYYMMDDHH strings for each hour between start and end"""
+    dr = pd.daterange(fu.tstr_to_datetime(start),
+                      fu.tstr_to_datetime(end),
+                      freg='H')
+    return [fu.get_tstr(i) for i in dr]
 
 
 class Configurator(object):
@@ -57,10 +59,17 @@ class Configurator(object):
     if not os.path.exists(rdr2_root):
         os.makedirs(rdr2_root)
 
-    def __init__(self, run_name, overwrite=False, c_start=3, c_end=9,
-                 return_df=False):
-        self.run_name = run_name
-        self.tstrings = getattr(self, run_name)
+    def __init__(self, run_name=None, startstop=None, overwrite=False,
+                 c_start=3, c_end=9, return_df=False):
+        if run_name is not None:
+            self.run_name = run_name
+            self.tstrings = getattr(self, run_name)
+        elif startstop is not None:
+            self.start, self.stop = startstop
+            self.tstrings = calc_daterange(self.start, self.stop)
+        else:
+            print("Provide either run_name or startstop.")
+            sys.exit()
         self.overwrite = overwrite
         self.c_start = c_start
         self.c_end = c_end
@@ -344,39 +353,38 @@ def merge_rdr1_rdr2(tstr, config):
         return to_return
 
 
-def verification_production(runs):
-    """runs should be a list with strings from Configurator.test_names."""
-    for name in runs:
-        config = Configurator(name, c_start=3, c_end=9,
-                              overwrite=True)
-        tstrings = config.tstrings
-
-        Parallel(n_jobs=8,
-                 verbose=11)(delayed(merge_rdr1_rdr2)
-                            (tstr, config)
-                             for tstr in tstrings)
-
-
 if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--run_name", help="use predefined run_name from"
-                        " Configurator.")
-    group.add_argument('-s','--startstop', help="provide start and stop "
-                       "string comma-separated in ISO format.")
+                       " Configurator.")
+    group.add_argument('-s', '--startstop', help="provide start and stop "
+                       "string comma-separated in YYYYMMDDHH format.")
 
     args = parser.parse_args()
     if args.startstop:
         start, stop = args.startstop.split(',')
-        print(start,stop)
+        config = Configurator(startstop=(start, stop), overwrite=True)
+        tstrings = config.tstrings
+        Parallel(n_jobs=8,
+                 verbose=20)(delayed(merge_rdr1_rdr2)
+                            (tstr, config)
+                             for tstr in tstrings)
     else:
-        runs = args.run_name
+        runs = [args.run_name]
+        if runs == 'all':
+            runs = Configurator.test_names
+        for name in runs:
+            config = Configurator(name, c_start=3, c_end=9,
+                                  overwrite=True)
+            tstrings = config.tstrings
 
-    # if runs == ['all']:
-    #     runs = Configurator.test_names
-    # verification_production(runs)
+            Parallel(n_jobs=8,
+                     verbose=20)(delayed(merge_rdr1_rdr2)
+                                (tstr, config)
+                                 for tstr in tstrings)
 
 
 # def prepare_rdr2_write(df):
