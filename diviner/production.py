@@ -39,7 +39,7 @@ def calc_daterange(start, end):
     """Return list of YYYYMMDDHH strings for each hour between start and end"""
     dr = pd.date_range(fu.tstr_to_datetime(start),
                       fu.tstr_to_datetime(end),
-                      freg='H')
+                      freq='H')
     return [fu.get_tstr(i) for i in dr]
 
 
