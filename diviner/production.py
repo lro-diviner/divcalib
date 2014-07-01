@@ -68,7 +68,7 @@ class Configurator(object):
         elif startstop is not None:
             self.start, self.stop = startstop
             self.tstrings = calc_daterange(self.start, self.stop)
-            run_name = 'startstop'
+            self.run_name = start + '_' + stop
         else:
             print("Provide either run_name or startstop.")
             sys.exit()
@@ -80,7 +80,7 @@ class Configurator(object):
 
         logger = logging.getLogger(name='diviner')
         logger.setLevel(logging.DEBUG)
-        logfname = 'divcalib_verif_' + run_name + '.log'
+        logfname = 'divcalib_verif_' + self.run_name + '.log'
         fh = logging.FileHandler(logfname)
         fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler(stream=None)
