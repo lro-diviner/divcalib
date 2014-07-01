@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import division, print_function
 from diviner import calib
 from diviner import file_utils as fu
@@ -36,7 +37,7 @@ def read_and_clean(fname):
 
 def calc_daterange(start, end):
     """Return list of YYYYMMDDHH strings for each hour between start and end"""
-    dr = pd.daterange(fu.tstr_to_datetime(start),
+    dr = pd.date_range(fu.tstr_to_datetime(start),
                       fu.tstr_to_datetime(end),
                       freg='H')
     return [fu.get_tstr(i) for i in dr]
