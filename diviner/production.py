@@ -68,6 +68,7 @@ class Configurator(object):
         elif startstop is not None:
             self.start, self.stop = startstop
             self.tstrings = calc_daterange(self.start, self.stop)
+            run_name = 'startstop'
         else:
             print("Provide either run_name or startstop.")
             sys.exit()
