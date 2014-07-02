@@ -79,7 +79,7 @@ class Configurator(object):
         os.makedirs(rdr2_root)
 
     def __init__(self, run_name=None, startstop=None, overwrite=False,
-                 c_start=3, c_end=9, return_df=False):
+                 c_start=3, c_end=9, return_df=False, do_rad_corr=True):
         if run_name is not None:
             self.run_name = run_name
             self.tstrings = getattr(self, run_name)
@@ -201,7 +201,7 @@ def get_example_data():
     return rdr1, rdr2
 
 
-def calibrate_tstr(tstr, savedir):
+def calibrate_tstr(tstr, savedir, do_rad_corr):
     module_logger.info('Calibrating {}'.format(tstr))
     sys.stdout.flush()
     df = fu.open_and_accumulate(tstr=tstr)
@@ -210,7 +210,7 @@ def calibrate_tstr(tstr, savedir):
             return
     except TypeError:
         return
-    rdr2 = calib.Calibrator(df, fix_noise=True, do_rad_corr=False)
+    rdr2 = calib.Calibrator(df, fix_noise=True, do_rad_corr=do_rad_corr)
     rdr2.calibrate()
     rdr2.Tb.to_hdf(get_tb_savename(savedir, tstr), 'df')
     rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), 'df')
@@ -344,7 +344,7 @@ def merge_rdr1_rdr2(tstr, config):
         return
     if not path.exists(get_tb_savename(savedir, tstr)):
         try:
-            calibrate_tstr(tstr, savedir)
+            calibrate_tstr(tstr, savedir, config.do_rad_corr)
         except:
             module_logger.error('Calibration failed for {}'.format(tstr))
             return
@@ -384,21 +384,41 @@ if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--run_name", help="use predefined run_name from"
                        " Configurator.")
     group.add_argument('-s', '--startstop', help="provide start and stop "
                        "string comma-separated in YYYYMMDDHH format.")
+
     overwrite_group = parser.add_mutually_exclusive_group()
-    overwrite_group.add_argument('--overwrite', help="overwrite existing files",
-                                 dest='overwrite', action='store_true')
-    overwrite_group.add_argument('--no-overwrite', help='do not overwrite exisiting files',
-                                 dest='overwrite', action='store_false')
+    overwrite_group.add_argument('--overwrite',
+                                 help="overwrite existing files",
+                                 dest='overwrite',
+                                 action='store_true')
+    overwrite_group.add_argument('--no-overwrite',
+                                 help='do not overwrite exisiting files',
+                                 dest='overwrite',
+                                 action='store_false')
     parser.set_defaults(overwrite=True)
+
+    doradcorr_group = parser.add_mutually_exclusive_group()
+    doradcorr_group.add_argument('--do-rad-corr',
+                                 help='do JPL radiance correction',
+                                 dest='do_rad_corr',
+                                 action='store_true')
+    doradcorr_group.add_argument('--no-rad-corr',
+                                 help='do NOT do radiance correction',
+                                 dest='do_rad_corr',
+                                 action='store_false')
+    parser.set_defaults(do_rad_corr=True)
+
     args = parser.parse_args()
     if args.startstop:
         start, stop = args.startstop.split(',')
-        config = Configurator(startstop=(start, stop), overwrite=args.overwrite)
+        config = Configurator(startstop=(start, stop),
+                              overwrite=args.overwrite,
+                              do_rad_corr=args.do_rad_corr)
         tstrings = config.tstrings
         Parallel(n_jobs=8,
                  verbose=20)(delayed(merge_rdr1_rdr2)
@@ -410,7 +430,8 @@ if __name__ == '__main__':
             runs = Configurator.test_names
         for name in runs:
             config = Configurator(name, c_start=3, c_end=9,
-                                  overwrite=args.overwrite)
+                                  overwrite=args.overwrite,
+                                  do_rad_corr=args.do_rad_corr)
             tstrings = config.tstrings
 
             Parallel(n_jobs=8,
