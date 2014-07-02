@@ -38,9 +38,27 @@ def read_and_clean(fname):
 def calc_daterange(start, end):
     """Return list of YYYYMMDDHH strings for each hour between start and end"""
     dr = pd.date_range(fu.tstr_to_datetime(start),
-                      fu.tstr_to_datetime(end),
-                      freq='H')
+                       fu.tstr_to_datetime(end),
+                       freq='H')
     return [fu.get_tstr(i) for i in dr]
+
+
+class NoCorrSavePaths(object):
+    savedir = '/raid1/maye/rdr_out/no_jpl_correction'
+    if not os.path.exists(savedir):
+        os.makedirs(savedir)
+    rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
+    if not os.path.exists(rdr2_root):
+        os.makedirs(rdr2_root)
+
+
+class CorrSavePaths(object):
+    savedir = '/raid1/maye/rdr_out/only_calibrate'
+    if not os.path.exists(savedir):
+        os.makedirs(savedir)
+    rdr2_root = '/raid1/maye/rdr_out/verification'
+    if not os.path.exists(rdr2_root):
+        os.makedirs(rdr2_root)
 
 
 class Configurator(object):
@@ -76,7 +94,14 @@ class Configurator(object):
         self.c_start = c_start
         self.c_end = c_end
         self.return_df = return_df
-        # l1a save folder
+        self.do_rad_corr = do_rad_corr
+        # set up paths
+        if do_rad_corr:
+            self.paths = CorrSavePaths
+        else:
+            self.paths = NoCorrSavePaths
+        self.savedir = self.paths.savedir
+        self.rdr2_root = self.paths.rdr2_root
 
         logger = logging.getLogger(name='diviner')
         logger.setLevel(logging.DEBUG)
