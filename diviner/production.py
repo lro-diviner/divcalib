@@ -297,7 +297,7 @@ def merge_rdr1_rdr2(tstr, config):
     savedir = config.savedir
 
     if not path.exists(rdr2savedir):
-        os.makedirs(rdr2savedir)
+        os.mkdir(rdr2savedir)
 
     # first create symlinks to avoid duplication
     symlink_existing_files(config, tstr)
