@@ -305,7 +305,7 @@ def merge_rdr1_rdr2(tstr, config):
     all_done, channels_to_do = check_for_existing_files(config, tstr)
 
     if all_done:
-        module_logger.info("Found nothing to do for {}. Returning.".
+        module_logger.info("Not overwriting existing files for {}. Returning.".
                            format(tstr))
         return
 
