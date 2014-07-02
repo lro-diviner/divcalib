@@ -364,11 +364,16 @@ if __name__ == '__main__':
                        " Configurator.")
     group.add_argument('-s', '--startstop', help="provide start and stop "
                        "string comma-separated in YYYYMMDDHH format.")
-
+    overwrite_group = parser.add_mutually_exclusive_group()
+    overwrite_group.add_argument('--overwrite', help="overwrite existing files",
+                                 dest='overwrite', action='store_true')
+    overwrite_group.add_argument('--no-overwrite', help='do not overwrite exisiting files',
+                                 dest='overwrite', action='store_false')
+    parser.set_defaults(overwrite=True)
     args = parser.parse_args()
     if args.startstop:
         start, stop = args.startstop.split(',')
-        config = Configurator(startstop=(start, stop), overwrite=True)
+        config = Configurator(startstop=(start, stop), overwrite=args.overwrite)
         tstrings = config.tstrings
         Parallel(n_jobs=8,
                  verbose=20)(delayed(merge_rdr1_rdr2)
@@ -380,7 +385,7 @@ if __name__ == '__main__':
             runs = Configurator.test_names
         for name in runs:
             config = Configurator(name, c_start=3, c_end=9,
-                                  overwrite=True)
+                                  overwrite=args.overwrite)
             tstrings = config.tstrings
 
             Parallel(n_jobs=8,
