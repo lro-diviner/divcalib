@@ -7,6 +7,7 @@ import sys
 import glob
 from dateutil.parser import parse as dateparser
 import os
+import glob
 from os import path
 from os.path import join as pjoin
 import socket
@@ -72,6 +73,34 @@ def scp_opsRDR_file(tstr):
                                                    tstr, target_path)
     call(cmd, shell=True)
 
+
+#
+# data browsing utils
+#
+
+def available_files(datapath, year=None):
+    "Provide year as constraining argument."
+    globbedlist = glob.glob(datapath+'/*')
+    if year is None:
+        retval = globbedlist
+    else:
+        retval = []
+        for fname in globbedlist:
+            if str(year) in os.path.basename(fname):
+                retval.append(fname)
+    return retval
+
+
+def available_l1a_files(year=None):
+    return available_files(l1adatapath, year=year)
+
+
+def available_rdrr_files(year=None):
+    return available_files(rdrrdatapath, year=year)
+
+
+def available_rdrs_files(year=None):
+    return available_files(rdrsdatapath, year=year)
 
 #
 # general utilities
