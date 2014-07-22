@@ -9,7 +9,8 @@ import pandas as pd
 
 
 def save_to_www(fname, **kwargs):
-    gcf().savefig("/u/paige/maye/WWW/calib/"+fname,**kwargs)
+    gcf().savefig("/u/paige/maye/WWW/calib/"+fname, **kwargs)
+
 
 def plot_calib_block(df, label, id, det='a6_11', limits=None, **kwargs):
     """Plot one designated calibration block.
@@ -17,16 +18,20 @@ def plot_calib_block(df, label, id, det='a6_11', limits=None, **kwargs):
     Parameters:
     -----------
 
-    df:     pandas Dataframe that has the block labels defined to use as filter.
-    label:  one of 'calib','bb','sv','st'
-    id:     number of block label to be plotted
-    det:    identifier of the detector, a6_11 is default being used.
+    df:
+        pandas Dataframe that has the block labels defined to use as filter.
+    label:
+        one of 'calib','bb','sv','st'
+    id:
+        number of block label to be plotted
+    det:
+        identifier of the detector, a6_11 is default being used.
     """
     if not label.endswith('_block_labels'):
         label = label + '_block_labels'
-    dfnow = df[df[label]==id]
+    dfnow = df[df[label] == id]
     df_to_plot = pd.DataFrame(index=dfnow.index)
-    boolean_selectors = ['is_moving','is_spaceview','is_bbview','is_stview']
+    boolean_selectors = ['is_moving', 'is_spaceview', 'is_bbview', 'is_stview']
     for sel in boolean_selectors:
         # get the timeseries for chosen detector where selector is true
         timeseries = dfnow[dfnow[sel]][det]
@@ -45,8 +50,10 @@ def plot_all_calib_blocks(df, **kwargs):
 
     Parameters:
     ==========
-    df:      pandas Dataframe with block labels defined (went through define_sdtype())
-    kwargs:  same keyword arguments as plot_calib_block
+    df:
+        pandas Dataframe with block labels defined (went through define_sdtype())
+    kwargs:
+        same keyword arguments as plot_calib_block
     """
     calib_ids = df.calib_block_labels.unique().tolist()
     # check if the calib block has actually calibration data
@@ -73,15 +80,16 @@ def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
     """
     df = df_in.resample('10s')
     print("Resampled to 10 s.")
-    fig, axes = subplots(3,3, **kwargs)
-    for ch in range(1,7):
-        if ch in [1,2] and only_thermal: continue
+    fig, axes = subplots(3, 3, **kwargs)
+    for ch in range(1, 7):
+        if ch in [1, 2] and only_thermal:
+            continue
         axis = axes.flatten()[ch-1]
         cols = ['a'+str(ch)+'_'+str(i).zfill(2) for i in det_list]
         df[cols].plot(ax=axis)
         axis.legend(loc='best')
         axis.set_title('Channel {0}'.format(ch))
-    for ch in range(1,4):
+    for ch in range(1, 4):
         axis = axes.flatten()[ch-1+6]
         cols = ['b'+str(ch)+'_'+str(i).zfill(2) for i in det_list]
         df[cols].plot(ax=axis)
