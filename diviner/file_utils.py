@@ -146,6 +146,11 @@ def tstr_to_l1a_fname(tstr):
     return pjoin(l1adatapath, tstr + '_L1A.TAB')
 
 
+def timestrings_for_day(day_string):
+    dr = pd.date_range(day_string, freq='H', periods=24)
+    return [get_tstr(i) for i in dr]
+
+
 #
 # Tools for data output to tables
 #
