@@ -63,8 +63,7 @@ class CorrSavePaths(object):
 
 class Configurator(object):
     test_names = [
-        'Ben_2010',
-        'Ben_2012',
+        'Ben_2012_2',
         'beta_0_circular',
         'beta_0_elliptical',
         'beta_90_circular',
@@ -126,20 +125,6 @@ class Configurator(object):
     @property
     def rdr2savedir(self):
         return path.join(self.rdr2_root, self.run_name)
-
-    @property
-    def Ben_2010(self):
-        fname = path.join(diviner.__path__[0],
-                          'data',
-                          'A14D2010.txt')
-        return read_and_clean(fname)
-
-    @property
-    def Ben_2012(self):
-        fname = path.join(diviner.__path__[0],
-                          'data',
-                          'A14D2012.txt')
-        return read_and_clean(fname)
 
     @property
     def Ben_2012_2(self):
