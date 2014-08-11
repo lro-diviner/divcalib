@@ -78,7 +78,8 @@ class Configurator(object):
         os.makedirs(rdr2_root)
 
     def __init__(self, run_name=None, startstop=None, overwrite=False,
-                 c_start=3, c_end=9, return_df=False, do_rad_corr=True):
+                 c_start=3, c_end=9, return_df=False, do_rad_corr=True,
+                 swap_clons=False):
         if run_name is not None:
             self.run_name = run_name
             self.tstrings = getattr(self, run_name)
@@ -94,6 +95,7 @@ class Configurator(object):
         self.c_end = c_end
         self.return_df = return_df
         self.do_rad_corr = do_rad_corr
+        self.swap_clons = swap_clons
         # set up paths
         if do_rad_corr:
             self.paths = CorrSavePaths
@@ -356,13 +358,15 @@ def merge_rdr1_rdr2(tstr, config):
         rdr2.det = rdr2.det.astype('int')
         rdr2.drop('index', inplace=True, axis=1)
         rdr2['c'] = channel.div
-        if config.return_df:
-            to_return.append(rdr2)
-        else:
-            rdr2.to_csv(fname, index=False, engine='fast')
+        clon_cols = rdr2.filter(regex="^clon_").columns
+        if config.swap_clons:
+            for col in clon_cols:
+                rdr2[col] = rdr2[col].map(lambda x: -(360 - x)
+                                          if x > 180 else x)
+        # engine='fast' has a bug!
+        rdr2.to_csv(fname, index=False)
     gc.collect()
-    if config.return_df:
-        return to_return
+    return "{} done.".format(tstr)
 
 
 if __name__ == '__main__':
@@ -398,6 +402,12 @@ if __name__ == '__main__':
                                  action='store_false')
     parser.set_defaults(do_rad_corr=True)
 
+    parser.add_argument('--swap_clons',
+                        help='swap clon values from 0..360 to -180..180 '
+                        'for Ben.',
+                        dest='swap_clons',
+                        action='store_true')
+
     args = parser.parse_args()
     if args.startstop:
         start, stop = args.startstop.split(',')
@@ -416,7 +426,8 @@ if __name__ == '__main__':
         for name in runs:
             config = Configurator(name, c_start=3, c_end=9,
                                   overwrite=args.overwrite,
-                                  do_rad_corr=args.do_rad_corr)
+                                  do_rad_corr=args.do_rad_corr,
+                                  swap_clons=args.swap_clons)
             tstrings = config.tstrings
 
             Parallel(n_jobs=8,
