@@ -302,9 +302,41 @@ def symlink_existing_files(config, tstr):
                                    format(otherpath, path_here))
 
 
-def merge_rdr1_rdr2(tstr, config):
+def get_data_for_merge(tstr, savedir):
+    # start processing
+    module_logger.info('Processing {0}'.format(tstr))
+    obs = fu.DivObs(tstr)
+    try:
+        rdr1 = rdrx.RDRR(obs.rdrrfname.path)
+    except RDRR_NotFoundError:
+        module_logger.warning('RDRR not found for {}'.format(tstr))
+        return
+    if not path.exists(get_tb_savename(savedir, tstr)):
+        try:
+            calibrate_tstr(tstr, savedir, config.do_rad_corr)
+        except:
+            module_logger.error('Calibration failed for {}'.format(tstr))
+            return
+    try:
+        tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
+    except KeyError:
+        module_logger.error("Could not find key 'df' in tb file for {}"
+                            .format(tstr))
+        return
+    try:
+        rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
+    except KeyError:
+        module_logger.error("Could not find key 'df' in rad file for {}"
+                            .format(tstr))
+        return
+    return obs, rdr1, tb, rad
+
+
+def merge_rdr1_rdr2(args):
+    tstr, config = args
+
     module_logger.debug("Entered merge_rdr1_rdr2()")
-    # hacky setup
+
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
 
@@ -321,23 +353,12 @@ def merge_rdr1_rdr2(tstr, config):
                            format(tstr))
         return
 
-    # start processing
-    module_logger.info('Processing {0}'.format(tstr))
-    obs = fu.DivObs(tstr)
     try:
-        rdr1 = rdrx.RDRR(obs.rdrrfname.path)
-    except RDRR_NotFoundError:
-        module_logger.warning('RDRR not found for {}'.format(tstr))
-        return
-    if not path.exists(get_tb_savename(savedir, tstr)):
-        try:
-            calibrate_tstr(tstr, savedir, config.do_rad_corr)
-        except:
-            module_logger.error('Calibration failed for {}'.format(tstr))
-            return
-    tb = pd.read_hdf(get_tb_savename(savedir, tstr), 'df')
-    rad = pd.read_hdf(get_rad_savename(savedir, tstr), 'df')
-    mergecols = 'index det'.split()
+        obs, rdr1, tb, rad = get_data_for_merge(tstr, savedir)
+    except Exception as e:
+        module_logger.error("ERror in get_data_for_merge: {}".format(e))
+
+    mergecols = ['index', 'det']
     to_return = []
     for c in channels_to_do:
         module_logger.debug('Processing channel {} of {}'.format(c, tstr))
