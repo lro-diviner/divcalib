@@ -7,7 +7,6 @@ import sys
 import glob
 from dateutil.parser import parse as dateparser
 import os
-import glob
 from os import path
 from os.path import join as pjoin
 import socket
