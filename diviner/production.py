@@ -5,6 +5,7 @@ from diviner import file_utils as fu
 from diviner import ana_utils as au
 from joblib import Parallel, delayed
 import pandas as pd
+import numpy as np
 import diviner
 import logging
 import os
@@ -13,6 +14,7 @@ import sys
 import rdrx
 import gc
 from diviner.exceptions import RDRR_NotFoundError
+from bintools import cols_to_descriptor
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
                               '%(message)s')
@@ -79,7 +81,7 @@ class Configurator(object):
 
     def __init__(self, run_name=None, startstop=None, overwrite=False,
                  c_start=3, c_end=9, return_df=False, do_rad_corr=True,
-                 swap_clons=False):
+                 swap_clons=False, save_as_pipes=True):
         if run_name is not None:
             self.run_name = run_name
             self.tstrings = getattr(self, run_name)
@@ -96,6 +98,11 @@ class Configurator(object):
         self.return_df = return_df
         self.do_rad_corr = do_rad_corr
         self.swap_clons = swap_clons
+        self.save_as_pipes = save_as_pipes
+        if save_as_pipes is True:
+            self.out_format = 'bin'
+        else:
+            self.out_format = 'csv'
         # set up paths
         if do_rad_corr:
             self.paths = CorrSavePaths
@@ -123,6 +130,12 @@ class Configurator(object):
             if f != self.run_name:
                 others.append(f)
         return others
+
+    def get_rdr2_savename(self, tstr, c, savedir=None):
+        if savedir is None:
+            savedir = self.rdr2savedir
+        return path.join(savedir,
+                         '{0}_C{1}_RDR_2.{2}'.format(tstr, c, self.out_format))
 
     @property
     def rdr2savedir(self):
@@ -275,7 +288,7 @@ def check_for_existing_files(config, tstr):
     # check which channels are not done yet, if so.
     all_done = True
     for c in range(config.c_start, config.c_end+1):
-        fname = get_rdr2_savename(config.rdr2savedir, tstr, c)
+        fname = config.get_rdr2_savename(tstr, c)
         if path.exists(fname) and (not config.overwrite):
             module_logger.debug("Found existing RDR2, skipping: {}"
                                 .format(path.basename(fname)))
@@ -289,13 +302,13 @@ def symlink_existing_files(config, tstr):
     """Find and symlink existing files to avoid duplication."""
 
     for c in range(config.c_start, config.c_end+1):
-        path_here = get_rdr2_savename(config.rdr2savedir, tstr, c)
+        path_here = config.get_rdr2_savename(tstr, c)
         # if I have the file in current folder, no need to look it up in others
         if path.exists(path_here):
             continue
         for folder in config.get_other_folders():
             othersavedir = path.join(config.rdr2_root, folder)
-            otherpath = get_rdr2_savename(othersavedir, tstr, c)
+            otherpath = config.get_rdr2_savename(tstr, c, savedir=othersavedir)
             if path.exists(otherpath):
                 os.symlink(otherpath, path_here)
                 module_logger.info("Symlinked {} into {}".
@@ -340,9 +353,6 @@ def merge_rdr1_rdr2(args):
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
 
-    if not path.exists(rdr2savedir):
-        os.mkdir(rdr2savedir)
-
     # first create symlinks to avoid duplication
     symlink_existing_files(config, tstr)
     # now determine whatever else is left to do:
@@ -359,12 +369,11 @@ def merge_rdr1_rdr2(args):
         module_logger.error("ERror in get_data_for_merge: {}".format(e))
 
     mergecols = ['index', 'det']
-    to_return = []
     for c in channels_to_do:
         module_logger.debug('Processing channel {} of {}'.format(c, tstr))
         if not path.exists(rdr2savedir):
             os.mkdir(rdr2savedir)
-        fname = get_rdr2_savename(rdr2savedir, tstr, c)
+        fname = config.get_rdr2_savename(tstr, c)
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
 
@@ -385,7 +394,14 @@ def merge_rdr1_rdr2(args):
                 rdr2[col] = rdr2[col].map(lambda x: -(360 - x)
                                           if x > 180 else x)
         # engine='fast' has a bug!
-        rdr2.to_csv(fname, index=False)
+        if not config.save_as_pipes:
+            rdr2.to_csv(fname, index=False)
+        else:
+            descpath = rdr2savedir + '/rdr2_verif.des'
+            if not os.path.exists(descpath):
+                with open(descpath, 'w') as f:
+                    f.write(cols_to_descriptor(rdr2.columns))
+            rdr2.values.astype(np.double).tofile(fname)
     gc.collect()
     return "{} done.".format(tstr)
 
@@ -423,6 +439,16 @@ if __name__ == '__main__':
                                  action='store_false')
     parser.set_defaults(do_rad_corr=True)
 
+    outformat_group = parser.add_mutually_exclusive_group()
+    outformat_group.add_argument('--save_as_pipes',
+                                 help='save in pipes binary format',
+                                 dest='save_as_pipes',
+                                 action='store_true')
+    outformat_group.add_argument('--save_as_csv',
+                                 help='save in CSV text format',
+                                 dest='save_as_pipes',
+                                 action='store_false')
+    parser.set_defaults(save_as_pipes=True)
     parser.add_argument('--swap_clons',
                         help='swap clon values from 0..360 to -180..180 '
                         'for Ben.',
@@ -434,11 +460,16 @@ if __name__ == '__main__':
         start, stop = args.startstop.split(',')
         config = Configurator(startstop=(start, stop),
                               overwrite=args.overwrite,
-                              do_rad_corr=args.do_rad_corr)
+                              do_rad_corr=args.do_rad_corr,
+                              save_as_pipes=args.save_as_pipes,
+                              swap_clons=args.swap_clons)
+        if not path.exists(config.rdr2savedir):
+            os.mkdir(config.rdr2savedir)
+
         tstrings = config.tstrings
         Parallel(n_jobs=8,
                  verbose=20)(delayed(merge_rdr1_rdr2)
-                            (tstr, config)
+                            ((tstr, config))
                              for tstr in tstrings)
     else:
         runs = [args.run_name]
@@ -448,12 +479,16 @@ if __name__ == '__main__':
             config = Configurator(name, c_start=3, c_end=9,
                                   overwrite=args.overwrite,
                                   do_rad_corr=args.do_rad_corr,
-                                  swap_clons=args.swap_clons)
+                                  swap_clons=args.swap_clons,
+                                  save_as_pipes=args.save_as_pipes)
+            if not path.exists(config.rdr2savedir):
+                os.mkdir(config.rdr2savedir)
+
             tstrings = config.tstrings
 
             Parallel(n_jobs=8,
                      verbose=20)(delayed(merge_rdr1_rdr2)
-                                (tstr, config)
+                                ((tstr, config))
                                  for tstr in tstrings)
 
 
