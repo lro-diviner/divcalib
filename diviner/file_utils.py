@@ -890,19 +890,13 @@ class L1ADataFile(object):
 
 
 def get_clean_l1a(tstr):
-    l1afile = L1ADataFile.from_tstr(tstr)
-    return l1afile.open()
+    obs = DivObs(tstr)
+    return obs.get_l1a()
 
 
 def get_dirty_l1a(tstr):
-    l1afile = L1ADataFile.from_tstr(tstr)
-    return l1afile.open_dirty()
-
-
-def get_raw_l1a(tstr):
-    l1afile = L1ADataFile.from_tstr(tstr)
-    l1afile.parse_tab()
-    return l1afile.df
+    obs = DivObs(tstr)
+    return obs.get_l1a_dirty()
 
 
 def open_and_accumulate(tstr, minimum_number=3):
