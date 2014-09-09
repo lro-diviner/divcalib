@@ -71,22 +71,18 @@ def get_mean_time(df_in, skipsamples=0):
     return t
 
 
-def calc_offsets_at_all_times(data, offsets):
-    real_time = np.array(data.index.values.view("i8") / 1000,
-                         dtype="datetime64[us]")
-    cali_time = np.array(offsets.index.values.view("i8") / 1000,
-                         dtype="datetime64[us]")
+def find_closest_offset_time(offset_times, all_times):
+    """Find index in offset_times that are closest to all times.
 
-    right_index = cali_time.searchsorted(real_time, side="left")
-    left_index = np.clip(right_index - 1, 0, len(offsets)-1)
-    right_index = np.clip(right_index, 0, len(offsets)-1)
-    left_time = cali_time[left_index]
-    right_time = cali_time[right_index]
-    left_diff = np.abs(left_time - real_time)
-    right_diff = np.abs(right_time - real_time)
-    caldata2 = offsets.ix[np.where(left_diff < right_diff,
-                                   left_time, right_time)]
-    return caldata2
+    offset_times and all_times need to be numpy arrays for this to work.
+    offset_times must be sorted as well.
+    """
+    idx = offset_times.searchsorted(all_times)
+    idx = np.clip(idx, 1, len(offset_times)-1)
+    left = offset_times[idx-1]
+    right = offset_times[idx]
+    idx -= all_times - left < right - all_times
+    return idx
 
 
 def get_data_columns(df):
@@ -539,6 +535,11 @@ class Calibrator(object):
         # calculate brightness temperatures Tb
         self.calc_tb()
 
+        ####
+        # Quality checks
+        ####
+        self.quality_checks()
+
     def pad_bb_temps(self):
         """ Forward pad bb temps to recreate JPL's calibration. """
         df = self.df
@@ -743,3 +744,13 @@ class Calibrator(object):
         # to not render existing code useless
         self.Tb = self.tb
         module_logger.debug("Calculated brightness temperatures.")
+
+    def quality_checks(self):
+
+        # delta times to offset times
+        offset_times = self.offsets.index.values
+        all_times = self.df.index.values
+        idx = find_closest_offset_time(offset_times, all_times)
+        ts = (all_times - self.offsets.index[idx].values) / 1e9  # to seconds
+        self.df['delta_times'] = ts.astype('int')
+        return ts.astype('timedelta64[s]')
