@@ -78,9 +78,9 @@ def scp_opsRDR_file(tstr):
 # data browsing utils
 #
 
-def available_files(datapath, year=None):
+def available_files(datapath, year=None, ext=None):
     "Provide year as constraining argument."
-    globbedlist = glob.glob(datapath+'/*')
+    globbedlist = glob.glob(datapath + '/*' + ext)
     if year is None:
         retval = globbedlist
     else:
@@ -92,15 +92,15 @@ def available_files(datapath, year=None):
 
 
 def available_l1a_files(year=None):
-    return available_files(l1adatapath, year=year)
+    return available_files(l1adatapath, year=year, ext='_L1A.TAB')
 
 
 def available_rdrr_files(year=None):
-    return available_files(rdrrdatapath, year=year)
+    return available_files(rdrrdatapath, year=year, ext='.rdrr')
 
 
 def available_rdrs_files(year=None):
-    return available_files(rdrsdatapath, year=year)
+    return available_files(rdrsdatapath, year=year, ext='.rdrs')
 
 #
 # general utilities
