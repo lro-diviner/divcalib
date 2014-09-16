@@ -54,29 +54,34 @@ def index_by_time(df, drop_dates=True):
 
 def cutoff_msec(ts):
     dtime = ts.to_datetime()
-    return pd.Timestamp(datetime(dtime.year,dtime.month,dtime.day,
-                                 dtime.hour,dtime.minute,dtime.second))
+    return pd.Timestamp(datetime(dtime.year, dtime.month, dtime.day,
+                                 dtime.hour, dtime.minute, dtime.second))
+
 
 def parse_divdata_times(df, drop_dates=True):
     format = "%Y%m%d%H%M"
     timecols = 'year month date hour minute'.split()
     subdf = df[timecols].astype('int')
     seconds = pd.Series(df.second*1e9, dtype='timedelta64[ns]')
-    up_to_min = pd.to_datetime(subdf.year*int(1e8) + subdf.month*int(1e6) + 
-                               subdf.date*int(1e4) + subdf.hour*int(1e2) + 
+    up_to_min = pd.to_datetime(subdf.year*int(1e8) + subdf.month*int(1e6) +
+                               subdf.date*int(1e4) + subdf.hour*int(1e2) +
                                subdf.minute, format=format, utc=False)
     times = up_to_min + seconds
     index = pd.DatetimeIndex(times)
     ts = pd.TimeSeries(index.map(cutoff_msec))
     ms = pd.Series(index.microsecond.round(-3)*1000, dtype='timedelta64[ns]')
     df.index = ts + ms
-    return df.drop(timecols+['second'], axis=1) if drop_dates else df 
-    
+    return df.drop(timecols+['second'], axis=1) if drop_dates else df
+
 
 def prepare_data(df_in):
     """Declare NaN value and pad nan data for some."""
     # df = index_by_time(df_in)
     # df[df == -9999.0] = nan
+    if not 'last_el_cmd' in df_in.columns:
+        df_in.rename(columns={'el_cmd': 'last_el_cmd',
+                              'az_cmd': 'last_az_cmd'},
+                     inplace=True)
     df_in.last_el_cmd.replace([np.nan], inplace=True)
     df_in.last_az_cmd.replace([np.nan], inplace=True)
     df_in.moving.replace([np.nan], inplace=True)
@@ -127,14 +132,15 @@ def define_sdtype(df):
     # WARNING: But not all moving data is contained in block labels!
     # The end of calib block has pointing commands set to nadir.
     # below defined "is_xxx" do NOT contain moving data.
-    df['calib_block_labels'] = nd.label((df.sdtype == 1) | \
-                                        (df.sdtype == 2) | \
+    df['calib_block_labels'] = nd.label((df.sdtype == 1) |
+                                        (df.sdtype == 2) |
                                         (df.sdtype == 3))[0]
     # this resets data from sdtypes >0 above that is still 'moving' to be
     # sdtype=-1 (i.e. 'moving', defined by me)
-    # doing this *after* the calib block labels are defined above ensures that the spaceviews
-    # and bb/st views are connected in one calib block. But resetting moving data now to -1
-    # ensures that I don't get empty moving data marked as bb_block_labels 
+    # doing this *after* the calib block labels are defined above ensures that
+    # the spaceviews and bb/st views are connected in one calib block.
+    # But resetting moving data now to -1 ensures that I don't get empty moving
+    #  data marked as bb_block_labels
     df.sdtype[df.moving == 1] = -1
 
     df['space_block_labels'] = nd.label(df.sdtype == 1)[0]
