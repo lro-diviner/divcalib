@@ -907,7 +907,7 @@ def open_and_accumulate(tstr, minimum_number=3):
     of calib-blocks to be unique!
     Each cleaning operation starts the numbering from 1 again!
 
-    minimum_number controls how many files are attached as one block.
+    'minimum_number' controls how many hour files are attached as one block.
     """
 
     # centerfile = L1ADataFile.from_tstr(tstr)
