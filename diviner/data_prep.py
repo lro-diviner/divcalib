@@ -118,10 +118,10 @@ def get_stowed_selector(df):
 
 def define_sdtype(df):
     df['sdtype'] = 0
-    df.sdtype[get_sv_selector(df)] = 1
-    df.sdtype[get_bb_selector(df)] = 2
-    df.sdtype[get_st_selector(df)] = 3
-    df.sdtype[get_stowed_selector(df)] = -2
+    df.loc[get_sv_selector(df), 'sdtype'] = 1
+    df.loc[get_bb_selector(df), 'sdtype'] = 2
+    df.loc[get_st_selector(df), 'sdtype'] = 3
+    df.loc[get_stowed_selector(df), 'sdtype'] = -2
     # the following defines the sequential list of calibration blocks inside
     # the dataframe. nd.label provides an ID for each sequential part where
     # the given condition is true.
@@ -141,7 +141,7 @@ def define_sdtype(df):
     # the spaceviews and bb/st views are connected in one calib block.
     # But resetting moving data now to -1 ensures that I don't get empty moving
     #  data marked as bb_block_labels
-    df.sdtype[df.moving == 1] = -1
+    df.loc[df.moving == 1, 'sdtype'] = -1
 
     df['space_block_labels'] = nd.label(df.sdtype == 1)[0]
     df['bb_block_labels'] = nd.label(df.sdtype == 2)[0]
