@@ -81,7 +81,7 @@ class Configurator(object):
 
     def __init__(self, run_name=None, startstop=None, overwrite=False,
                  c_start=3, c_end=9, return_df=False, do_rad_corr=True,
-                 swap_clons=False, save_as_pipes=True):
+                 swap_clons=True, save_as_pipes=True):
         if run_name is not None:
             self.run_name = run_name
             self.tstrings = getattr(self, run_name)
