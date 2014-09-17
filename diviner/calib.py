@@ -77,6 +77,8 @@ def find_closest_offset_time(offset_times, all_times):
     offset_times and all_times need to be numpy arrays for this to work.
     offset_times must be sorted as well.
     """
+    if len(offset_times) == 1:
+        return np.zeros_like(all_times, dtype='int')
     idx = offset_times.searchsorted(all_times)
     idx = np.clip(idx, 1, len(offset_times)-1)
     left = offset_times[idx-1]
@@ -481,13 +483,10 @@ class Calibrator(object):
         self.norm_to_abs_converter.columns = thermal_channels
 
     def call_up_to(self, wanted):
-        keys = 'bbtemps rbb offsets cbb gain caldata rads tb'.split()
+        keys = 'bbtemps calblocks interp rads tb'.split()
         methods = {'bbtemps': self.interpolate_bb_temps,
-                   'rbb': self.calc_one_RBB,
-                   'offsets': self.calc_offsets,
-                   'cbb': self.calc_CBB,
-                   'gain': self.calc_gain,
-                   'caldata': self.interpolate_caldata,
+                   'calblocks': self.process_calblocks,
+                   'interp': self.interpolate_caldata,
                    'rads': self.calc_radiances,
                    'tb': self.calc_tb}
 
