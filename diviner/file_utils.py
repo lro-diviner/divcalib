@@ -899,7 +899,7 @@ def get_dirty_l1a(tstr):
     return obs.get_l1a_dirty()
 
 
-def open_and_accumulate(tstr, minimum_number=3):
+def open_and_accumulate(tstr, minimum_number=1):
     """Open L1A datafile fname and accumulate neighboring data.
 
     To explain why I accumulate first dirty files:
@@ -907,7 +907,7 @@ def open_and_accumulate(tstr, minimum_number=3):
     of calib-blocks to be unique!
     Each cleaning operation starts the numbering from 1 again!
 
-    'minimum_number' controls how many hour files are attached as one block.
+    'minimum_number' controls how many hour files are attached on each side.
     """
 
     # centerfile = L1ADataFile.from_tstr(tstr)
@@ -923,6 +923,7 @@ def open_and_accumulate(tstr, minimum_number=3):
     # fn_handler = FileName(centerfile.fname)
     current = obs.copy()
 
+    appended_counter = 0
     while True:
         previous = current.previous()
         try:
@@ -934,14 +935,16 @@ def open_and_accumulate(tstr, minimum_number=3):
         else:
             logging.debug("Appending {0} on the left."
                           .format(previous.time.tstr))
-
-        if any(previous.get_l1a().is_calib):
+            appended_counter += 1
+        if any(previous.get_l1a().is_calib) and \
+                (appended_counter >= minimum_number):
             break
         current = previous.copy()
 
     # append next hours until calib blocks found
     # go back to center file name
     current = obs.copy()
+    appended_counter = 0
     while True:
         next = current.next()
         try:
@@ -952,8 +955,10 @@ def open_and_accumulate(tstr, minimum_number=3):
             break
         else:
             logging.debug("Appending {0} on the right.".format(next.time.tstr))
+            appended_counter += 1
 
-        if any(next.get_l1a().is_calib):
+        if any(next.get_l1a().is_calib) and \
+                (appended_counter >= minimum_number):
             break
         current = next.copy()
 
