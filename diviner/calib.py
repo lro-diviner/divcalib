@@ -423,7 +423,8 @@ class Calibrator(object):
                  calfitting_order=1,
                  new_rad_corr=True,
                  fix_noise=False,
-                 do_jpl_calib=False):
+                 do_jpl_calib=False,
+                 do_fpt_calib=False):
         # quick way to simulate JPL calib as good as possible
         if do_jpl_calib:
             pad_bbtemps = True
@@ -475,6 +476,9 @@ class Calibrator(object):
         # radiance non-linearity correction
         self.radcorr = RadianceCorrection(new_corr=new_rad_corr)
 
+        # alternative emergency calibration
+        self.do_fpt_calib = do_fpt_calib
+
         # loading converter factors norm-to-abs-radiances
         self.norm_to_abs_converter = pd.read_pickle(
             os.path.join(__path__[0], 'data',
@@ -521,6 +525,11 @@ class Calibrator(object):
         #####
         # interpolate offsets (and gains?) over the big dataframe block
         self.interpolate_caldata()
+
+        ###
+        # Alternative calibration via FPTemps
+        ###
+        self.get_offsets_from_focal_plane_temps('b3_11')
 
         #####
         ### CALCULATE RADIANCES
@@ -743,6 +752,19 @@ class Calibrator(object):
         # to not render existing code useless
         self.Tb = self.tb
         module_logger.debug("Calculated brightness temperatures.")
+
+    def get_offsets_from_focal_plane_temps(self, det):
+        fptemps = self.df.fpb_temp.dropna()
+        fpt = fptemps.resample('5min')
+        grad = np.gradient(fpt)
+
+        all_times = self.df.index.values.astype('float')
+        grad_times = fpt.index.values.astype('float')
+        spline = Spline(grad_times, grad, s=0.0, k=3)
+        grad_interp = spline(all_times)
+        offsets = self.offsets_interp[det]
+        if self.do_fpt_calib:
+            self.offsets_interp[det] = offsets.ptp()*grad_interp+offsets.mean()
 
     def quality_checks(self):
 
