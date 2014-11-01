@@ -56,3 +56,4 @@ notebooks/**/*.csv
 notebooks/**/*.txt
 notebooks/plots
 *.sublime-*
+*.old

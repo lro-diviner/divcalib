@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
-pandas_version = '0.13.1'
+pandas_version = '0.14.1'
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -21,7 +21,7 @@ class PyTest(TestCommand):
 
 setup(
     name = "Diviner",
-    version = "2.4.0beta1",
+    version = "2.4.0beta2",
     packages = find_packages(),
 
     install_requires = ['pandas>='+pandas_version, 'cliutils'],
