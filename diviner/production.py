@@ -45,22 +45,18 @@ def calc_daterange(start, end):
     return [fu.get_tstr(i) for i in dr]
 
 
-class NoCorrSavePaths(object):
-    savedir = '/raid1/maye/rdr_out/no_jpl_correction'
-    if not os.path.exists(savedir):
-        os.makedirs(savedir)
-    rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
-    if not os.path.exists(rdr2_root):
-        os.makedirs(rdr2_root)
-
-
-class CorrSavePaths(object):
-    savedir = '/raid1/maye/rdr_out/only_calibrate'
-    if not os.path.exists(savedir):
-        os.makedirs(savedir)
-    rdr2_root = '/raid1/maye/rdr_out/verification'
-    if not os.path.exists(rdr2_root):
-        os.makedirs(rdr2_root)
+class SavePaths(object):
+    def __init__(self, do_rad_corr):
+        if do_rad_corr:
+            savedir = '/raid1/maye/rdr_out/only_calibrate'
+            rdr2_root = '/raid1/maye/rdr_out/verification'
+        else:
+            savedir = '/raid1/maye/rdr_out/no_jpl_correction'
+            rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
+        if not os.path.exists(savedir):
+            os.makedirs(savedir)
+        if not os.path.exists(rdr2_root):
+            os.makedirs(rdr2_root)
 
 
 class Configurator(object):
@@ -104,10 +100,7 @@ class Configurator(object):
         else:
             self.out_format = 'csv'
         # set up paths
-        if do_rad_corr:
-            self.paths = CorrSavePaths
-        else:
-            self.paths = NoCorrSavePaths
+        self.paths = SavePaths(do_rad_corr)
         self.savedir = self.paths.savedir
         self.rdr2_root = self.paths.rdr2_root
 
