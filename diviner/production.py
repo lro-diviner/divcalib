@@ -366,7 +366,7 @@ def merge_rdr1_rdr2(args):
     try:
         obs, rdr1, tb, rad = get_data_for_merge(tstr, savedir)
     except Exception as e:
-        module_logger.error("ERror in get_data_for_merge: {}".format(e))
+        module_logger.error("Error in get_data_for_merge: {}".format(e))
 
     mergecols = ['index', 'det']
     for c in channels_to_do:
