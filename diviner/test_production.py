@@ -31,16 +31,67 @@ cols_to_melt = set(formats.colname) - set(cols_no_melt) - set(cols_skip)
 cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
 
 
-class Configurator(object):
+def read_and_clean(fname):
+    with open(fname) as f:
+        tstrings = f.readlines()
+    return [i.strip() for i in tstrings]
 
-    def __init__(self, startstop=None, overwrite=False, c_start=3, c_end=9,
-                 do_rad_corr=False, swap_clons=True, save_as_pipes=True):
-        self.start, self.stop = startstop
-        self.tstrings = fu.calc_daterange(self.start, self.stop)
-        self.run_name = start + '_' + stop
+
+def calc_daterange(start, end):
+    """Return list of YYYYMMDDHH strings for each hour between start and end"""
+    dr = pd.date_range(fu.tstr_to_datetime(start),
+                       fu.tstr_to_datetime(end),
+                       freq='H')
+    return [fu.get_tstr(i) for i in dr]
+
+
+class SavePaths(object):
+    def __init__(self, do_rad_corr):
+        if do_rad_corr:
+            savedir = '/raid1/maye/rdr_out/only_calibrate'
+            rdr2_root = '/raid1/maye/rdr_out/verification'
+        else:
+            savedir = '/raid1/maye/rdr_out/no_jpl_correction'
+            rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
+        if not os.path.exists(savedir):
+            os.makedirs(savedir)
+        if not os.path.exists(rdr2_root):
+            os.makedirs(rdr2_root)
+
+
+class Configurator(object):
+    test_names = [
+        'Ben_2012_2',
+        'beta_0_circular',
+        'beta_0_elliptical',
+        'beta_90_circular',
+        'beta_90_elliptical'
+    ]
+
+    savedir = '/raid1/maye/rdr_out/no_jpl_correction'
+    if not os.path.exists(savedir):
+        os.makedirs(savedir)
+    rdr2_root = '/raid1/maye/rdr_out/verification_no_jpl_corr'
+    if not os.path.exists(rdr2_root):
+        os.makedirs(rdr2_root)
+
+    def __init__(self, run_name=None, startstop=None, overwrite=False,
+                 c_start=3, c_end=9, return_df=False, do_rad_corr=True,
+                 swap_clons=True, save_as_pipes=True):
+        if run_name is not None:
+            self.run_name = run_name
+            self.tstrings = getattr(self, run_name)
+        elif startstop is not None:
+            self.start, self.stop = startstop
+            self.tstrings = calc_daterange(self.start, self.stop)
+            self.run_name = start + '_' + stop
+        else:
+            print("Provide either run_name or startstop.")
+            sys.exit()
         self.overwrite = overwrite
         self.c_start = c_start
         self.c_end = c_end
+        self.return_df = return_df
         self.do_rad_corr = do_rad_corr
         self.swap_clons = swap_clons
         self.save_as_pipes = save_as_pipes
@@ -48,13 +99,11 @@ class Configurator(object):
             self.out_format = 'bin'
         else:
             self.out_format = 'csv'
-
         # set up paths
         self.paths = SavePaths(do_rad_corr)
         self.savedir = self.paths.savedir
         self.rdr2_root = self.paths.rdr2_root
 
-        # logging setup
         logger = logging.getLogger(name='diviner')
         logger.setLevel(logging.DEBUG)
         logfname = 'divcalib_verif_' + self.run_name + '.log'
@@ -62,15 +111,11 @@ class Configurator(object):
         fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler(stream=None)
         ch.setLevel(logging.INFO)
+
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
         logger.addHandler(fh)
         logger.addHandler(ch)
-
-        if not os.path.exists(self.savedir):
-            os.makedirs(self.savedir)
-        if not os.path.exists(self.rdr2_root):
-            os.makedirs(self.rdr2_root)
 
     def get_other_folders(self):
         others = []
@@ -84,6 +129,48 @@ class Configurator(object):
             savedir = self.rdr2savedir
         return path.join(savedir,
                          '{0}_C{1}_RDR_2.{2}'.format(tstr, c, self.out_format))
+
+    @property
+    def rdr2savedir(self):
+        return path.join(self.rdr2_root, self.run_name)
+
+    @property
+    def Ben_2012_2(self):
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          'A14_HOURS.txt')
+        return read_and_clean(fname)
+
+    @property
+    def beta_0_circular(self):
+        "low beta, circular orbit."
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2009082321_2009092002.txt')
+        return read_and_clean(fname)
+
+    @property
+    def beta_0_elliptical(self):
+        "low beta, elliptical orbit"
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2012022408_2012032323.txt')
+
+        return read_and_clean(fname)
+
+    @property
+    def beta_90_circular(self):
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2010120102_2010122712.txt')
+        return read_and_clean(fname)
+
+    @property
+    def beta_90_elliptical(self):
+        fname = path.join(diviner.__path__[0],
+                          'data',
+                          '2012061211_2012062602.txt')
+        return read_and_clean(fname)
 
 
 def get_tb_savename(savedir, tstr):
