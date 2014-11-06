@@ -101,6 +101,7 @@ def available_rdrr_files(year=None):
 def available_rdrs_files(year=None):
     return available_files(rdrsdatapath, year=year, ext='.rdrs')
 
+
 #
 # general utilities
 #
@@ -150,6 +151,14 @@ def timestrings_for_day(day_string):
     return [get_tstr(i) for i in dr]
 
 
+def calc_daterange(start, end):
+    """Return list of YYYYMMDDHH strings for each hour between start and end"""
+    dr = pd.date_range(tstr_to_datetime(start),
+                       tstr_to_datetime(end),
+                       freq='H')
+    return [get_tstr(i) for i in dr]
+
+
 #
 # Tools for data output to tables
 #
@@ -158,6 +167,7 @@ def get_month_sample_path_from_mode(mode):
 
 
 class DivTime(object):
+
     """Manage time-related metadata for Diviner observations."""
     fmt = ''  # set in derived class!
 
@@ -179,6 +189,7 @@ class DivTime(object):
 
 
 class DivHour(DivTime):
+
     """Class for the usual hour-strings."""
     fmt = '%Y%m%d%H'
     lentstr = 10
@@ -195,12 +206,14 @@ class DivHour(DivTime):
 
 
 class DivDay(DivTime):
+
     """Class for a full day of Diviner data."""
     fmt = '%Y%m%d'
     lentstr = 8
 
 
 class DivObs(object):
+
     @classmethod
     def from_fname(cls, fname):
         basename = path.basename(fname)
@@ -237,6 +250,7 @@ class DivObs(object):
 
 
 class FileName(object):
+
     """Managing class for file name attributes."""
 
     ext = ''  # fill in child class !
@@ -349,6 +363,7 @@ def get_rdr_headers(fname):
 
 
 class GroundCalibFile(file):
+
     def __init__(self, *args, **kwargs):
         super(GroundCalibFile, self).__init__(*args, **kwargs)
         self.get_headers()
