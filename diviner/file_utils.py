@@ -17,10 +17,11 @@ from collections import deque
 import logging
 from diviner import __path__
 from subprocess import call
-from .exceptions import DivTimeLengthError,\
-    RDRR_NotFoundError,\
-    RDRS_NotFoundError,\
-    L1ANotFoundError
+from .exceptions import (DivTimeLengthError,
+                         RDRR_NotFoundError,
+                         RDRS_NotFoundError,
+                         L1ANotFoundError)
+
 from cliutils import cliargs
 # from plot_utils import ProgressBar
 import zipfile
@@ -120,6 +121,17 @@ def get_tstr(indata):
 
 
 def tstr_to_datetime(tstr):
+    if not len(tstr) in [4, 6, 8, 10]:
+        raise DivTimeLengthError(tstr, ['YYYY',
+                                        'YYYYMM',
+                                        'YYYYMMDD',
+                                        'YYYYMMDDHH'])
+    if len(tstr) == 4:
+        tstr += '010100'
+    elif len(tstr) == 6:
+        tstr += '0100'
+    elif len(tstr) == 8:
+        tstr += '00'
     dtime = dt.strptime(tstr, '%Y%m%d%H')
     return dtime
 
