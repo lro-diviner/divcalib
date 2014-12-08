@@ -13,8 +13,9 @@ from os import path
 import sys
 import rdrx
 import gc
-from diviner.exceptions import RDRR_NotFoundError
+from diviner.exceptions import RDRS_NotFoundError
 from bintools import cols_to_descriptor
+import ConfigParser
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
                               '%(message)s')
@@ -35,12 +36,16 @@ class Configurator(object):
 
     def __init__(self, startstop=None, overwrite=False, c_start=3, c_end=9,
                  do_rad_corr=False, swap_clons=True, save_as_pipes=True):
+        # time scope of run definition
         self.start, self.stop = startstop
         self.tstrings = fu.calc_daterange(self.start, self.stop)
         self.run_name = start + '_' + stop
+
         self.overwrite = overwrite
+
         self.c_start = c_start
         self.c_end = c_end
+
         self.do_rad_corr = do_rad_corr
         self.swap_clons = swap_clons
         self.save_as_pipes = save_as_pipes
@@ -50,7 +55,6 @@ class Configurator(object):
             self.out_format = 'csv'
 
         # set up paths
-        self.paths = SavePaths(do_rad_corr)
         self.savedir = self.paths.savedir
         self.rdr2_root = self.paths.rdr2_root
 
@@ -71,13 +75,6 @@ class Configurator(object):
             os.makedirs(self.savedir)
         if not os.path.exists(self.rdr2_root):
             os.makedirs(self.rdr2_root)
-
-    def get_other_folders(self):
-        others = []
-        for f in self.test_names:
-            if f != self.run_name:
-                others.append(f)
-        return others
 
     def get_rdr2_savename(self, tstr, c, savedir=None):
         if savedir is None:
@@ -103,7 +100,7 @@ def get_example_data():
     df = fu.get_clean_l1a(tstr)
     rdr2 = calib.Calibrator(df)
     rdr2.calibrate()
-    rdr1 = rdrx.RDRR(tstr)
+    rdr1 = rdrx.RDRS(tstr)
     return rdr1, rdr2
 
 
@@ -204,31 +201,14 @@ def check_for_existing_files(config, tstr):
     return all_done, channels_to_do
 
 
-def symlink_existing_files(config, tstr):
-    """Find and symlink existing files to avoid duplication."""
-
-    for c in range(config.c_start, config.c_end+1):
-        path_here = config.get_rdr2_savename(tstr, c)
-        # if I have the file in current folder, no need to look it up in others
-        if path.exists(path_here):
-            continue
-        for folder in config.get_other_folders():
-            othersavedir = path.join(config.rdr2_root, folder)
-            otherpath = config.get_rdr2_savename(tstr, c, savedir=othersavedir)
-            if path.exists(otherpath):
-                os.symlink(otherpath, path_here)
-                module_logger.info("Symlinked {} into {}".
-                                   format(otherpath, path_here))
-
-
 def get_data_for_merge(tstr, savedir):
     # start processing
     module_logger.info('Processing {0}'.format(tstr))
     obs = fu.DivObs(tstr)
     try:
-        rdr1 = rdrx.RDRR(obs.rdrrfname.path)
-    except RDRR_NotFoundError:
-        module_logger.warning('RDRR not found for {}'.format(tstr))
+        rdr1 = rdrx.RDRS(obs.rdrsfname.path)
+    except RDRS_NotFoundError:
+        module_logger.warning('RDRS not found for {}'.format(tstr))
         return
     if not path.exists(get_tb_savename(savedir, tstr)):
         try:
@@ -259,9 +239,7 @@ def produce_tstr(args):
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
 
-    # first create symlinks to avoid duplication
-    # symlink_existing_files(config, tstr)
-    # now determine whatever else is left to do:
+    # determine what is left to do:
     all_done, channels_to_do = check_for_existing_files(config, tstr)
 
     if all_done:
@@ -299,14 +277,15 @@ def produce_tstr(args):
             for col in clon_cols:
                 rdr2[col] = rdr2[col].map(lambda x: -(360 - x)
                                           if x > 180 else x)
-        # engine='fast' has a bug!
         if not config.save_as_pipes:
             rdr2.to_csv(fname, index=False)
         else:
+            # first put a descriptor file next to it if it doesn't exist
             descpath = rdr2savedir + '/rdr2_verif.des'
             if not os.path.exists(descpath):
                 with open(descpath, 'w') as f:
                     f.write(cols_to_descriptor(rdr2.columns))
+            # now write the values in binary form
             rdr2.values.astype(np.double).tofile(fname)
     gc.collect()
     return "{} done.".format(tstr)
@@ -314,88 +293,40 @@ def produce_tstr(args):
 
 if __name__ == '__main__':
 
-    import argparse
-    parser = argparse.ArgumentParser()
+    try:
+        configfile = sys.argv[1]
+    except IndexError:
+        print("Provide config file as argument")
+        sys.exit()
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-r", "--run_name", help="use predefined run_name from"
-                       " Configurator.")
-    group.add_argument('-s', '--startstop', help="provide start and stop "
-                       "string comma-separated in YYYYMMDDHH format.")
+    config = ConfigParser.ConfigParser()
+    config.read(configfile)
 
-    overwrite_group = parser.add_mutually_exclusive_group()
-    overwrite_group.add_argument('--overwrite',
-                                 help="overwrite existing files",
-                                 dest='overwrite',
-                                 action='store_true')
-    overwrite_group.add_argument('--no-overwrite',
-                                 help='do not overwrite exisiting files',
-                                 dest='overwrite',
-                                 action='store_false')
-    parser.set_defaults(overwrite=True)
+    # paths and scope of production run
+    start = config.get('run_control', 'start')
+    stop = config.get('run_control', 'stop')
+    rad_tb_path = config.get('paths', 'rad_tb')
+    pipes_path = config.get('paths', 'pipes')
 
-    doradcorr_group = parser.add_mutually_exclusive_group()
-    doradcorr_group.add_argument('--do-rad-corr',
-                                 help='do JPL radiance correction',
-                                 dest='do_rad_corr',
-                                 action='store_true')
-    doradcorr_group.add_argument('--no-rad-corr',
-                                 help='do NOT do radiance correction',
-                                 dest='do_rad_corr',
-                                 action='store_false')
-    parser.set_defaults(do_rad_corr=True)
+    # calibration control options
+    overwrite = config.getbool('calibration', 'overwrite')
+    c_start = config.getint('calibration', 'c_start')
+    c_end = config.getint('calibration', 'c_end')
+    do_rad_corr = config.getbool('calibration', 'do_rad_corr')
+    swap_clons = config.getbool('calibration', 'swap_clons')
+    save_as_pipes = config.getbool('calibration', 'save_as_pipes')
 
-    outformat_group = parser.add_mutually_exclusive_group()
-    outformat_group.add_argument('--save_as_pipes',
-                                 help='save in pipes binary format',
-                                 dest='save_as_pipes',
-                                 action='store_true')
-    outformat_group.add_argument('--save_as_csv',
-                                 help='save in CSV text format',
-                                 dest='save_as_pipes',
-                                 action='store_false')
-    parser.set_defaults(save_as_pipes=True)
-    parser.add_argument('--swap_clons',
-                        help='swap clon values from 0..360 to -180..180 '
-                        'for Ben.',
-                        dest='swap_clons',
-                        action='store_true')
+    config = Configurator(startstop=(start, stop),
+                          overwrite=overwrite,
+                          do_rad_corr=do_rad_corr,
+                          save_as_pipes=save_as_pipes,
+                          swap_clons=swap_clons)
+    if not path.exists(config.rdr2savedir):
+        os.mkdir(config.rdr2savedir)
 
-    args = parser.parse_args()
-    if args.startstop:
-        start, stop = args.startstop.split(',')
-        config = Configurator(startstop=(start, stop),
-                              overwrite=args.overwrite,
-                              do_rad_corr=args.do_rad_corr,
-                              save_as_pipes=args.save_as_pipes,
-                              swap_clons=args.swap_clons)
-        if not path.exists(config.rdr2savedir):
-            os.mkdir(config.rdr2savedir)
-
-        tstrings = config.tstrings
-        Parallel(n_jobs=8,
-                 verbose=20)(delayed(produce_tstr)
-                            ((tstr, config))
-                             for tstr in tstrings)
-    else:
-        runs = [args.run_name]
-        if runs == 'all':
-            runs = Configurator.test_names
-        for name in runs:
-            config = Configurator(name, c_start=3, c_end=9,
-                                  overwrite=args.overwrite,
-                                  do_rad_corr=args.do_rad_corr,
-                                  swap_clons=args.swap_clons,
-                                  save_as_pipes=args.save_as_pipes)
-            if not path.exists(config.rdr2savedir):
-                os.mkdir(config.rdr2savedir)
-
-            tstrings = config.tstrings
-
-            Parallel(n_jobs=8,
-                     verbose=20)(delayed(produce_tstr)
-                                ((tstr, config))
-                                 for tstr in tstrings)
+    tstrings = config.tstrings
+    Parallel(n_jobs=8, verbose=20)(delayed(produce_tstr)((tstr, config))
+                                   for tstr in tstrings)
 
 
 # def prepare_rdr2_write(df):
