@@ -17,6 +17,10 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy pytest pandas
   - pip install .
+cache:
+  directories:
+    - miniconda
+
 # command to run tests, e.g. python setup.py test
 script:
   - py.test
