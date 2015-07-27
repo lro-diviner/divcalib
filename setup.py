@@ -24,7 +24,7 @@ setup(
     version = "2.4.0beta2",
     packages = find_packages(),
 
-    install_requires = ['pandas>='+pandas_version, 'cliutils'],
+    install_requires = ['pandas>='+pandas_version],
     tests_require = ['pytest'],
 
     cmdclass = {'test': PyTest},

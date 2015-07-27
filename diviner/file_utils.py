@@ -22,7 +22,6 @@ from .exceptions import (DivTimeLengthError,
                          RDRS_NotFoundError,
                          L1ANotFoundError)
 
-from cliutils import cliargs
 # from plot_utils import ProgressBar
 import zipfile
 
@@ -55,7 +54,6 @@ else:
 #
 # data transport utilities
 #
-@cliargs
 def scp_l1a_file(tstr):
     src_host = 'luna4'
     target_path = pjoin(datapath, 'l1a_data')
