@@ -7,7 +7,7 @@ import logging
 from numpy import poly1d
 import os
 from diviner import __path__
-import .divconstants as config
+from . import divconstants as config
 from exceptions import *
 from div_l1a_fix import correct_noise
 

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import .divconstants as c
+from . import divconstants as c
 from scipy import ndimage as nd
 from datetime import datetime
 
