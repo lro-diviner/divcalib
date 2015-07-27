@@ -1,5 +1,3 @@
-import ez_setup
-ez_setup.use_setuptools()
 import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
@@ -21,7 +19,7 @@ class PyTest(TestCommand):
 
 setup(
     name = "Diviner",
-    version = "2.4.0beta2",
+    version = "2.4.0b3",
     packages = find_packages(),
 
     install_requires = ['pandas>='+pandas_version],
