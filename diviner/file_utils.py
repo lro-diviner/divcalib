@@ -372,23 +372,23 @@ def get_rdr_headers(fname):
     return parse_header_line(line)
 
 
-class GroundCalibFile(file):
+class GroundCalibFile(object):
 
-    def __init__(self, *args, **kwargs):
-        super(GroundCalibFile, self).__init__(*args, **kwargs)
+    def __init__(self, fname):
+        self.f = open(fname)
         self.get_headers()
 
     def get_headers(self):
         self.skip = 0
         while True:
             self.skip += 1
-            line = self.readline()
+            line = self.f.readline()
             if not line.startswith('#'):
                 self.headers = parse_header_line(line)
                 return
 
     def read_data(self, nrows=None):
-        self.seek(0)
+        self.f.seek(0)
         df = pd.io.parsers.read_csv(self,
                                     skiprows=self.skip + 1,
                                     skipinitialspace=True,
