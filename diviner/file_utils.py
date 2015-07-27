@@ -343,7 +343,7 @@ def parse_header_line(line):
 
 
 class L1AHeader(object):
-    from l1a_header import headerstring
+    from .l1a_header import headerstring
     # beware: parse_header_line converts to lower case!
     columns = parse_header_line(headerstring)
 
