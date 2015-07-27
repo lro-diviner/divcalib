@@ -12,7 +12,7 @@ from os.path import join as pjoin
 import socket
 from datetime import timedelta
 from datetime import datetime as dt
-from data_prep import define_sdtype, prepare_data, index_by_time
+from .data_prep import define_sdtype, prepare_data, index_by_time
 from collections import deque
 import logging
 from diviner import __path__
