@@ -5,13 +5,12 @@ import os
 
 import numpy as np
 import pandas as pd
+from diviner import __path__
 from numpy import poly1d
 from scipy.interpolate import UnivariateSpline as Spline
 
-from div_l1a_fix import correct_noise
-from diviner import __path__
-
 from . import divconstants as config
+from .div_l1a_fix import correct_noise
 from .exceptions import MeanTimeCalcError
 
 module_logger = logging.getLogger(name='diviner.calib')
