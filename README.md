@@ -1,4 +1,7 @@
 diviner
 =======
 
+[![Code Health](https://landscape.io/github/michaelaye/diviner/develop/landscape.svg?style=flat)](https://landscape.io/github/michaelaye/diviner/develop)
+
+
 Code that supports the analysis of Diviner data
