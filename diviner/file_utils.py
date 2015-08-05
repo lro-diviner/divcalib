@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
 # file utilities for Diviner
-from __future__ import print_function, division
-import pandas as pd
-import numpy as np
-import sys
+from __future__ import division, print_function
+
 import glob
-from dateutil.parser import parse as dateparser
+import logging
 import os
+import socket
+import sys
+import zipfile
+from collections import deque
+from datetime import datetime as dt
+from datetime import timedelta
 from os import path
 from os.path import join as pjoin
-import socket
-from datetime import timedelta
-from datetime import datetime as dt
-from .data_prep import define_sdtype, prepare_data, index_by_time
-from collections import deque
-import logging
-from diviner import __path__
 from subprocess import call
-from .exceptions import (DivTimeLengthError,
-                         RDRR_NotFoundError,
-                         RDRS_NotFoundError,
-                         L1ANotFoundError)
 
-# from plot_utils import ProgressBar
-import zipfile
+import numpy as np
+import pandas as pd
+from dateutil.parser import parse as dateparser
+
+from diviner import __path__
+
+from .data_prep import define_sdtype, index_by_time, prepare_data
+from .exceptions import (DivTimeLengthError, L1ANotFoundError,
+                         RDRR_NotFoundError, RDRS_NotFoundError)
 
 hostname = socket.gethostname().split('.')[0]
 user = os.environ['USER']
@@ -827,7 +827,7 @@ class DivXDataPump(object):
         "t in hours, n = how many hours."
         start_time = self.time + timedelta(hours=t)
         l = []
-        for i in xrange(n):
+        for i in range(n):
             new_time = start_time + timedelta(hours=i)
             basename = self.get_fname_from_time(new_time)
             print(basename)
