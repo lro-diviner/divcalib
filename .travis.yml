@@ -10,12 +10,15 @@ python:
   - "3.4"
 
 before_install:
+  - REDIRECT_TO=/dev/stdout
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
+  - bash miniconda.sh -b -p $HOME/miniconda &> ${REDIRECT_TO}
   - export PATH="$HOME/miniconda/bin:$PATH"
-  - conda update --yes conda
+  - conda update --yes --quiet conda &> ${REDIRECT_TO}
+
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
+  # - pip install -q coveralls pytest-cov
   - pip install .
 cache:
   directories:
