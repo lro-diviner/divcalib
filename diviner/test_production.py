@@ -1,20 +1,22 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
-from diviner import calib
-from diviner import file_utils as fu
-from diviner import ana_utils as au
-from joblib import Parallel, delayed
-import pandas as pd
-import numpy as np
-import diviner
+
+import gc
 import logging
 import os
-from os import path
 import sys
-import rdrx
-import gc
-from diviner.exceptions import RDRR_NotFoundError
+from os import path
+
+import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
+
+import diviner
 from bintools import cols_to_descriptor
+from diviner import ana_utils as au
+from diviner import file_utils as fu
+from diviner import calib, rdrx
+from diviner.exceptions import RDRR_NotFoundError
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
                               '%(message)s')
@@ -252,7 +254,7 @@ def melt_and_merge_rdr1(rdrxobject, c):
 
 
 def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
-    c = indf.filter(regex=channel.mcs+'_')[obs.time.tindex]
+    c = indf.filter(regex=channel.mcs + '_')[obs.time.tindex]
     renamer = lambda x: int(x[-2:])
     # for telescope B (channel.div > 6):
     if (channel.div > 6) and invert_dets:
@@ -280,7 +282,7 @@ def check_for_existing_files(config, tstr):
     channels_to_do = []
     # check which channels are not done yet, if so.
     all_done = True
-    for c in range(config.c_start, config.c_end+1):
+    for c in range(config.c_start, config.c_end + 1):
         fname = config.get_rdr2_savename(tstr, c)
         if path.exists(fname) and (not config.overwrite):
             module_logger.debug("Found existing RDR2, skipping: {}"
@@ -294,7 +296,7 @@ def check_for_existing_files(config, tstr):
 def symlink_existing_files(config, tstr):
     """Find and symlink existing files to avoid duplication."""
 
-    for c in range(config.c_start, config.c_end+1):
+    for c in range(config.c_start, config.c_end + 1):
         path_here = config.get_rdr2_savename(tstr, c)
         # if I have the file in current folder, no need to look it up in others
         if path.exists(path_here):
@@ -462,7 +464,7 @@ if __name__ == '__main__':
         tstrings = config.tstrings
         Parallel(n_jobs=8,
                  verbose=20)(delayed(produce_tstr)
-                            ((tstr, config))
+                             ((tstr, config))
                              for tstr in tstrings)
     else:
         runs = [args.run_name]
@@ -481,7 +483,7 @@ if __name__ == '__main__':
 
             Parallel(n_jobs=8,
                      verbose=20)(delayed(produce_tstr)
-                                ((tstr, config))
+                                 ((tstr, config))
                                  for tstr in tstrings)
 
 

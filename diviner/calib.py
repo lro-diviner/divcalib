@@ -1,15 +1,18 @@
 from __future__ import division, print_function
-import pandas as pd
-import numpy as np
-from scipy.interpolate import UnivariateSpline as Spline
-#from plot_utils import ProgressBar
+
 import logging
-from numpy import poly1d
 import os
-from diviner import __path__
-from . import divconstants as config
-from exceptions import *
+
+import numpy as np
+import pandas as pd
+from numpy import poly1d
+from scipy.interpolate import UnivariateSpline as Spline
+
 from div_l1a_fix import correct_noise
+from diviner import __path__
+
+from . import divconstants as config
+from .exceptions import MeanTimeCalcError
 
 module_logger = logging.getLogger(name='diviner.calib')
 module_logger.setLevel(logging.INFO)
@@ -80,8 +83,8 @@ def find_closest_offset_time(offset_times, all_times):
     if len(offset_times) == 1:
         return np.zeros_like(all_times, dtype='int')
     idx = offset_times.searchsorted(all_times)
-    idx = np.clip(idx, 1, len(offset_times)-1)
-    left = offset_times[idx-1]
+    idx = np.clip(idx, 1, len(offset_times) - 1)
+    left = offset_times[idx - 1]
     right = offset_times[idx]
     idx -= all_times - left < right - all_times
     return idx
@@ -138,13 +141,13 @@ class RBBTable(object):
     def get_telA_radiances(self, temp):
         rads = []
         for i in range(3, 7):
-            rads.extend(21*[float(self.get_radiance(temp, i))])
+            rads.extend(21 * [float(self.get_radiance(temp, i))])
         return rads
 
     def get_telB_radiances(self, temp):
         rads = []
         for i in range(7, 10):
-            rads.extend(21*[float(self.get_radiance(temp, i))])
+            rads.extend(21 * [float(self.get_radiance(temp, i))])
         return rads
 
     def lookup_radiances_for_thermal_channels(self, mapping_source, store):
@@ -167,10 +170,10 @@ class RBBTable(object):
 
         # loop over thermal channels ('a3'..'b3', i.e. 3..9 in Diviner lingo)
         for channel in thermal_channels:
-            #link to the correct bb temps by checking first letter of channel
+            # link to the correct bb temps by checking first letter of channel
             bbtemps = mapping[channel[0]]
 
-            #look up the radiances for this channel
+            # look up the radiances for this channel
             RBBs = self.get_radiance(bbtemps, mcs_div_mapping[channel])
             channel_rbbs = pd.Series(RBBs, index=mapping_source.index)
             for i in range(1, 22):
@@ -179,7 +182,7 @@ class RBBTable(object):
 
 
 ###
-### global
+# global
 ###
 rbbtable = RBBTable()
 
@@ -259,7 +262,7 @@ class CalBlock(object):
         self.df = df
         self.offsets_done = False
         for view in 'space bb st'.split():
-            viewdf = get_data_columns(self.df[self.df['is_'+view+'view']])
+            viewdf = get_data_columns(self.df[self.df['is_' + view + 'view']])
             setattr(self, view + 'views', viewdf)
             label = view + '_block_labels'
             setattr(self, view + '_grouped', viewdf.groupby(self.df[label]))
@@ -283,16 +286,13 @@ class CalBlock(object):
                                " at {}.".format(self.df.index[0]))
         if np.any(self.st_grouped.size() > config.ST_LENGTH):
             module_logger.info("ST views larger than {} at {}."
-                         .format(config.ST_LENGTH,
-                                 self.df.index[0]))
+                               .format(config.ST_LENGTH, self.df.index[0]))
         if np.any(self.space_grouped.size() > config.SPACE_LENGTH):
             module_logger.info("Space-view larger than {} at {}."
-                         .format(config.SPACE_LENGTH,
-                                 self.df.index[0]))
+                               .format(config.SPACE_LENGTH, self.df.index[0]))
         if len(self.bbviews) > config.BB_LENGTH:
             module_logger.info("BB-view larger than {} at {}."
-                         .format(config.BB_LENGTH,
-                                 self.df.index[0]))
+                               .format(config.BB_LENGTH, self.df.index[0]))
 
     def get_unique_labels(self, view):
         labels = self.df[view + '_block_labels'].unique()
@@ -502,26 +502,28 @@ class Calibrator(object):
     def calibrate(self):
 
         #####
-        ### BB TEMPERATURES
+        # BB TEMPERATURES
         #####
         # interpolate the bb1 and bb2 temperatures for all times
         # or pad if to recreate JPL calibration
         if self.pad_bbtemps:
-            ### WARNING!
-            ## This can cut off a calib point and make the offset times unfit
+            ###
+            # WARNING!
+            # This can cut off a calib point and make the offset times unfit
             # the calib mean times.
-            ### WARNING!
+            # WARNING!
+            ###
             self.pad_bb_temps()
         else:
             self.interpolate_bb_temps()
 
         #####
-        ### Process CalBlocks
+        # Process CalBlocks
         #####
         self.process_calblocks()
 
         #####
-        ### INTERPOLATION OF CALIB DATA
+        # INTERPOLATION OF CALIB DATA
         #####
         # interpolate offsets (and gains?) over the big dataframe block
         self.interpolate_caldata()
@@ -532,13 +534,13 @@ class Calibrator(object):
         self.get_offsets_from_focal_plane_temps('b3_11')
 
         #####
-        ### CALCULATE RADIANCES
+        # CALCULATE RADIANCES
         #####
         # Apply the interpolated values to create science data (T_b, radiances)
         self.calc_radiances()
 
         #####
-        ### CALCULATE T_B
+        # CALCULATE T_B
         #####
         # calculate brightness temperatures Tb
         self.calc_tb()
@@ -555,7 +557,7 @@ class Calibrator(object):
 
         # first i forward pad from first filled value.
         for bbtemp in bbtemps:
-            df[bbtemp+'_interp'] = df[bbtemp].replace(np.nan)
+            df[bbtemp + '_interp'] = df[bbtemp].replace(np.nan)
 
         # now find which is the first filled value and cut off dataframe, to be
         # exactly doing what JPL is doing
@@ -676,7 +678,7 @@ class Calibrator(object):
         gains to all data.
         """
 
-        ### create filter here for the kind of data to calibrate !!
+        # create filter here for the kind of data to calibrate !!
         # before, I was only producing science data for non-calibblock data.
         # now I do for all as it was done like that before.
         # sdata = self.df[self.df.sdtype==0]
@@ -719,7 +721,7 @@ class Calibrator(object):
 
         if self.do_rad_corr:
             module_logger.info("Performing radiance correction on {}"
-                         .format(self.df.index[0]))
+                               .format(self.df.index[0]))
             # restricting to thermal dets is not required thanks to handling
             # it upstairs, so commenting it out for now.
             # thermal_dets = get_thermal_detectors(norm_radiance)
@@ -735,7 +737,7 @@ class Calibrator(object):
         # to loop over channels here, not single detectors
         for channel in thermal_channels:
             # this filter catches all detectors for the current channel
-            abs_radiance[abs_radiance.filter(regex=channel+'_').columns] *= \
+            abs_radiance[abs_radiance.filter(regex=channel + '_').columns] *= \
                 self.norm_to_abs_converter.get_value(2, channel)
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
@@ -744,7 +746,7 @@ class Calibrator(object):
     def calc_tb(self):
         container = []
         for channel in thermal_channels:
-            tbch = self.norm_radiance.filter(regex=channel+'_').apply(
+            tbch = self.norm_radiance.filter(regex=channel + '_').apply(
                 self.rbbtable.get_tb,
                 args=(mcs_div_mapping[channel],))
             container.append(tbch)
@@ -764,7 +766,7 @@ class Calibrator(object):
         grad_interp = spline(all_times)
         offsets = self.offsets_interp[det]
         if self.do_fpt_calib:
-            self.offsets_interp[det] = offsets.ptp()*grad_interp+offsets.mean()
+            self.offsets_interp[det] = offsets.ptp() * grad_interp + offsets.mean()
 
     def quality_checks(self):
 
