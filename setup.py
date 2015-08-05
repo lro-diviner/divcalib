@@ -23,7 +23,8 @@ setup(
     name="Diviner",
     version="2.4.0b4",
     packages=find_packages(),
-
+    package_dir={'diviner': 'diviner'},
+    package_data={'diviner': ['data/*']},
     install_requires=['pandas>=' + pandas_version],
     tests_require=['pytest'],
 
