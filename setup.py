@@ -21,7 +21,7 @@ class PyTest(TestCommand):
 
 setup(
     name="Diviner",
-    version="2.4.0b3",
+    version="2.4.0b4",
     packages=find_packages(),
 
     install_requires=['pandas>=' + pandas_version],
