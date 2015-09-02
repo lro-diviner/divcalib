@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 from diviner.metadata import get_all_df
 from bokeh.plotting import output_file, figure, save
-from bokeh.models.formatters.TickFormatter import DatetimeTickFormatter
+from bokeh.models import DatetimeTickFormatter
 import pandas as pd
 
 
