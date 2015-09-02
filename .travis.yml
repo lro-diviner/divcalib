@@ -7,7 +7,6 @@ branches:
 
 python:
   - "2.7"
-  - "3.4"
 
 before_install:
   - REDIRECT_TO=/dev/stdout
