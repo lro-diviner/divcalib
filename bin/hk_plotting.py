@@ -18,7 +18,7 @@ def create_hk_temps():
         p.line(dates, df[col], legend=col)
         p.title = col
 
-    save()
+    save(p)
 
 
 def create_other_hk():
@@ -33,7 +33,7 @@ def create_other_hk():
         p.line(dates, df[col], legend=col)
         p.title = col
 
-    save()
+    save(p)
 
 
 def create_high_res(col):
@@ -46,7 +46,7 @@ def create_high_res(col):
                tools='pan,wheel_zoom,box_zoom,reset,previewsave')
     p.line(dates, df[col])
     p.title = col
-    save()
+    save(p)
 
 if __name__ == '__main__':
     create_high_res('bb_1_temp')
