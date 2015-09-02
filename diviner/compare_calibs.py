@@ -8,6 +8,7 @@ import os
 
 print pd.__version__
 
+
 def get_channel_from_fname(divrad_fname):
     b = os.path.basename(divrad_fname)
     cdet = b.split('.')[0].split('_')[-1]
@@ -19,20 +20,20 @@ def get_channel_from_fname(divrad_fname):
         c = 'b'+c
     cdet = c+'_'+det
     return cdet
-    
-#filter for current (<0.11) pandas warnings
-warnings.filterwarnings('ignore',category=FutureWarning)
-    
+
+# filter for current (<0.11) pandas warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
 #
 # get divdata file
 #
 
 divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c6d11.divdata'
 
-columns = ['year','month','date','hour','minute','second','qmi','radiance']
+columns = ['year', 'month', 'date', 'hour', 'minute', 'second', 'qmi', 'radiance']
 
 # use pandas parser to read in text file
-divdata = pd.io.parsers.read_table(divrad_fname, sep='\s+',names=columns)
+divdata = pd.io.parsers.read_table(divrad_fname, sep='\s+', names=columns)
 
 # create time index for data
 divdata = fu.index_by_time(divdata)
@@ -41,7 +42,7 @@ divdata = fu.index_by_time(divdata)
 divdata = divdata.sort_index()
 
 # drop qmi
-divdata = divdata.drop('qmi',axis=1)
+divdata = divdata.drop('qmi', axis=1)
 
 #
 # now get div247 file and calibrate
@@ -52,16 +53,16 @@ pump = fu.Div247DataPump("20110416")
 # get first hour for that day
 df = pump.get_n_hours(2)
 
-#options for calbibration
+# options for calbibration
 options = dict(do_bbtimes=True, pad_bbtemps=False,
                single_rbb=True, skipsamples=True)
-#calibrate
+# calibrate
 calib_mine = calib.Calibrator(df, do_bbtimes=False, pad_bbtemps=False,
-                                single_rbb=False, skipsamples=False)
+                              single_rbb=False, skipsamples=False)
 calib_mine.calibrate()
 
 calib_jpl = calib.Calibrator(df, do_bbtimes=True, pad_bbtemps=True,
-                                single_rbb=True, skipsamples=True)
+                             single_rbb=True, skipsamples=True)
 calib_jpl.calibrate()
 
 # find out the channel that was used by divdata
@@ -72,7 +73,7 @@ myrad_new = pd.DataFrame(calib_mine.abs_radiance[cdet])
 myrad_old = pd.DataFrame(calib_jpl.abs_radiance[cdet])
 
 compare = myrad_new.merge(divdata, left_index=True, right_index=True)
-compare.columns = ['new','divdata']
+compare.columns = ['new', 'divdata']
 compare['jpl'] = myrad_old
 
 compare['bb_error'] = (1 - compare.old / compare.new_bb) * 100
@@ -81,10 +82,9 @@ compare['cb_error'] = (1 - compare.old / compare.new_cb) * 100
 
 compare['bb_error'].plot()
 compare.old.plot(secondary_y=True)
-divdata.radiance.plot(style='r.',label='old')
-myrad.plot(style='g.',label='new')
+divdata.radiance.plot(style='r.', label='old')
+myrad.plot(style='g.', label='new')
 plt.legend(loc='best')
-plt.savefig(divrad_fname+'.png',dpi=100)
+plt.savefig(divrad_fname+'.png', dpi=100)
 plt.show()
 print
-

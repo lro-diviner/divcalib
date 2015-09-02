@@ -2,21 +2,22 @@
 # -*- coding: utf-8 -*-
 # <nbformat>3.0</nbformat>
 from __future__ import division, print_function
-from matplotlib.pyplot import show, rcParams, subplots
+
+import os
+from datetime import timedelta
+
 import matplotlib.pyplot as plt
 from diviner import file_utils as fu
 from diviner import calib
-import pandas as pd
-from diviner import file_utils as fu
-from datetime import timedelta
-import os
+from matplotlib.pyplot import rcParams, subplots
 
 rcParams['figure.figsize'] = (14, 10)
 
 
 class HotOrbits(object):
+
     """docstring for HotOrbits"""
-    savepath = os.path.join(fu.outpath,'hot_orbits')
+    savepath = os.path.join(fu.outpath, 'hot_orbits')
 
     def __init__(self, df, title_prefix='', rad_corr=True,
                  new_rad_corr=False, folder=''):
@@ -31,7 +32,7 @@ class HotOrbits(object):
 
         # my calibration
         c = calib.Calibrator(df, do_rad_corr=rad_corr,
-                                 new_rad_corr=new_rad_corr)
+                             new_rad_corr=new_rad_corr)
         c.calibrate()
         self.c = c
 
@@ -53,7 +54,9 @@ class HotOrbits(object):
         self.chmedian = self.Tb.apply(lambda x: x - x.median(), axis=1)
         self.chmean = self.Tb.apply(lambda x: x - x.mean(), axis=1)
 
-    def plot_detectors(self, det_list=[1,11,21]):
+    def plot_detectors(self, det_list=None):
+        if det_list is None:
+            det_list = [1, 11, 21]
         fig, ax = subplots()
 
         self.Tb[det_list].plot(ax=ax)
@@ -77,27 +80,26 @@ class HotOrbits(object):
     def plot_raw(self, ):
         df = self.df
         ch2study = self.ch2study
-        figure()
+        plt.figure()
         col = self.ch2study+'_11'
         # df[col].plot(style='k.', markersize=2, )
-        plot(df[col].index, df[col], 'k.', markersize=2)
+        plt.plot(df[col].index, df[col], 'k.', markersize=2)
         # df[df.is_spaceview][col].plot(style='b.', markersize=4)
-        plot(df[df.is_spaceview][col].index,
-                df[df.is_spaceview][col],
-                'b.', markersize=4)
+        plt.plot(df[df.is_spaceview][col].index,
+                 df[df.is_spaceview][col],
+                 'b.', markersize=4)
         # choffsets[self.ch2study+'_11'].plot(style='b.', markersize=2, )
-        plot(df[df.is_bbview][col].index,
-                df[df.is_bbview][col],
-                'r.', markersize=2, )
+        plt.plot(df[df.is_bbview][col].index,
+                 df[df.is_bbview][col],
+                 'r.', markersize=2, )
         # chbbs[self.ch2study+'_11'].plot(style='r.', markersize=2, )
         # if len(df[df.is_stview]) is not 0:
         #     df[df.is_stview][col].plot(style='c.', markersize=5, )
         titlestr = ch2study + ' raw  plus marked calib views'
-        title(' '.join([self.title_prefix, titlestr]))
-        ylabel('Counts')
-        xlabel('Time [UTC')
-        savefig(os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png'))
-
+        plt.title(' '.join([self.title_prefix, titlestr]))
+        plt.ylabel('Counts')
+        plt.xlabel('Time [UTC')
+        plt.savefig(os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png'))
 
     def get_corr_string(self):
         if self.rad_corr:
@@ -126,8 +128,8 @@ class HotOrbits(object):
             df[20].plot(style='k', ax=ax)
         else:
             df.plot(ax=ax)
-        ax.legend(ncol=5,loc='lower right')
-        ax.set_ylim(ymin=-80,ymax=80)
+        ax.legend(ncol=5, loc='lower right')
+        ax.set_ylim(ymin=-80, ymax=80)
 
         corr_string = self.get_corr_string()
         titlestr = self.ch2study + \
@@ -138,34 +140,36 @@ class HotOrbits(object):
         fig.savefig(savestring, dpi=200)
 
     def imshow(self):
-        figure(figsize=(21,3))
-        imshow(self.Tb.values.T, interpolation='none', aspect='auto')
-        colorbar(orientation='horizontal')
+        plt.figure(figsize=(21, 3))
+        plt.imshow(self.Tb.values.T, interpolation='none', aspect='auto')
+        plt.colorbar(orientation='horizontal')
         titlestr = self.ch2study + ' channel image plot'
-        title(' '.join([self.title_prefix, titlestr]))
-        savefig(os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png'))
+        plt.title(' '.join([self.title_prefix, titlestr]))
+        plt.savefig(os.path.join(self.savepath, '_'.join(titlestr.split()) + '.png'))
 
     def plot_max_deviation_det(self):
-        figure()
+        plt.figure()
         self.chmedian.idxmax(axis=1).plot(style='.')
-        xlabel('Time [UTC]')
-        ylabel('Detector number')
+        plt.xlabel('Time [UTC]')
+        plt.ylabel('Detector number')
         tstr = 'Which detector shows the largest deviation from the median'
-        title(' '.join([self.title_prefix,tstr]))
-        savefig(os.path.join(self.savepath, '_'.join(tstr.split()) + '.png'))
+        plt.title(' '.join([self.title_prefix, tstr]))
+        plt.savefig(os.path.join(self.savepath, '_'.join(tstr.split()) + '.png'))
 
     def plot_kde(self):
         self.Tb.plot(kind='kde')
-        legend()
+        plt.legend()
         tstr = 'Detector KDEs'
-        title(' '.join([self.title_prefix, tstr]))
-        savefig(os.path.join(self.savepath + '_'.join(tstr.split()) + '.png'))
+        plt.title(' '.join([self.title_prefix, tstr]))
+        plt.savefig(os.path.join(self.savepath + '_'.join(tstr.split()) + '.png'))
 
     def plot_gains_interp(self):
         self.c.gains_interp.plot(style='*')
-        savefig(os.path.join(self.savepath + 'gains_interp.png'))
+        plt.savefig(os.path.join(self.savepath + 'gains_interp.png'))
+
 
 class HotOrbitsDivData(HotOrbits):
+
     def __init__(self, ch2study, Tb, title_prefix=""):
         self.ch2study = ch2study
         self.Tb = Tb
@@ -174,7 +178,7 @@ class HotOrbitsDivData(HotOrbits):
         self.savepath = os.path.join(self.savepath, 'divdata_')
         self.title_prefix = title_prefix
 ####
-### start of script
+# start of script
 ####
 
 # get L1A data
@@ -185,13 +189,13 @@ df = pump.get_n_hours_from_t(6, offset)
 
 objects = []
 objects.append(HotOrbits(df, timestr + str(offset),
-                           rad_corr=True, new_rad_corr=True, folder=timestr))
+                         rad_corr=True, new_rad_corr=True, folder=timestr))
 objects.append(HotOrbits(df, timestr + str(offset),
-                           rad_corr=False, new_rad_corr=False, folder=timestr))
-#objects.append(HotOrbits(df, timestr + str(offset),
+                         rad_corr=False, new_rad_corr=False, folder=timestr))
+# objects.append(HotOrbits(df, timestr + str(offset),
 #                              rad_corr=True, new_rad_corr=False, folder=timestr))
 
-detectors = ['a3','a4','a5','a6','b1','b2','b3']
+detectors = ['a3', 'a4', 'a5', 'a6', 'b1', 'b2', 'b3']
 #detectors = ['b1','b2','b3']
 for ch in detectors:
     print("\nDoing", ch)
@@ -228,4 +232,4 @@ for ch in detectors:
 # divhotorbits.plot_max_deviation_det()
 # divhotorbits.plot_kde()
 
-#show()
+# show()

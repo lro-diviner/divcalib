@@ -42,7 +42,7 @@ def correct_noise(data):
     # exceeds 50, the noise is set to zero and the observation is
     # not corrected.
 
-    length = data.shape[0]
+    length = int(data.shape[0])
 
     c1 = np.zeros((length, 21, 81))
     c2 = np.zeros((length, 21, 81))
@@ -56,7 +56,7 @@ def correct_noise(data):
     max_diff1 = ma.max(ma.max(c1, axis=2) - ma.min(c1, axis=2), axis=1)
     max_diff2 = ma.max(ma.max(c2, axis=2) - ma.min(c2, axis=2), axis=1)
     max_diff = ma.max(np.transpose(np.dstack((max_diff1, max_diff2)),
-                      (1, 0, 2)),
+                                   (1, 0, 2)),
                       axis=2)
 
     # Where the DN difference exceeds 50, set noise to zero.
@@ -84,4 +84,4 @@ def correct_noise(data):
 if __name__ == '__main__':
     infile = sys.argv[1]
     data = fu.L1ADataFile(infile).open()
-    retval = main(data)
+    retval = correct_noise(data)
