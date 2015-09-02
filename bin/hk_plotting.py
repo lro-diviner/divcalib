@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from diviner.metadata import get_all_df
-from bokeh.plotting import output_file, figure, line, save, curplot
+from bokeh.plotting import output_file, figure, save, curplot
 import pandas as pd
 
 
@@ -13,10 +13,10 @@ def create_hk_temps():
 
     dates = df[t_cols].index.to_datetime().to_series()
     for col in t_cols:
-        figure(x_axis_type='datetime',
-               tools='pan,wheel_zoom,box_zoom,reset,previewsave')
-        line(dates, df[col], legend=col)
-        curplot().title = col
+        p = figure(x_axis_type='datetime',
+                   tools='pan,wheel_zoom,box_zoom,reset,previewsave')
+        p.line(dates, df[col], legend=col)
+        p.title = col
 
     save()
 
@@ -28,10 +28,10 @@ def create_other_hk():
     rest_cols = list(set(df.columns) - set(t_cols))
     dates = df[t_cols].index.to_datetime().to_series()
     for col in rest_cols:
-        figure(x_axis_type='datetime',
-               tools='pan,wheel_zoom,box_zoom,reset,previewsave')
-        line(dates, df[col], legend=col)
-        curplot().title = col
+        p = figure(x_axis_type='datetime',
+                   tools='pan,wheel_zoom,box_zoom,reset,previewsave')
+        p.line(dates, df[col], legend=col)
+        p.title = col
 
     save()
 
@@ -42,10 +42,10 @@ def create_high_res(col):
     df = pd.read_hdf('/raid1/maye/rdr_out/metadata/201209_fastread.h5', 'df')
     df = df.resample('10s')
     dates = df.index.to_datetime().to_series()
-    figure(x_axis_type='datetime',
-           tools='pan,wheel_zoom,box_zoom,reset,previewsave')
-    line(dates, df[col])
-    curplot().title = col
+    p = figure(x_axis_type='datetime',
+               tools='pan,wheel_zoom,box_zoom,reset,previewsave')
+    p.line(dates, df[col])
+    p.title = col
     save()
 
 if __name__ == '__main__':
