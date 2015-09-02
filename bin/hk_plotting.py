@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 from diviner.metadata import get_all_df
 from bokeh.plotting import output_file, figure, save
+from bokeh.models.formatters.TickFormatter import DatetimeTickFormatter
 import pandas as pd
 
 
@@ -46,6 +47,16 @@ def create_high_res(col):
                tools='pan,wheel_zoom,box_zoom,reset,previewsave')
     p.line(dates, df[col])
     p.title = col
+
+    fmt = DatetimeTickFormatter(
+        formats=dict(
+            hours=["%H:%M"],
+            days=["%Y-%m-%d"],
+            months=["%b %Y"],
+            years=["%b %Y"],
+        )
+    )
+    p.axis[0].formatter = fmt
     save(p)
 
 if __name__ == '__main__':
