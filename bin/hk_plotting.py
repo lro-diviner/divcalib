@@ -37,7 +37,7 @@ def create_other_hk():
 
 
 def create_high_res(col):
-    print('creating ', col)
+    print('creating', col)
     output_file('high_res.html', title='Highres')
     df = pd.read_hdf('/raid1/maye/rdr_out/metadata/201209_fastread.h5', 'df')
     df = df.resample('10s')
