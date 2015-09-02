@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from diviner.metadata import get_all_df
-from bokeh.plotting import *
+from bokeh.plotting import output_file, figure, line, save, curplot
 import pandas as pd
 
 
