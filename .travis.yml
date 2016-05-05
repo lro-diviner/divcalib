@@ -14,6 +14,7 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda &> ${REDIRECT_TO}
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda update --yes --quiet conda &> ${REDIRECT_TO}
+  - pip install codecov
 
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
@@ -26,3 +27,6 @@ cache:
 # command to run tests, e.g. python setup.py test
 script:
   - py.test tests
+
+after_success:
+  - codecov
