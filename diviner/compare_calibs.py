@@ -1,10 +1,12 @@
 #!/usr/bin/env python
-import pandas as pd
-import file_utils as fu
-import calib
-import matplotlib.pyplot as plt
-import warnings
 import os
+import warnings
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from diviner import calib
+from diviner import file_utils as fu
 
 
 def get_channel_from_fname(divrad_fname):
