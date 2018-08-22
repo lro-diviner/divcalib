@@ -1,4 +1,4 @@
-import StringIO
+from io import StringIO
 import os
 import diviner
 import pandas as pd
@@ -143,94 +143,92 @@ def create_formatdic_for_dataframe():
 
 
 class Formatter(object):
-    format_list =[(0,'date','"{:>11s}"'),
-                  (1,'utc','"{:>12s}"'),
-                  (2,'jdate','{:17.9f}'),
-                  (3,'orbit','{:5d}'),
-                  (4,'sundist','{:7.5f}'),
-                  (5,'sunlat','{:8.5f}'),
-                  (6,'sunlon','{:9.5f}'),
-                  (7,'sclk','{:016.5f}'),
-                  (8,'sclat','{:9.5f}'),
-                  (9,'sclon','{:9.5f}'),
-                  (10,'scrad','{:11.5f}'),
-                  (11,'scalt','{:11.5f}'),
-                  (12,'el_cmd','{:7.3f}'),
-                  (13,'az_cmd','{:7.3f}'),
-                  (14,'af','{:4d}'),
-                  (15,'orientlat','{:9.5f}'),
-                  (16,'orientlon','{:9.5f}'),
-                  (17,'c','{:1d}'),
-                  (18,'det','{:3d}'),
-                  (19,'vlookx','{:9.6f}'),
-                  (20,'vlooky','{:9.6f}'),
-                  (21,'vlookz','{:9.6f}')]
+    format_list = [(0, 'date', '"{:>11s}"'),
+                   (1, 'utc', '"{:>12s}"'),
+                   (2, 'jdate', '{:17.9f}'),
+                   (3, 'orbit', '{:5d}'),
+                   (4, 'sundist', '{:7.5f}'),
+                   (5, 'sunlat', '{:8.5f}'),
+                   (6, 'sunlon', '{:9.5f}'),
+                   (7, 'sclk', '{:016.5f}'),
+                   (8, 'sclat', '{:9.5f}'),
+                   (9, 'sclon', '{:9.5f}'),
+                   (10, 'scrad', '{:11.5f}'),
+                   (11, 'scalt', '{:11.5f}'),
+                   (12, 'el_cmd', '{:7.3f}'),
+                   (13, 'az_cmd', '{:7.3f}'),
+                   (14, 'af', '{:4d}'),
+                   (15, 'orientlat', '{:9.5f}'),
+                   (16, 'orientlon', '{:9.5f}'),
+                   (17, 'c', '{:1d}'),
+                   (18, 'det', '{:3d}'),
+                   (19, 'vlookx', '{:9.6f}'),
+                   (20, 'vlooky', '{:9.6f}'),
+                   (21, 'vlookz', '{:9.6f}')]
 
     subformat_nominal = [
-                      (22,'radiance','{:10.4f}'),
-                      (23,'tb','{:8.3f}'),
-                      (24,'clat','{:9.5f}'),
-                      (25,'clon','{:9.5f}'),
-                      (26,'cemis','{:9.5f}'),
-                      (27,'csunzen','{:9.5f}'),
-                      (28,'csunazi','{:9.5f}'),
-                      (29,'cloctime','{:8.5f}'),
-                      ]
+        (22, 'radiance', '{:10.4f}'),
+        (23, 'tb', '{:8.3f}'),
+        (24, 'clat', '{:9.5f}'),
+        (25, 'clon', '{:9.5f}'),
+        (26, 'cemis', '{:9.5f}'),
+        (27, 'csunzen', '{:9.5f}'),
+        (28, 'csunazi', '{:9.5f}'),
+        (29, 'cloctime', '{:8.5f}'),
+    ]
 
     # for spaceviews
     subformat_space = [
-                      (22,'radiance','{:10.4f}'),
-                      (23,'tb','{:8.3f}'),
-                      (24,'clat','{:9.1f}'),
-                      (25,'clon','{:9.1f}'),
-                      (26,'cemis','{:9.1f}'),
-                      (27,'csunzen','{:9.1f}'),
-                      (28,'csunazi','{:9.1f}'),
-                      (29,'cloctime','{:8.1f}'),
-                     ]
+        (22, 'radiance', '{:10.4f}'),
+        (23, 'tb', '{:8.3f}'),
+        (24, 'clat', '{:9.1f}'),
+        (25, 'clon', '{:9.1f}'),
+        (26, 'cemis', '{:9.1f}'),
+        (27, 'csunzen', '{:9.1f}'),
+        (28, 'csunazi', '{:9.1f}'),
+        (29, 'cloctime', '{:8.1f}'),
+    ]
 
     # when looking at the solar target, we calculate csunzen and csunazi for the
     # illumination of the target
     subformat_solartarget = [
-                      (22,'radiance','{:10.4f}'),
-                      (23,'tb','{:8.3f}'),
-                      (24,'clat','{:9.1f}'),
-                      (25,'clon','{:9.1f}'),
-                      (26,'cemis','{:9.1f}'),
-                      (27,'csunzen','{:9.5f}'),
-                      (28,'csunazi','{:9.5f}'),
-                      (29,'cloctime','{:8.1f}'),
-                     ]
+        (22, 'radiance', '{:10.4f}'),
+        (23, 'tb', '{:8.3f}'),
+        (24, 'clat', '{:9.1f}'),
+        (25, 'clon', '{:9.1f}'),
+        (26, 'cemis', '{:9.1f}'),
+        (27, 'csunzen', '{:9.5f}'),
+        (28, 'csunazi', '{:9.5f}'),
+        (29, 'cloctime', '{:8.1f}'),
+    ]
 
     subformat_nan = [
-                      (22,'radiance','{:10.1f}'),
-                      (23,'tb','{:8.1f}'),
-                      (24,'clat','{:9.1f}'),
-                      (25,'clon','{:9.1f}'),
-                      (26,'cemis','{:9.1f}'),
-                      (27,'csunzen','{:9.1f}'),
-                      (28,'csunazi','{:9.1f}'),
-                      (29,'cloctime','{:8.1f}'),
-                     ]
+        (22, 'radiance', '{:10.1f}'),
+        (23, 'tb', '{:8.1f}'),
+        (24, 'clat', '{:9.1f}'),
+        (25, 'clon', '{:9.1f}'),
+        (26, 'cemis', '{:9.1f}'),
+        (27, 'csunzen', '{:9.1f}'),
+        (28, 'csunazi', '{:9.1f}'),
+        (29, 'cloctime', '{:8.1f}'),
+    ]
 
     subformat_rest = [
-                      (30,'cphase','{:9.5f}'),
-                      (31,'roi','{:4d}'),
-                     ]
+        (30, 'cphase', '{:9.5f}'),
+        (31, 'roi', '{:4d}'),
+    ]
     flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n',
              's', 'a', 'b']
 
-    for i,flag in enumerate(flags):
+    for i, flag in enumerate(flags):
         subformat_rest += [(i+32, flag, '{:1d}')]
 
     format_nominal = format_list + subformat_nominal + subformat_rest
     format_space = format_list + subformat_space + subformat_rest
     format_solartarget = format_list + subformat_solartarget + subformat_rest
-    format_nan  = format_list + subformat_nan  + subformat_rest
+    format_nan = format_list + subformat_nan + subformat_rest
 
-    nominal     = [i[2] for i in format_nominal]
-    space       = [i[2] for i in format_space]
+    nominal = [i[2] for i in format_nominal]
+    space = [i[2] for i in format_space]
     solartarget = [i[2] for i in format_solartarget]
-    nan         = [i[2] for i in format_nan]
-
-
+    nan = [i[2] for i in format_nan]
