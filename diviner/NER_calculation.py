@@ -36,7 +36,7 @@ for ch in range(3, 10):
     def calc_NER(SDT, C1, C2, gain, offset):
         R1 = (C1 - offset) * gain
         R2 = (C2 - offset) * gain
-        print 'R1: {}\nR2: {}'.format(R1, R2)
+        print('R1: {}\nR2: {}'.format(R1, R2))
         return SDT*(R1-R2)/(C1-C2)
 
     # c1 = sv[16:].mean()
