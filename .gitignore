@@ -57,3 +57,5 @@ notebooks/**/*.txt
 notebooks/plots
 *.sublime-*
 *.old
+
+doc/_build/
