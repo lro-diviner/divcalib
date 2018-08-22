@@ -15,7 +15,7 @@ for i, fname in enumerate(fnames):
     if i % 4 == 0:
         gc.collect()
         print(gc.collect())
-    print fname
+    print(fname)
     df = pd.read_hdf(fname, 'df', columns=[colname])
     df['mybool'] = df[colname] == 90
     df['label'] = label(df.mybool)[0]
