@@ -5,3 +5,6 @@ sphinxcontrib-bibtex
 nbsphinx
 numpy
 pandas
+scipy
+matplotlib
+joblib
