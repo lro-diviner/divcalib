@@ -5,14 +5,14 @@ from traitsui.api \
     import Item, Group, View, CheckListEditor,FileEditor, UItem
 from chaco.api \
     import ArrayPlotData, Plot
-from enable.component_editor import ComponentEditor    
+from enable.component_editor import ComponentEditor
 from numpy import arange, nan
 import os
 import diviner as d
 import sys
 from threading import Thread
 
-        
+
 class DivChanDet(HasTraits):
     c = Range(1,9)
     det = Range(1,21)
@@ -32,7 +32,7 @@ class DivChanDet(HasTraits):
 class DivChannel(HasTraits):
     id = Range(1,9)
     d = dict([(i+1, False) for i in range(21)])
-    
+
 class DivGui ( HasTraits ):
     """ Define the main DivGui class. """
     fpath = File#,
@@ -89,28 +89,28 @@ class DivGui ( HasTraits ):
         plot = Plot(self.plotdata)
         plot.plot(("x", "y"), type='scatter', color='blue')
         self.plot = plot
-                
+
     def _checklist_c_changed(self, old, new):
-        print old,new
+        print(old,new)
         self._create_plot_component(int(new[-1]))
-        
+
     def add_status(self,txt):
         print(txt)
         self.status += txt + '\n'
-        
+
     def _fpath_changed(self,new):
         self.add_status('Loading new file...')
         Thread(target=self.fpath_changed, args=(new,)).start()
-        
+
     def fpath_changed(self,new):
-        print "Reading",new
-        #### 
+        print("Reading",new)
+        ####
         ### FIX ME: nrows = 1000 for develepment
         ####
         self.df = d.read_div_data(new,nrows=35000)
         self.add_status("Done loading new file.")
         self.checklist_c=['1']
-    
+
 
 # Run the GUI (if invoked from the command line):
 if __name__ == '__main__':
