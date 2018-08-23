@@ -26,8 +26,13 @@ from .exceptions import (DivTimeLengthError, L1ANotFoundError,
                          RDRR_NotFoundError, RDRS_NotFoundError)
 
 hostname = socket.gethostname().split('.')[0]
-user = os.environ['USER']
+try:
+    user = os.environ['USER']
+except KeyError:
+    user = 'none'
+
 home = os.environ['HOME']
+
 if sys.platform == 'darwin':
     datapath = pjoin(home, 'data', 'diviner')
     outpath = pjoin(datapath, 'out')

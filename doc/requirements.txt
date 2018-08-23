@@ -1,0 +1,10 @@
+sphinx
+sphinxcontrib-napoleon
+sphinx-py3doc-enhanced-theme
+sphinxcontrib-bibtex
+nbsphinx
+numpy
+pandas
+scipy
+matplotlib
+joblib

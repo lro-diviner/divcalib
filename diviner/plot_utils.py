@@ -49,7 +49,7 @@ def plot_all_calib_blocks(df, **kwargs):
     """Plot all calibration blocks found in the provided dataframe.
 
     Parameters:
-    ==========
+    ===========
     df:
         pandas Dataframe with block labels defined (went through define_sdtype())
     kwargs:

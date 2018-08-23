@@ -14,6 +14,7 @@ fnames = glob.glob(root+"/20????.h5")
 fnames.sort()
 colname = 'last_el_cmd'
 
+
 def do_work(fname):
     print(fname)
     root = os.path.dirname(fname)
@@ -24,10 +25,11 @@ def do_work(fname):
     df['label'] = label(df.mybool)[0]
     df['time'] = df.index
     g = df.groupby('label')['time']
-    subdf = pd.DataFrame({'start':g.first(),
-                          'duration':g.last() - g.first()})
+    subdf = pd.DataFrame({'start': g.first(),
+                          'duration': g.last() - g.first()})
     if len(subdf) > 0:
-        newfname = os.path.join(root, 'analysis', base + '_test_' + colname + '.h5')
+        newfname = os.path.join(
+            root, 'analysis', base + '_test_' + colname + '.h5')
         subdf[1:].to_hdf(newfname,
                          'df',
                          mode='a',

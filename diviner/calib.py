@@ -33,7 +33,23 @@ div_mcs_mapping = {key: value for value, key in list(mcs_div_mapping.items())}
 
 
 def get_calib_blocks(df, blocktype, del_zero=True):
-    "Allowed block-types: ['calib','sv','bb','st']."
+    """Group and put into dictionary calib blocks.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Dataframe holding the data to be grouped and filtered.
+    blocktype : {'calib', 'sv', 'bb', 'st'}
+        Blocktype of the kind of calib data to group and filter for.
+    del_zero : bool, optional
+        Boolean to control if data with label id=0 should be kicked out as well.
+        Label 0 is basically all non-calib science data. Default: True
+
+    Returns
+    -------
+    dict
+        Dictionary containing the calibration blocks for blocktype `blocktype`.
+    """
     try:
         d = dict(list(df.groupby(blocktype + '_block_labels')))
     except KeyError:
@@ -57,6 +73,16 @@ def get_mean_time(df_in, skipsamples=0):
     calibration. They would calculate the time starting from the node counter
     'bbstart', which is the starting point after skipping samples, compared to
     'bborigstart' which is the first node of a bb-view.
+
+    Parameters
+    ----------
+    df_in : pandas.DataFrame
+        Dataframe with a datetime index for which a mean time will be calculated.
+
+    Returns
+    -------
+    pandas.tslib.Timestamp
+        Timestamp containing the mean time for the provided `df_in`.
     """
     # rec
     df = df_in[skipsamples:]
@@ -78,6 +104,18 @@ def find_closest_offset_time(offset_times, all_times):
 
     offset_times and all_times need to be numpy arrays for this to work.
     offset_times must be sorted as well.
+
+    Parameters
+    ----------
+    offset_times : numpy.array
+        Sorted array in which to find closest index for `all_times`
+    all_times : numpy.array
+        Times to search for in `offset_times`
+
+    Returns
+    -------
+    numpy.array
+        Index array for the found closest times.
     """
     if len(offset_times) == 1:
         return np.zeros_like(all_times, dtype='int')
@@ -90,15 +128,19 @@ def find_closest_offset_time(offset_times, all_times):
 
 
 def get_data_columns(df):
+    "Return the columns of df for the detectors."
     return df.filter(items=detectors)
 
 
 def get_thermal_detectors(df):
+    "Return the thermal detector columns only."
     return df.filter(items=thermal_detectors)
 
 
 class RBBTable(object):
+
     """Table class to convert between temperatures and radiances."""
+
     def __init__(self):
         super(RBBTable, self).__init__()
         self.df = pd.read_hdf(os.path.join(__path__[0],
@@ -132,9 +174,37 @@ class RBBTable(object):
             self.rad2t[ch] = Spline(data, temps, s=0.0, k=1)
 
     def get_radiance(self, temps, ch):
+        """Calculate radiance for given temperatures and channel.
+
+        Parameters
+        ----------
+        temps : np.array('float')
+            Float arrays with temperatures to be converted to radiance.
+        ch : int
+            Channel number for which to convert temperatures to radiance.
+
+        Returns
+        -------
+        numpy.array('float')
+            Array of floats with radiances.
+        """
         return self.t2rad[ch](temps)
 
     def get_tb(self, rads, ch):
+        """Calculate T_b for given radiances and channel.
+
+        Parameters
+        ----------
+        rads : np.array('float')
+            Float arrays with radiances to be converted to brightness temperature.
+        ch : int
+            Channel number for which to do the conversion.
+
+        Returns
+        -------
+        numpy.array('float')
+            Array of floats with brightness temperatures.
+        """
         return self.rad2t[ch](rads)
 
     def get_telA_radiances(self, temp):
@@ -187,10 +257,12 @@ rbbtable = RBBTable()
 
 
 class RadianceCorrection(object):
+
     """Polynomial correction for the interpolated radiances.
 
     This is the equivalent class to RConvertTable class in JPL's code.
     """
+
     def __init__(self, new_corr=True):
         super(RadianceCorrection, self).__init__()
         self.excelfile = pd.io.excel.ExcelFile(
@@ -231,6 +303,7 @@ class RadianceCorrection(object):
 
 
 class CalBlock(object):
+
     """Class to handle different options on how to deal with single cal block.
 
     IN:
@@ -240,6 +313,7 @@ class CalBlock(object):
     OUT:
         via several class methods and properties (like members)
     """
+
     def __init__(self, df):
         """Initialize CalBlock instance.
 
@@ -407,13 +481,15 @@ class CalBlock(object):
 
 
 class Calibrator(object):
+
     """currently set up to work with a 'wide' dataframe.
 
     Meaning, all detectors have their own column.
     """
 
     # temperature - radiance converter table
-    rbbtable = RBBTable()
+    # commented out as I'm working with a global table to avoid multiple instances
+    # rbbtable = RBBTable()
 
     def __init__(self, df, pad_bbtemps=False,
                  single_rbb=True, skipsamples=True,

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-import pandas as pd
-from . import file_utils as fu
-from . import calib
-import matplotlib.pyplot as plt
-import warnings
 import os
+import warnings
 
-print(pd.__version__)
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from diviner import calib
+from diviner import file_utils as fu
 
 
 def get_channel_from_fname(divrad_fname):
@@ -21,6 +21,7 @@ def get_channel_from_fname(divrad_fname):
     cdet = c+'_'+det
     return cdet
 
+
 # filter for current (<0.11) pandas warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
 
@@ -30,7 +31,8 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 
 divrad_fname = '/Users/maye/data/diviner/rdr_data/20110416_00-01_c6d11.divdata'
 
-columns = ['year', 'month', 'date', 'hour', 'minute', 'second', 'qmi', 'radiance']
+columns = ['year', 'month', 'date', 'hour',
+           'minute', 'second', 'qmi', 'radiance']
 
 # use pandas parser to read in text file
 divdata = pd.io.parsers.read_table(divrad_fname, sep='\s+', names=columns)
@@ -87,4 +89,7 @@ myrad.plot(style='g.', label='new')
 plt.legend(loc='best')
 plt.savefig(divrad_fname+'.png', dpi=100)
 plt.show()
+<< << << < HEAD
 print()
+== == == =
+>>>>>> > b39041079ff190a88c0e206d1a5536f622894981
