@@ -31,7 +31,6 @@ try:
 except KeyError:
     user = 'none'
 
-
 home = os.environ['HOME']
 
 if sys.platform == 'darwin':
