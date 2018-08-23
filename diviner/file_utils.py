@@ -28,31 +28,33 @@ from .exceptions import (DivTimeLengthError, L1ANotFoundError,
 hostname = socket.gethostname().split('.')[0]
 try:
     user = os.environ['USER']
-    home = os.environ['HOME']
 except KeyError:
-    print("Problem with environment variables")
+    user = 'none'
+
+
+home = os.environ['HOME']
+
+if sys.platform == 'darwin':
+    datapath = pjoin(home, 'data', 'diviner')
+    outpath = pjoin(datapath, 'out')
+    kernelpath = pjoin(home, 'data', 'spice', 'diviner')
+    codepath = pjoin(home, 'Dropbox', 'src', 'diviner')
+    l1adatapath = pjoin(datapath, 'l1a_data')
+    rdrdatapath = pjoin(datapath, 'opsRDR')
+    rdrrdatapath = pjoin(
+        os.environ['HOME'], 'data', 'diviner', 'rdrr_data')
+    rdrsdatapath = pjoin(
+        os.environ['HOME'], 'data', 'diviner', 'rdrs_data')
 else:
-    if sys.platform == 'darwin':
-        datapath = pjoin(home, 'data', 'diviner')
-        outpath = pjoin(datapath, 'out')
-        kernelpath = pjoin(home, 'data', 'spice', 'diviner')
-        codepath = pjoin(home, 'Dropbox', 'src', 'diviner')
-        l1adatapath = pjoin(datapath, 'l1a_data')
-        rdrdatapath = pjoin(datapath, 'opsRDR')
-        rdrrdatapath = pjoin(
-            os.environ['HOME'], 'data', 'diviner', 'rdrr_data')
-        rdrsdatapath = pjoin(
-            os.environ['HOME'], 'data', 'diviner', 'rdrs_data')
-    else:
-        datapath = pjoin(path.sep, hostname, user)
-        outpath = pjoin(datapath, 'rdr_out')
-        kernelpath = pjoin(datapath, 'kernels')
-        codepath = pjoin(os.environ['HOME'], 'src/diviner')
-        feipath = pjoin(path.sep, 'luna1', 'marks', 'feidata')
-        l1adatapath = pjoin(feipath, 'DIV:opsL1A', 'data')
-        rdrdatapath = pjoin(feipath, 'DIV:opsRdr', 'data')
-        rdrrdatapath = '/luna7/marks/rdrr_data'
-        rdrsdatapath = '/luna6/marks/rdrs_data'
+    datapath = pjoin(path.sep, hostname, user)
+    outpath = pjoin(datapath, 'rdr_out')
+    kernelpath = pjoin(datapath, 'kernels')
+    codepath = pjoin(os.environ['HOME'], 'src/diviner')
+    feipath = pjoin(path.sep, 'luna1', 'marks', 'feidata')
+    l1adatapath = pjoin(feipath, 'DIV:opsL1A', 'data')
+    rdrdatapath = pjoin(feipath, 'DIV:opsRdr', 'data')
+    rdrrdatapath = '/luna7/marks/rdrr_data'
+    rdrsdatapath = '/luna6/marks/rdrs_data'
 
 
 #
