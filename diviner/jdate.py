@@ -118,54 +118,54 @@ if __name__ == '__main__':
     mjd=array((51544.0000, -678575., 55555., 55554.))
 
     # check conversions to JD
-    print "Checking mjd2jd, jd2mjd ... "
+    print("Checking mjd2jd, jd2mjd ... ")
     err=0
     jd= mjd2jd(mjd)
     mjdback= jd2mjd(jd)
     for i in range(len(mjdback)):
         if mjd[i]!=mjdback[i]:
-            print "ERROR: mjd2jd -> jd2mjd failed!"
+            print("ERROR: mjd2jd -> jd2mjd failed!")
             err=1
     if err==0:
-        print "OK!"
+        print("OK!")
 
     # check conversions to JY
-    print "Checking jd2jyear, jyear2jd ... "
+    print("Checking jd2jyear, jyear2jd ... ")
     err=0
     jy= jd2jyear(jd)
     jdback= jyear2jd(jy)
     for i in range(len(jdback)):
         if jd[i]!=jdback[i]:
-            print "ERROR: jd2jyear -> jyear2jd failed!"
+            print("ERROR: jd2jyear -> jyear2jd failed!")
             err=1
     if err==0:
-        print "OK!"
+        print("OK!")
 
     # check conversions to ordinal
-    print "Checking ordinal2jd, jd2ordinal ... "
+    print("Checking ordinal2jd, jd2ordinal ... ")
     err=0
     ordinal= jd2ordinal(jd)
     jdback= ordinal2jd(ordinal)
     for i in range(len(jdback)):
         if jd[i]!=jdback[i]:
-            print "ERROR: jd2ordinal -> ordinal2jd failed!"
+            print("ERROR: jd2ordinal -> ordinal2jd failed!")
             err=1
     if err==0:
-        print "OK!"
+        print("OK!")
     
     # print dates
-        print "Checking correctness of date translation ... "
+        print("Checking correctness of date translation ... ")
         err=0
         for i in range(len(ordinal)):
             dt= datetime.fromordinal(int(ordinal[i]))
             if(days[i] != dt.day):
-                print "ERROR: in day result ", dt
+                print("ERROR: in day result ", dt)
                 err=1
             if(months[i] != dt.month):
-                print "ERROR: in month result ", dt
+                print("ERROR: in month result ", dt)
                 err=1
             if(years[i] != dt.year):
-                print "ERROR: in year result ", dt
+                print("ERROR: in year result ", dt)
                 err=1
         if err==0:
-            print "OK!"
+            print("OK!")

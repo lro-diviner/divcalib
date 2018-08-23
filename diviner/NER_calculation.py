@@ -14,7 +14,7 @@ rdr2 = calib.Calibrator(df)
 rdr2.calibrate()
 
 for ch in range(3, 10):
-    print "Ch", ch, "det: ", 10
+    print("Ch", ch, "det: ", 10)
     cdet = au.CDet(ch, 11)
     det = cdet.mcs
 
@@ -36,7 +36,7 @@ for ch in range(3, 10):
     def calc_NER(SDT, C1, C2, gain, offset):
         R1 = (C1 - offset) * gain
         R2 = (C2 - offset) * gain
-        print 'R1: {}\nR2: {}'.format(R1, R2)
+        print('R1: {}\nR2: {}'.format(R1, R2))
         return SDT*(R1-R2)/(C1-C2)
 
     # c1 = sv[16:].mean()
@@ -44,7 +44,7 @@ for ch in range(3, 10):
 
     # NER = calc_NER(STD, c1, c2, gain, offset)
     NER = STD * gain
-    print "NER simple:", STD*gain
+    print("NER simple:", STD*gain)
 
     rbbtable = calib.RBBTable()
     temps = np.linspace(0, 400, 401)
@@ -55,8 +55,8 @@ for ch in range(3, 10):
 
     bucket['NEdT'] = np.abs(NER / bucket['dR/dT'])
 
-    print "STD:", STD
-    print "STD2:", STD2
-    print "NEdT(300K): ", bucket['NEdT'][300:301].iloc[0]
-    print "NEdT(33K): ", bucket['NEdT'][40:41].iloc[0]
-    print
+    print("STD:", STD)
+    print("STD2:", STD2)
+    print("NEdT(300K): ", bucket['NEdT'][300:301].iloc[0])
+    print("NEdT(33K): ", bucket['NEdT'][40:41].iloc[0])
+    print()

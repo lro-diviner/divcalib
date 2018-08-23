@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+
 from matplotlib.pylab import gcf, subplots, figure
 # from mpl_toolkits.mplot3d import axes3d
 import matplotlib.animation as animation
@@ -103,16 +103,16 @@ def create_plot_pointings(azim_start=-60,
                           elev_start=30,
                           elev_min=-10):
     # azimuths
-    azis_down = range(azim_start, azim_min, -1)
-    azis_up = range(azim_min, azim_max)
-    azis_down2 = range(azim_max, azim_start, -1)
+    azis_down = list(range(azim_start, azim_min, -1))
+    azis_up = list(range(azim_min, azim_max))
+    azis_down2 = list(range(azim_max, azim_start, -1))
     azis = azis_down + azis_up + azis_down2
     # elevations
-    elevs_down = range(elev_start, elev_min, -1)
-    elevs_up = range(elev_min, elev_start)
+    elevs_down = list(range(elev_start, elev_min, -1))
+    elevs_up = list(range(elev_min, elev_start))
     elevs = elevs_down + elevs_up
     # return pointing tuples
-    return zip(elevs, azis)
+    return list(zip(elevs, azis))
 
 
 def plot3d_animation(df_in):

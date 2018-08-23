@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 from diviner import calib
 from diviner import file_utils as fu
 from diviner import ana_utils as au
@@ -11,11 +11,11 @@ import logging
 import os
 from os import path
 import sys
-import rdrx
+from . import rdrx
 import gc
 from diviner.exceptions import RDRS_NotFoundError
-from bintools import cols_to_descriptor
-import ConfigParser
+from .bintools import cols_to_descriptor
+import configparser
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
                               '%(message)s')
@@ -299,7 +299,7 @@ if __name__ == '__main__':
         print("Provide config file as argument")
         sys.exit()
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(configfile)
 
     # paths and scope of production run

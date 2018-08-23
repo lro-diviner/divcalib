@@ -1,5 +1,5 @@
 #!/Library/Frameworks/EPD64.framework/Versions/7.3/bin/enpkg
-from __future__ import division
+
 from scipy.constants import k as kb
 from scipy.constants import c, h
 import numpy as np

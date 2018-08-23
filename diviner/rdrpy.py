@@ -26,13 +26,13 @@ def rdrp2hdf(fpath):
     fname = os.path.basename(fpath)
     timestamp = fname.split('_')[0]
     if os.path.exists(os.path.join(destdir, timestamp + '.h5')):
-        print timestamp, 'exists.'
+        print(timestamp, 'exists.')
         return
     newfname = os.path.join(destdir, timestamp + '.des')
     cmd = 'rdrp daterange=' + timestamp + ' > ' + newfname
     print(cmd)
     call(cmd, shell=True)
-    print("Produced {}.des".format(timestamp))
+    print(("Produced {}.des".format(timestamp)))
     des2hdf(newfname)
 
 
@@ -58,7 +58,7 @@ def rdrp2des_or_csv(start, end=None, outtype=None):
 def produce_h5():
     pool = Pool(3)
     if despaths:
-        print "Found des files. First converting them:", despaths
+        print("Found des files. First converting them:", despaths)
         pool.map(des2hdf, despaths)
     pool.map(rdrp2hdf, fpaths)
 
@@ -70,6 +70,6 @@ if __name__ == '__main__':
         try:
             start, end = sys.argv[1:]
         except ValueError:
-            print("Usage: {0} START END [OUTTYPE]".format(sys.argv[0]))
+            print(("Usage: {0} START END [OUTTYPE]".format(sys.argv[0])))
             sys.exit()
     rdrp2des_or_csv(start, end, outtype)

@@ -13,7 +13,7 @@ class Flag(object):
             self.set_members()
 
     def set_members(self):
-        for bitname, val in self.dic.iteritems():
+        for bitname, val in self.dic.items():
             # add the flagname and it's status, but cut off initial
             # qf_ from the name
             setattr(self, bitname, self.check_bit(val))
@@ -32,7 +32,7 @@ class Flag(object):
     def __str__(self):
         # find longest key
         lwidth = 0
-        for key in self.dic.keys():
+        for key in list(self.dic.keys()):
             if len(key) > lwidth:
                 lwidth = len(key)
         s = ''
@@ -42,7 +42,7 @@ class Flag(object):
         return s
 
     def __call__(self):
-        print(self.__str__())
+        print((self.__str__()))
 
 
 class CalibFlag(Flag):

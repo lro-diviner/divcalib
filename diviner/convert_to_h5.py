@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: UTF-8
-from __future__ import division, print_function
+
 import pandas as pd
 import glob
 from diviner.divtweet import tweet_machine # imports api handle

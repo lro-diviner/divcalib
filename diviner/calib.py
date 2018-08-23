@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+
 
 import logging
 import os
@@ -29,7 +29,7 @@ mcs_div_mapping = {'a1': 1, 'a2': 2, 'a3': 3,
                    'a4': 4, 'a5': 5, 'a6': 6,
                    'b1': 7, 'b2': 8, 'b3': 9}
 
-div_mcs_mapping = {key: value for value, key in mcs_div_mapping.iteritems()}
+div_mcs_mapping = {key: value for value, key in list(mcs_div_mapping.items())}
 
 
 def get_calib_blocks(df, blocktype, del_zero=True):
@@ -604,7 +604,7 @@ class Calibrator(object):
         calblocks = get_calib_blocks(self.df, 'calib')
         gain_container = []
         offset_container = []
-        for label, calblock in calblocks.iteritems():
+        for label, calblock in list(calblocks.items()):
             module_logger.debug("Processing label {}".format(label))
             if not np.any(calblock[calblock.is_calib]):
                 n_moving = len(calblock[calblock.is_moving])

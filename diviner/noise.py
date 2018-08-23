@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division
+
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
@@ -62,14 +62,14 @@ def prep_data(fname):
 def plot_channel_means(ax, df,col_str, ch_start=1, ch_end=9):
     for i in range(ch_start,ch_end+1):
         series = div.get_channel_mean(df, col_str, i)
-        if debug: print(i,series.min())
+        if debug: print((i,series.min()))
         ax.plot(series, label=str(i))
     ax.set_ylabel('c_mean('+col_str+')')
 
 def plot_channel_stds(ax, df,col_str):
     for i in range(9):
         series = div.get_channel_std(df, col_str, i+1)
-        if debug: print(i,series.min())
+        if debug: print((i,series.min()))
         ax.plot(series, label=str(i+1))
     ax.set_ylabel('c_std('+col_str+')')
 
@@ -93,20 +93,20 @@ def plot_csunzen(ax, df):
 def process_fname(fname_col_str):
     fname,col_str = fname_col_str
     
-    print "Preparing data..."
+    print("Preparing data...")
     df = prep_data(fname)
-    print "Done."
+    print("Done.")
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    print "Plotting channels."
+    print("Plotting channels.")
     plot_channel_means(ax, df, col_str, 3, 5)
-    print "Done plotting channels. Plotting csunzen."
+    print("Done plotting channels. Plotting csunzen.")
     plot_csunzen(ax, df)
     ax.legend(loc='best',ncol=3,)
     datasetname = get_datasetname(fname)
     ax.set_title(datasetname+'_'+col_str)
     plotfname = get_new_fname(datasetname, col_str)
-    print "Result filename: ", plotfname
+    print("Result filename: ", plotfname)
     plt.savefig(plotfname)
             
     # 
@@ -164,7 +164,7 @@ if __name__ == '__main__':
         col_str = sys.argv[1]
         i_start, i_end = [int(i) for i in sys.argv[2:]]
     except (IndexError, ValueError):
-        print 'Provide "data_col i_start i_end" to work on.'
+        print('Provide "data_col i_start i_end" to work on.')
         sys.exit()
     fnames_and_col_str = [(fname,col_str) for fname in fnames]
     p.map(process_fname, fnames_and_col_str[i_start:i_end])

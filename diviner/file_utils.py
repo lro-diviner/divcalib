@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # file utilities for Diviner
-from __future__ import division, print_function
+
 
 import glob
 import logging
@@ -44,7 +44,7 @@ else:
     outpath = pjoin(datapath, 'rdr_out')
     kernelpath = pjoin(datapath, 'kernels')
     codepath = pjoin(os.environ['HOME'], 'src/diviner')
-    feipath = pjoin(path.sep, 'luna1', 'marks', 'feidata')
+    feipath = pjoin(path.sep, 'raid1', 'u', 'paige', 'marks', 'feidata')
     l1adatapath = pjoin(feipath, 'DIV:opsL1A', 'data')
     rdrdatapath = pjoin(feipath, 'DIV:opsRdr', 'data')
     rdrrdatapath = '/luna7/marks/rdrr_data'
@@ -211,7 +211,7 @@ class DivHour(DivTime):
     def previous(self):
         return DivHour.from_dtime(self.dtime - timedelta(hours=1))
 
-    def next(self):
+    def __next__(self):
         return DivHour.from_dtime(self.dtime + timedelta(hours=1))
 
 
@@ -235,8 +235,8 @@ class DivObs(object):
         self.rdrrfname = RDRRFileName.from_tstr(tstr)
         self.rdrsfname = RDRSFileName.from_tstr(tstr)
 
-    def next(self):
-        nexthour = self.time.next()
+    def __next__(self):
+        nexthour = next(self.time)
         return DivObs(nexthour.tstr)
 
     def previous(self):
@@ -513,7 +513,7 @@ def get_df_from_h5(fname):
     try:
         print("Opening {0}".format(fname))
         store = pd.HDFStore(fname)
-        df = store[store.keys()[0]]
+        df = store[list(store.keys())[0]]
         store.close()
     except:
         print("file {0} not found.".format(fname))
@@ -814,7 +814,7 @@ class DivXDataPump(object):
         i = 0
         while i < n:
             i += 1
-            df = self.process_one_file(openfiles.next())
+            df = self.process_one_file(next(openfiles))
             yield df
 
     def clean_final_df(self, df):
@@ -971,7 +971,7 @@ def open_and_accumulate(tstr, minimum_number=1):
     current = obs.copy()
     appended_counter = 0
     while True:
-        next = current.next()
+        next = next(current)
         try:
             dataframes.append(next.get_l1a_dirty())
         except IOError:
@@ -1025,7 +1025,7 @@ class RDRxReader(object):
 
     def parse_times(self):
         df = self.df
-        timecols = [u'yyyy', u'mm', u'dd', u'hh', u'mn', u'ss']
+        timecols = ['yyyy', 'mm', 'dd', 'hh', 'mn', 'ss']
         secs_only = df.ss.astype('int')
         msecs = (df.ss - secs_only).round(3)
         mapper = lambda x: str(int(x)).zfill(2)

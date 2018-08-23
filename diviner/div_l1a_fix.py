@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from __future__ import division, print_function
+
 import numpy as np
 from numpy import ma
 import sys
@@ -47,7 +47,7 @@ def correct_noise(data):
     c1 = np.zeros((length, 21, 81))
     c2 = np.zeros((length, 21, 81))
 
-    for i in xrange(0, 81):
+    for i in range(0, 81):
         c1[40:length-40, :, i] = data.ix[i:length-80+i, 'a1_01':'a1_21']
         c2[40:length-40, :, i] = data.ix[i:length-80+i, 'a2_01':'a2_21']
 
@@ -68,7 +68,7 @@ def correct_noise(data):
     noise[:40] = 0
     noise[length-40:] = 0
 
-    for i in xrange(2, 9):
+    for i in range(2, 9):
         if i < 6:
             # a3..a6
             ch = 'a'+str(i+1)

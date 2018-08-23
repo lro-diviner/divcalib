@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 from diviner import file_utils as fu
 from diviner import calib
 import pandas as pd
@@ -13,7 +13,7 @@ from diviner import mypool
 
 # leave out visual channels for now
 l1a_channels = calib.channels[2:]
-rdr_channels = range(1,10)[2:]
+rdr_channels = list(range(1,10))[2:]
 
 def process_one_channel(args):
     # unpack argument tuple
@@ -28,7 +28,7 @@ def process_one_channel(args):
     # rename detector names to rdr standard, and reverse detector numbering for
     # detectors of telescope B
     if l1a_channel.startswith('b'):
-        tbout.columns = radout.columns = range(21,0,-1)
+        tbout.columns = radout.columns = list(range(21,0,-1))
     else:
         tbout.rename(columns=lambda x:int(x[3:]), inplace=True)
         radout.rename(columns=lambda x:int(x[3:]), inplace=True)
@@ -55,8 +55,8 @@ def process_one_channel(args):
     radout['date'] = dfdate
     radout['utc'] = dfutc
 
-    tbmolten = pd.melt(tbout, id_vars=['date','utc'], value_vars=range(1,22))
-    radmolten = pd.melt(radout, id_vars=['date','utc'], value_vars=range(1,22))
+    tbmolten = pd.melt(tbout, id_vars=['date','utc'], value_vars=list(range(1,22)))
+    radmolten = pd.melt(radout, id_vars=['date','utc'], value_vars=list(range(1,22)))
 
     # the melting process left funny columns names. repair.
     tbmolten.columns = ['date','utc','det','tb']

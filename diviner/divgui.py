@@ -91,7 +91,7 @@ class DivGui ( HasTraits ):
         self.plot = plot
                 
     def _checklist_c_changed(self, old, new):
-        print old,new
+        print(old,new)
         self._create_plot_component(int(new[-1]))
         
     def add_status(self,txt):
@@ -103,7 +103,7 @@ class DivGui ( HasTraits ):
         Thread(target=self.fpath_changed, args=(new,)).start()
         
     def fpath_changed(self,new):
-        print "Reading",new
+        print("Reading",new)
         #### 
         ### FIX ME: nrows = 1000 for develepment
         ####

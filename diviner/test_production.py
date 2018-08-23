@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 
 import gc
 import logging
@@ -12,7 +12,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 import diviner
-from bintools import cols_to_descriptor
+from .bintools import cols_to_descriptor
 from diviner import ana_utils as au
 from diviner import file_utils as fu
 from diviner import calib, rdrx

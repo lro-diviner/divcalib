@@ -31,7 +31,7 @@ def get_example_rdrx():
 def colnames(colbase, channel=None):
     """create rdrx column names for one or all channels."""
     if not channel:
-        channels = range(1, 10)
+        channels = list(range(1, 10))
     else:
         channels = [channel]
     colnames = []

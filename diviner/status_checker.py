@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 from diviner.divtweet import * # imports api handle
 import os, glob, sys
 from diviner import file_utils as fu

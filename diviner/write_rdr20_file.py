@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 from diviner import file_utils as fu
 import os
 import sys
@@ -43,7 +43,7 @@ def set_view(df):
               9: 9}
     tmp = AFHandler(df.af).second_digit
     df['v'] = 0
-    for oldval, newval in mapper.iteritems():
+    for oldval, newval in mapper.items():
         df['v'][tmp == oldval] = newval
 
 

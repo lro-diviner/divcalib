@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division
+
 from create_database import DataPump
 import pandas as pd
 from matplotlib.pylab import show
@@ -20,7 +20,7 @@ def get_first_sv_mean(df):
     return d[min(d.keys())].mean()
     
 def get_data(month, det, view='is_spaceview', lock=None, container=None):
-    print 'Working on',month
+    print('Working on',month)
     pump = DataPump()
     store = pump.get_month_h5(month)
     df = store.select('df', (view+'=True'), columns=[det,'calib_block_labels'])
@@ -28,7 +28,7 @@ def get_data(month, det, view='is_spaceview', lock=None, container=None):
     return df
 
 def get_all_dets_per_view(month, view='is_spaceview'):
-    print 'Working on',month
+    print('Working on',month)
     pump = DataPump()
     store = pump.get_month_h5(month)
     df = store.select('df', (view+'=True'))
@@ -81,9 +81,9 @@ if __name__ == '__main__':
     except:
         try:
             det = 'a3_11'
-            print 'Using default detector:',det
+            print('Using default detector:',det)
             start, end , view = sys.argv[1:]
         except:
-            print "Usage: {0} startmonth endmonth".format(sys.argv[0])
+            print("Usage: {0} startmonth endmonth".format(sys.argv[0]))
             sys.exit()
     for_all_dets(start,end, view)

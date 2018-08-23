@@ -1,4 +1,4 @@
-import StringIO
+import io
 import os
 import diviner
 import pandas as pd

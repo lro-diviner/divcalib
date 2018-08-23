@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
+
 from diviner import file_utils as fu
 import pandas as pd
 import glob

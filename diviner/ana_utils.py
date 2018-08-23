@@ -9,7 +9,7 @@ class Channel(object):
                        'b1': 7, 'b2': 8, 'b3': 9}
 
     div_mcs_mapping = {key: value for value, key in
-                       mcs_div_mapping.iteritems()}
+                       mcs_div_mapping.items()}
 
     def __init__(self, c):
         if str(c).lower()[0] in ['a', 'b']:
@@ -109,7 +109,7 @@ class CalibHelper(object):
         newrad = self.get_c_rad(c, tstr, kind, invert_dets)
         newrad = newrad.reset_index()
         molten = pd.melt(newrad, id_vars=['index'],
-                         value_vars=range(1, 22),
+                         value_vars=list(range(1, 22)),
                          var_name='det',
                          value_name='newrad')
         return molten

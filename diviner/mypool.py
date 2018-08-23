@@ -24,12 +24,12 @@ class MyPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
 
 def sleepawhile(t):
-    print("Sleeping %i seconds..." % t)
+    print(("Sleeping %i seconds..." % t))
     time.sleep(t)
     return t
 
 def work(num_procs):
-    print("Creating %i (daemon) workers and jobs in child." % num_procs)
+    print(("Creating %i (daemon) workers and jobs in child." % num_procs))
     pool = multiprocessing.Pool(num_procs)
 
     result = pool.map(sleepawhile,

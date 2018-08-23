@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 from diviner import file_utils as fu
 import sys
 import pandas as pd
@@ -52,7 +52,7 @@ def produce_store_file_main():
     except IndexError:
         print("Usage: {0} year(yyyy)".format(sys.argv[0]))
         sys.exit()
-    months = range(1, 13)
+    months = list(range(1, 13))
     for month in months:
         timestr = year + str(month).zfill(2)
         divtweet.tweet_machine("Producing metadata for {0}".format(timestr))
@@ -111,7 +111,7 @@ def resampler(year, interval):
 
 def get_all_df():
     """Load all Diviner mission metadata daily means."""
-    years = range(2009, 2014)
+    years = list(range(2009, 2014))
     l = []
     for year in years:
         store = pd.HDFStore(pjoin(savedir, str(year) + '_daily_means.h5'))

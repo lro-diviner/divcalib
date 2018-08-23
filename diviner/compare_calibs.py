@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import pandas as pd
-import file_utils as fu
-import calib
+from . import file_utils as fu
+from . import calib
 import matplotlib.pyplot as plt
 import warnings
 import os
 
-print pd.__version__
+print(pd.__version__)
 
 
 def get_channel_from_fname(divrad_fname):
@@ -87,4 +87,4 @@ myrad.plot(style='g.', label='new')
 plt.legend(loc='best')
 plt.savefig(divrad_fname+'.png', dpi=100)
 plt.show()
-print
+print()

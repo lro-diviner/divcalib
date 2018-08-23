@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from diviner import file_utils as fu, calib
 from os.path import join as pjoin
 import sys

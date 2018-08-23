@@ -15,7 +15,7 @@ fnames.sort()
 colname = 'last_el_cmd'
 
 def do_work(fname):
-    print fname
+    print(fname)
     root = os.path.dirname(fname)
     base = os.path.basename(fname)
     base = os.path.splitext(base)[0]
@@ -39,4 +39,4 @@ p = Pool(3)
 
 t1 = time.time()
 p.map(do_work, fnames[:3])
-print time.time() - t1
+print(time.time() - t1)
