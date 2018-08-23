@@ -9,9 +9,9 @@ Welcome to Diviner Foundation Dataset RDR's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-notes
+   notes
 
 Indices and tables
 ==================
