@@ -438,7 +438,7 @@ class RDRReader(object):
         self.open_file()
         self.no_to_skip = 0
         while True:
-            line = self.f.readline()
+            line = self.f.readline().decode('utf-8')
             self.no_to_skip += 1
             if not line.startswith('# Header'):
                 break
