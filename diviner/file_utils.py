@@ -143,20 +143,6 @@ def fname_to_tstr(fname):
     return path.basename(fname)[:10]
 
 
-def fname_to_tindex(fname):
-    """Convert filename to time-index for indexing pd.DataFrame.
-
-    Convert a filename to a dataframe-index string to get the hour indicated by
-    the filename.
-    """
-    tstr = fname_to_tstr(fname)
-    return tstr_to_tindex(tstr)
-
-
-def tstr_to_tindex(tstr):
-    return tstr[:8] + ' ' + tstr[8:]
-
-
 def tstr_to_l1a_fname(tstr):
     return pjoin(l1adatapath, tstr + '_L1A.TAB')
 
@@ -183,7 +169,10 @@ def get_month_sample_path_from_mode(mode):
 
 class DivTime(object):
 
-    """Manage time-related metadata for Diviner observations."""
+    """Manage time-related metadata for Diviner observations.
+    
+    Abstract class! Use the derivatives!
+    """
     fmt = ''  # set in derived class!
 
     @classmethod
@@ -213,10 +202,12 @@ class DivHour(DivTime):
     def tindex(self):
         return self.tstr[:8] + ' ' + self.tstr[8:]
 
+    @property
     def previous(self):
         return DivHour.from_dtime(self.dtime - timedelta(hours=1))
 
-    def __next__(self):
+    @property
+    def next(self):
         return DivHour.from_dtime(self.dtime + timedelta(hours=1))
 
 
