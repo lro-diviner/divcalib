@@ -58,3 +58,4 @@ notebooks/plots
 *.old
 
 doc/_build/
+**/*.png
