@@ -40,7 +40,7 @@ def test_parse_times():
     # .T(ransform)
     df = df.T
     df.columns = ['date', 'utc']
-    parsed = fu.parse_times(df).index[0].to_datetime()
+    parsed = fu.parse_times(df).index[0].to_pydatetime()
     assert parsed == dtime
 
 

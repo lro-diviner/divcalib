@@ -10,7 +10,7 @@ from datetime import datetime
 
 
 def format_time(intime):
-    t = intime.to_datetime()
+    t = intime.to_pydatetime()
     s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
     tail = s[-7:]
     f = round(float(tail), 3)
@@ -53,7 +53,7 @@ def index_by_time(df, drop_dates=True):
 
 
 def cutoff_msec(ts):
-    dtime = ts.to_datetime()
+    dtime = ts.to_pydatetime()
     return pd.Timestamp(datetime(dtime.year, dtime.month, dtime.day,
                                  dtime.hour, dtime.minute, dtime.second))
 
