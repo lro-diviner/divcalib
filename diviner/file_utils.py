@@ -298,6 +298,15 @@ class FileName(object):
     def fname(self):
         return pjoin(self.dirname, self.tstr + self.rest)
 
+    def __str__(self):
+        s = f"{self.__class__.__name__}\n"
+        s += f"Dir: {self.dirname}\n"
+        s += f"Base: {self.basename}"
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class L1AFileName(FileName):
     ext = '_L1A.TAB'
