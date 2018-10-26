@@ -191,6 +191,13 @@ class DivTime(object):
             self.hour = self.tstr[8:10]
         self.dtime = dt.strptime(self.tstr, self.fmt)
 
+    def __str__(self):
+        s = f"{self.__class__.__name__}\n"
+        s += f"{self.dtime}"
+        return s
+
+    def __repr__(self):
+        return self.__str__()
 
 class DivHour(DivTime):
 
