@@ -263,6 +263,18 @@ class DivObs(object):
     def copy(self):
         return DivObs(self.time.tstr)
 
+    def __str__(self):
+        s = f"self.__class__.__name__}\n"
+        s += f"L1A: {self.l1afname}\n"
+        s += f"RDRR: {self.rdrrfname}\n"
+        s += f"RDRS: {self.rdrsfname}"
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+        
+    
+
 
 class FileName(object):
 
