@@ -238,12 +238,14 @@ class DivObs(object):
         self.rdrrfname = RDRRFileName.from_tstr(tstr)
         self.rdrsfname = RDRSFileName.from_tstr(tstr)
 
-    def __next__(self):
-        nexthour = next(self.time)
+    @property
+    def next(self):
+        nexthour = self.time.next
         return DivObs(nexthour.tstr)
 
+    @property
     def previous(self):
-        prevhour = self.time.previous()
+        prevhour = self.time.previous
         return DivObs(prevhour.tstr)
 
     def get_l1a(self):
