@@ -264,7 +264,7 @@ class DivObs(object):
         return DivObs(self.time.tstr)
 
     def __str__(self):
-        s = f"self.__class__.__name__}\n"
+        s = f"{self.__class__.__name__}\n"
         s += f"L1A: {self.l1afname}\n"
         s += f"RDRR: {self.rdrrfname}\n"
         s += f"RDRS: {self.rdrsfname}"
@@ -272,7 +272,7 @@ class DivObs(object):
 
     def __repr__(self):
         return self.__str__()
-        
+
     
 
 
