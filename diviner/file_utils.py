@@ -274,8 +274,6 @@ class DivObs(object):
         return self.__str__()
 
     
-
-
 class FileName(object):
 
     """Managing class for file name attributes."""
@@ -384,20 +382,6 @@ class L1AHeader(object):
     metadatacols.sort()
 
 
-def get_rdr_headers(fname):
-    """Get headers from both ops and PDS RDR files."""
-    if isinstance(fname, zipfile.ZipFile):
-        f = fname.open(fname.namelist()[0])
-    else:
-        f = open(fname)
-    while True:
-        line = f.readline()
-        if not line.startswith('# Header'):
-            break
-    f.close()
-    return parse_header_line(line)
-
-
 class GroundCalibFile(object):
 
     def __init__(self, fname):
@@ -440,10 +424,6 @@ class RDRReader(object):
         self.get_rdr_headers()
         # to not break existing code refererring to self.open
         self.read_df = self.open
-
-    def find_fnames(self):
-        self.fnames = glob.glob(pjoin(self.datapath,
-                                      self.tstr + '*_RDR.TAB.zip'))
 
     def open_file(self):
         if self.fname.lower().endswith('.zip'):
