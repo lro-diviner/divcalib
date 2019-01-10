@@ -993,7 +993,7 @@ def open_and_accumulate(tstr, minimum_number=1):
     current = obs.copy()
     appended_counter = 0
     while True:
-        next = next(current)
+        next = current.next
         try:
             dataframes.append(next.get_l1a_dirty())
         except IOError:
