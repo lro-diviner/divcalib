@@ -635,7 +635,8 @@ class Calibrator(object):
         ###
         # Alternative calibration via FPTemps
         ###
-        self.get_offsets_from_focal_plane_temps('b3_11')
+        if self.do_fpt_calib:
+            self.get_offsets_from_focal_plane_temps("b3_11")
 
         #####
         # CALCULATE RADIANCES
