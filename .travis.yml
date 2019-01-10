@@ -15,7 +15,7 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda &> ${REDIRECT_TO}
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda update --yes --quiet conda &> ${REDIRECT_TO}
-  - conda install --yes python=3.6 --file requirements.txt -c conda-forge
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt -c conda-forge
   - conda install codecov -y -c conda-forge
 
 install:
