@@ -973,7 +973,7 @@ def open_and_accumulate(tstr, minimum_number=1):
 
     appended_counter = 0
     while True:
-        previous = current.previous()
+        previous = current.previous
         try:
             dataframes.appendleft(previous.get_l1a_dirty())
         except L1ANotFoundError:
