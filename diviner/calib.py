@@ -853,7 +853,7 @@ class Calibrator(object):
         container = []
         for channel in thermal_channels:
             tbch = self.norm_radiance.filter(regex=channel + "_").apply(
-                self.rbbtable.get_tb, args=(mcs_div_mapping[channel],)
+                rbbtable.get_tb, args=(mcs_div_mapping[channel],)
             )
             container.append(tbch)
         self.tb = pd.concat(container, axis=1)
