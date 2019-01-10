@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # file utilities for Diviner
-
-
 import glob
 import logging
 import os
@@ -22,58 +20,60 @@ from dateutil.parser import parse as dateparser
 from diviner import __path__
 
 from .data_prep import define_sdtype, index_by_time, prepare_data
-from .exceptions import (DivTimeLengthError, L1ANotFoundError,
-                         RDRR_NotFoundError, RDRS_NotFoundError)
+from .exceptions import (
+    DivTimeLengthError,
+    L1ANotFoundError,
+    RDRR_NotFoundError,
+    RDRS_NotFoundError,
+)
 
-hostname = socket.gethostname().split('.')[0]
+hostname = socket.gethostname().split(".")[0]
 try:
-    user = os.environ['USER']
+    user = os.environ["USER"]
 except KeyError:
-    user = 'none'
+    user = "none"
 
-home = os.environ['HOME']
+home = os.environ["HOME"]
 
-if sys.platform == 'darwin':
-    datapath = pjoin(home, 'data', 'diviner')
-    outpath = pjoin(datapath, 'out')
-    kernelpath = pjoin(home, 'data', 'spice', 'diviner')
-    codepath = pjoin(home, 'Dropbox', 'src', 'diviner')
-    l1adatapath = pjoin(datapath, 'l1a_data')
-    rdrdatapath = pjoin(datapath, 'opsRDR')
-    rdrrdatapath = pjoin(
-        os.environ['HOME'], 'data', 'diviner', 'rdrr_data')
-    rdrsdatapath = pjoin(
-        os.environ['HOME'], 'data', 'diviner', 'rdrs_data')
+if sys.platform == "darwin":
+    datapath = pjoin(home, "data", "diviner")
+    outpath = pjoin(datapath, "out")
+    kernelpath = pjoin(home, "data", "spice", "diviner")
+    codepath = pjoin(home, "Dropbox", "src", "diviner")
+    l1adatapath = pjoin(datapath, "l1a_data")
+    rdrdatapath = pjoin(datapath, "opsRDR")
+    rdrrdatapath = pjoin(os.environ["HOME"], "data", "diviner", "rdrr_data")
+    rdrsdatapath = pjoin(os.environ["HOME"], "data", "diviner", "rdrs_data")
 else:
     datapath = pjoin(path.sep, hostname, user)
-    outpath = pjoin(datapath, 'rdr_out')
-    kernelpath = pjoin(datapath, 'kernels')
-    codepath = pjoin(os.environ['HOME'], 'src/diviner')
-    feipath = pjoin(path.sep, 'raid1', 'u', 'paige', 'marks', 'feidata')
-    l1adatapath = pjoin(feipath, 'DIV:opsL1A', 'data')
-    rdrdatapath = pjoin(feipath, 'DIV:opsRdr', 'data')
-    rdrrdatapath = '/luna7/marks/rdrr_data'
-    rdrsdatapath = '/luna6/marks/rdrs_data'
+    outpath = pjoin(datapath, "rdr_out")
+    kernelpath = pjoin(datapath, "kernels")
+    codepath = pjoin(os.environ["HOME"], "src/diviner")
+    feipath = pjoin(path.sep, "raid1", "u", "paige", "marks", "feidata")
+    l1adatapath = pjoin(feipath, "DIV:opsL1A", "data")
+    rdrdatapath = pjoin(feipath, "DIV:opsRdr", "data")
+    rdrrdatapath = "/luna7/marks/rdrr_data"
+    rdrsdatapath = "/luna6/marks/rdrs_data"
 
 
 #
 # data transport utilities
 #
 def scp_l1a_file(tstr):
-    src_host = 'luna4'
-    target_path = pjoin(datapath, 'l1a_data')
-    src_datadir = '/luna1/marks/feidata/DIV:opsL1A/data'
-    cmd = 'scp {0}:{1}/{2}_L1A.TAB {3}'.format(src_host, src_datadir,
-                                               tstr, target_path)
+    src_host = "luna4"
+    target_path = pjoin(datapath, "l1a_data")
+    src_datadir = "/luna1/marks/feidata/DIV:opsL1A/data"
+    cmd = f"scp {src_host}:{src_datadir}/{tstr}_L1A.TAB {target_path}"
     print(cmd)
     call(cmd, shell=True)
 
 
 def scp_opsRDR_file(tstr):
-    src_host = 'luna4'
-    target_path = pjoin(datapath, 'opsRDR')
-    cmd = 'scp {0}:{1}/{2}_RDR.TAB.zip {3}'.format(src_host, rdrdatapath,
-                                                   tstr, target_path)
+    src_host = "luna4"
+    target_path = pjoin(datapath, "opsRDR")
+    cmd = "scp {0}:{1}/{2}_RDR.TAB.zip {3}".format(
+        src_host, rdrdatapath, tstr, target_path
+    )
     call(cmd, shell=True)
 
 
@@ -81,9 +81,10 @@ def scp_opsRDR_file(tstr):
 # data browsing utils
 #
 
+
 def available_files(datapath, year=None, ext=None):
     "Provide year as constraining argument."
-    globbedlist = glob.glob(datapath + '/*' + ext)
+    globbedlist = glob.glob(datapath + "/*" + ext)
     if year is None:
         retval = globbedlist
     else:
@@ -95,15 +96,15 @@ def available_files(datapath, year=None, ext=None):
 
 
 def available_l1a_files(year=None):
-    return available_files(l1adatapath, year=year, ext='_L1A.TAB')
+    return available_files(l1adatapath, year=year, ext="_L1A.TAB")
 
 
 def available_rdrr_files(year=None):
-    return available_files(rdrrdatapath, year=year, ext='.rdrr')
+    return available_files(rdrrdatapath, year=year, ext=".rdrr")
 
 
 def available_rdrs_files(year=None):
-    return available_files(rdrsdatapath, year=year, ext='.rdrs')
+    return available_files(rdrsdatapath, year=year, ext=".rdrs")
 
 
 #
@@ -111,10 +112,10 @@ def available_rdrs_files(year=None):
 #
 def get_tstr(indata):
     # datetime type
-    if hasattr(indata, 'strftime'):
+    if hasattr(indata, "strftime"):
         return indata.strftime("%Y%m%d%H")
     # pandas timestamp
-    elif hasattr(indata, 'to_pydatetime'):
+    elif hasattr(indata, "to_pydatetime"):
         t = indata.to_pydatetime()
         return t.strftime("%Y%m%d%H")
     else:
@@ -125,17 +126,14 @@ def get_tstr(indata):
 
 def tstr_to_datetime(tstr):
     if not len(tstr) in [4, 6, 8, 10]:
-        raise DivTimeLengthError(tstr, ['YYYY',
-                                        'YYYYMM',
-                                        'YYYYMMDD',
-                                        'YYYYMMDDHH'])
+        raise DivTimeLengthError(tstr, ["YYYY", "YYYYMM", "YYYYMMDD", "YYYYMMDDHH"])
     if len(tstr) == 4:
-        tstr += '010100'
+        tstr += "010100"
     elif len(tstr) == 6:
-        tstr += '0100'
+        tstr += "0100"
     elif len(tstr) == 8:
-        tstr += '00'
-    dtime = dt.strptime(tstr, '%Y%m%d%H')
+        tstr += "00"
+    dtime = dt.strptime(tstr, "%Y%m%d%H")
     return dtime
 
 
@@ -144,19 +142,17 @@ def fname_to_tstr(fname):
 
 
 def tstr_to_l1a_fname(tstr):
-    return pjoin(l1adatapath, tstr + '_L1A.TAB')
+    return pjoin(l1adatapath, tstr + "_L1A.TAB")
 
 
 def timestrings_for_day(day_string):
-    dr = pd.date_range(day_string, freq='H', periods=24)
+    dr = pd.date_range(day_string, freq="H", periods=24)
     return [get_tstr(i) for i in dr]
 
 
 def calc_daterange(start, end):
     """Return list of YYYYMMDDHH strings for each hour between start and end"""
-    dr = pd.date_range(tstr_to_datetime(start),
-                       tstr_to_datetime(end),
-                       freq='H')
+    dr = pd.date_range(tstr_to_datetime(start), tstr_to_datetime(end), freq="H")
     return [get_tstr(i) for i in dr]
 
 
@@ -164,16 +160,17 @@ def calc_daterange(start, end):
 # Tools for data output to tables
 #
 def get_month_sample_path_from_mode(mode):
-    return pjoin(datapath, 'rdr20_month_samples', mode)
+    return pjoin(datapath, "rdr20_month_samples", mode)
 
 
 class DivTime(object):
 
     """Manage time-related metadata for Diviner observations.
-    
+
     Abstract class! Use the derivatives!
     """
-    fmt = ''  # set in derived class!
+
+    fmt = ""  # set in derived class!
 
     @classmethod
     def from_dtime(cls, dtime):
@@ -199,15 +196,17 @@ class DivTime(object):
     def __repr__(self):
         return self.__str__()
 
+
 class DivHour(DivTime):
 
     """Class for the usual hour-strings."""
-    fmt = '%Y%m%d%H'
+
+    fmt = "%Y%m%d%H"
     lentstr = 10
 
     @property
     def tindex(self):
-        return self.tstr[:8] + ' ' + self.tstr[8:]
+        return self.tstr[:8] + " " + self.tstr[8:]
 
     @property
     def previous(self):
@@ -221,12 +220,12 @@ class DivHour(DivTime):
 class DivDay(DivTime):
 
     """Class for a full day of Diviner data."""
-    fmt = '%Y%m%d'
+
+    fmt = "%Y%m%d"
     lentstr = 8
 
 
 class DivObs(object):
-
     @classmethod
     def from_fname(cls, fname):
         basename = path.basename(fname)
@@ -273,13 +272,13 @@ class DivObs(object):
     def __repr__(self):
         return self.__str__()
 
-    
+
 class FileName(object):
 
     """Managing class for file name attributes."""
 
-    ext = ''  # fill in child class !
-    datapath = ''  # fill in child class !
+    ext = ""  # fill in child class !
+    datapath = ""  # fill in child class !
 
     @classmethod
     def from_tstr(cls, tstr):
@@ -291,12 +290,12 @@ class FileName(object):
         self.basename = path.basename(fname)
         self.dirname = path.dirname(fname)
         self.file_id, self.ext = path.splitext(self.basename)
-        self.tstr = self.file_id.split('_')[0]
+        self.tstr = self.file_id.split("_")[0]
         # as Diviner FILES only exist in separations of hours I use DivHour
         # here:
         self.divhour = DivHour(self.tstr)
         # save everything after the first '_' as rest
-        self.rest = self.basename[len(self.tstr):]
+        self.rest = self.basename[len(self.tstr) :]
 
     @property
     def path(self):
@@ -321,17 +320,17 @@ class FileName(object):
 
 
 class L1AFileName(FileName):
-    ext = '_L1A.TAB'
+    ext = "_L1A.TAB"
     datapath = l1adatapath
 
 
 class RDRRFileName(FileName):
-    ext = '.rdrr'
+    ext = ".rdrr"
     datapath = rdrrdatapath
 
 
 class RDRSFileName(FileName):
-    ext = '.rdrs'
+    ext = ".rdrs"
     datapath = rdrsdatapath
 
 
@@ -358,9 +357,9 @@ def parse_header_line(line):
     >>> parse_header_line(s)
     ['a', 'b', 'c']
     """
-    line = line.strip('#')
-    if ',' in line:
-        newline = line.split(',')
+    line = line.strip("#")
+    if "," in line:
+        newline = line.split(",")
     else:
         newline = line.split()
     return [i.strip().lower() for i in newline]
@@ -368,13 +367,16 @@ def parse_header_line(line):
 
 class L1AHeader(object):
     from .l1a_header import headerstring
+
     # beware: parse_header_line converts to lower case!
     columns = parse_header_line(headerstring)
 
-    tel1cols = ["a{0}_{1}".format(i, str(j).zfill(2))
-                for i in range(1, 7) for j in range(1, 22)]
-    tel2cols = ['b{0}_{1}'.format(i, str(j).zfill(2))
-                for i in range(1, 4) for j in range(1, 22)]
+    tel1cols = [
+        "a{0}_{1}".format(i, str(j).zfill(2)) for i in range(1, 7) for j in range(1, 22)
+    ]
+    tel2cols = [
+        "b{0}_{1}".format(i, str(j).zfill(2)) for i in range(1, 4) for j in range(1, 22)
+    ]
 
     datacols = tel1cols + tel2cols
 
@@ -383,7 +385,6 @@ class L1AHeader(object):
 
 
 class GroundCalibFile(object):
-
     def __init__(self, fname):
         self.f = open(fname)
         self.get_headers()
@@ -393,17 +394,19 @@ class GroundCalibFile(object):
         while True:
             self.skip += 1
             line = self.f.readline()
-            if not line.startswith('#'):
+            if not line.startswith("#"):
                 self.headers = parse_header_line(line)
                 return
 
     def read_data(self, nrows=None):
         self.f.seek(0)
-        df = pd.io.parsers.read_csv(self,
-                                    skiprows=self.skip + 1,
-                                    skipinitialspace=True,
-                                    names=self.headers,
-                                    nrows=nrows)
+        df = pd.io.parsers.read_csv(
+            self,
+            skiprows=self.skip + 1,
+            skipinitialspace=True,
+            names=self.headers,
+            nrows=nrows,
+        )
         return parse_times(df)
 
 
@@ -414,8 +417,7 @@ class RDRReader(object):
 
     @classmethod
     def from_tstr(cls, tstr):
-        fnames = glob.glob(pjoin(cls.datapath,
-                                 tstr + '*_RDR.TAB.zip'))
+        fnames = glob.glob(pjoin(cls.datapath, tstr + "*_RDR.TAB.zip"))
         return cls(fname=fnames[0])
 
     def __init__(self, fname, nrows=None):
@@ -426,7 +428,7 @@ class RDRReader(object):
         self.read_df = self.open
 
     def open_file(self):
-        if self.fname.lower().endswith('.zip'):
+        if self.fname.lower().endswith(".zip"):
             zfile = zipfile.ZipFile(self.fname)
             self.f = zfile.open(zfile.namelist()[0])
         else:
@@ -439,21 +441,22 @@ class RDRReader(object):
         self.open_file()
         self.no_to_skip = 0
         while True:
-            line = self.f.readline().decode('utf-8')
+            line = self.f.readline().decode("utf-8")
             self.no_to_skip += 1
-            if not line.startswith('# Header'):
+            if not line.startswith("# Header"):
                 break
         self.headers = parse_header_line(line)
         self.f.close()
 
     def open(self, nrows=None, do_parse_times=True):
         self.open_file()
-        df = pd.io.parsers.read_csv(self.f,
-                                    skiprows=self.no_to_skip,
-                                    skipinitialspace=True,
-                                    names=self.headers,
-                                    nrows=nrows,
-                                    )
+        df = pd.io.parsers.read_csv(
+            self.f,
+            skiprows=self.no_to_skip,
+            skipinitialspace=True,
+            names=self.headers,
+            nrows=nrows,
+        )
         self.f.close()
         return parse_times(df) if do_parse_times else df
 
@@ -464,20 +467,22 @@ class RDRReader(object):
 
 
 def parse_times(df):
-    format = '%d-%b-%Y %H:%M:%S.%f'
+    format = "%d-%b-%Y %H:%M:%S.%f"
     # I don't need to round the seconds here because the df.utc data has
     # already a 3-digit millisecond string: '19:00:00.793'
-    times = pd.to_datetime(df.date + ' ' + df.utc, format=format, utc=False)
+    times = pd.to_datetime(df.date + " " + df.utc, format=format, utc=False)
     df.set_index(times, inplace=True)
-    return df.drop(['date', 'utc'], axis=1)
+    return df.drop(["date", "utc"], axis=1)
 
 
 def read_l1a_data(fname, nrows=None):
-    df = pd.io.parsers.read_csv(fname,
-                                names=L1AHeader.columns,
-                                na_values='-9999',
-                                skiprows=8,
-                                skipinitialspace=True)
+    df = pd.io.parsers.read_csv(
+        fname,
+        names=L1AHeader.columns,
+        na_values="-9999",
+        skiprows=8,
+        skipinitialspace=True,
+    )
     return parse_times(df)
 
 
@@ -510,7 +515,7 @@ def read_pprint(fname):
     ndata = np.loadtxt(fname, skiprows=1)
     dataframe = pd.DataFrame(ndata)
     dataframe.columns = headers
-    dataframe.sort('jdate', inplace=True)
+    dataframe.sort("jdate", inplace=True)
     return dataframe
 
 
@@ -521,7 +526,7 @@ def get_df_from_h5(fname):
         store = pd.HDFStore(fname)
         df = store[list(store.keys())[0]]
         store.close()
-    except:
+    except FileNotFoundError:
         print("file {0} not found.".format(fname))
     return df
 
@@ -529,10 +534,10 @@ def get_df_from_h5(fname):
 def read_div_data(fname):
     with open(fname) as f:
         line = f.readline()
-        if any(['dlre_edr.c' in line, 'Header' in line]):
+        if any(["dlre_edr.c" in line, "Header" in line]):
             rdr = RDRReader(f.fname)
             return rdr.read_df()
-        elif fname.endswith('.h5'):
+        elif fname.endswith(".h5"):
             return get_df_from_h5(fname)
         else:
             return read_pprint(fname)
@@ -542,8 +547,9 @@ def read_div_data(fname):
 # tools for parsing binary data of Diviner
 #
 
+
 def get_dtypes_from_columns(keys):
-    return np.dtype([(key, 'f8') for key in keys])
+    return np.dtype([(key, "f8") for key in keys])
 
 
 def parse_descriptor(fpath):
@@ -554,7 +560,7 @@ def parse_descriptor(fpath):
     s = s.drop(0)
 
     def unpack_str(value):
-        val2 = value.split(' ')
+        val2 = value.split(" ")
         t = [i.strip().strip("'") for i in val2]
         return t[0].lower()
 
@@ -578,7 +584,7 @@ def read_binary_pipe(fpath):
     while True:
         line = f.readline()
         lines.append(line)
-        if 'end' in line:
+        if "end" in line:
             break
 
     rec_dtype, keys = get_dtypes_from_binary_pipe(lines)
@@ -589,13 +595,14 @@ def read_binary_pipe(fpath):
 
 
 def get_div247_dtypes():
-    despath = pjoin(__path__[0], 'data', 'div247.des')
+    despath = pjoin(__path__[0], "data", "div247.des")
     return parse_descriptor(despath)
 
 
 def get_div38_dtypes():
-    despath = pjoin(__path__[0], 'data', 'div38.des')
+    despath = pjoin(__path__[0], "data", "div38.des")
     return parse_descriptor(despath)
+
 
 #
 # rdrplus tools
@@ -607,8 +614,9 @@ def read_rdrplus(fpath, nrows):
         line = f.readline()
         headers = parse_header_line(line)
 
-    return pd.io.parsers.read_csv(fpath, names=headers, na_values=['-9999'],
-                                  skiprows=1, nrows=nrows)
+    return pd.io.parsers.read_csv(
+        fpath, names=headers, na_values=["-9999"], skiprows=1, nrows=nrows
+    )
 
 
 def fname_to_df(fname, rec_dtype, keys):
@@ -620,7 +628,7 @@ def fname_to_df(fname, rec_dtype, keys):
 
 def folder_to_df(folder, top_end=None, verbose=False):
     rec_dtype, keys = get_div247_dtypes()
-    fnames = glob.glob(folder + '/*.div247')
+    fnames = glob.glob(folder + "/*.div247")
     fnames.sort()
     if not top_end:
         top_end = len(fnames)
@@ -628,12 +636,12 @@ def folder_to_df(folder, top_end=None, verbose=False):
     olddf = None
     for i, fname in enumerate(fnames[:top_end]):
         if verbose:
-            print(round(float(i) * 100 / top_end, 1), '%')
+            print(round(float(i) * 100 / top_end, 1), "%")
         df = fname_to_df(fname, rec_dtype, keys)
         df = prepare_data(df)
         define_sdtype(df)
         if olddf is not None:
-            for s in df.filter(regex='_labels'):
+            for s in df.filter(regex="_labels"):
                 df[s] += olddf[s].max()
         olddf = df.copy()
         dfall = pd.concat([dfall, df])
@@ -643,15 +651,15 @@ def folder_to_df(folder, top_end=None, verbose=False):
 
 def get_storename(folder):
     path = os.path.realpath(folder)
-    dirname = '/luna4/maye/data/h5_div247'
+    dirname = "/luna4/maye/data/h5_div247"
     basename = os.path.basename(path)
-    storename = pjoin(dirname, basename + '.h5')
+    storename = pjoin(dirname, basename + ".h5")
     return storename
 
 
 def folder_to_store(folder):
     rec_dtype, keys = get_div247_dtypes()
-    fnames = glob.glob(folder + '/*.div247')
+    fnames = glob.glob(folder + "/*.div247")
     if not fnames:
         print("Found no files.")
         return
@@ -659,14 +667,23 @@ def folder_to_store(folder):
     # opening store in overwrite-mode
     storename = get_storename(folder)
     print(storename)
-    store = pd.HDFStore(storename, mode='w')
+    store = pd.HDFStore(storename, mode="w")
     nfiles = len(fnames)
     olddf = None
-    cols = ['calib_block_labels', 'space_block_labels', 'bb_block_labels',
-            'st_block_labels', 'is_spaceview', 'is_bbview', 'is_stview',
-            'is_moving', 'is_stowed', 'is_calib']
+    cols = [
+        "calib_block_labels",
+        "space_block_labels",
+        "bb_block_labels",
+        "st_block_labels",
+        "is_spaceview",
+        "is_bbview",
+        "is_stview",
+        "is_moving",
+        "is_stowed",
+        "is_calib",
+    ]
     for i, fname in enumerate(fnames):
-        print(round(float(i) * 100 / nfiles, 1), '%')
+        print(round(float(i) * 100 / nfiles, 1), "%")
         df = fname_to_df(fname, rec_dtype, keys)
         df = prepare_data(df)
         define_sdtype(df)
@@ -674,15 +691,15 @@ def folder_to_store(folder):
         if len(to_store) == 0:
             continue
         if olddf is not None:
-            for s in to_store.filter(regex='_labels'):
+            for s in to_store.filter(regex="_labels"):
                 to_store[s] += olddf[s].max()
         olddf = to_store.copy()
         try:
-            store.append('df', to_store, data_columns=cols)
+            store.append("df", to_store, data_columns=cols)
         except Exception as e:
             store.close()
-            print('at', fname)
-            print('something went wrong at appending into store.')
+            print("at", fname)
+            print("something went wrong at appending into store.")
             print(e)
             return
     print("Done.")
@@ -691,8 +708,9 @@ def folder_to_store(folder):
 
 class DataPump(object):
     """class to provide Diviner data in different ways."""
+
     rec_dtype, keys = get_div247_dtypes()
-    datapath = '/luna4/maye/data/div247/'
+    datapath = "/luna4/maye/data/div247/"
 
     def __init__(self, fname_pattern=None, tstr=None, fnames_only=False):
         self.fnames_only = fnames_only
@@ -704,8 +722,7 @@ class DataPump(object):
 
         self.tstr = tstr
         self.current_time = dateparser(tstr)
-        self.fname = pjoin(datapath,
-                           self.current_time.strftime("%Y%m%d%H"))
+        self.fname = pjoin(datapath, self.current_time.strftime("%Y%m%d%H"))
         self.increment = timedelta(hours=1)
 
     # def gen_fnames(self, pattern, top):
@@ -713,7 +730,7 @@ class DataPump(object):
 
     def get_fnames(self):
         dirname = path.dirname(self.fname)
-        fnames = glob.glob(dirname + '/*.div247')
+        fnames = glob.glob(dirname + "/*.div247")
         fnames.sort()
         self.fnames = fnames
         self.index = self.fnames.index(self.fname)
@@ -738,7 +755,7 @@ class DataPump(object):
 
 
 class H5DataPump(object):
-    datapath = pjoin(datapath, 'h5_div247')
+    datapath = pjoin(datapath, "h5_div247")
 
     def __init__(self, tstr):
         self.tstr = tstr
@@ -748,7 +765,7 @@ class H5DataPump(object):
         self.fnames.sort()
 
     def get_fnames(self):
-        return glob.glob(pjoin(self.datapath, self.tstr[:4] + '*'))
+        return glob.glob(pjoin(self.datapath, self.tstr[:4] + "*"))
 
     def store_generator(self):
         for fname in self.fnames:
@@ -769,11 +786,11 @@ class DivXDataPump(object):
     Needs to be completed in derived class.
     Things missing is self.datapath to be set in deriving class.
     """
-    tstr_parser = {4: '%Y', 6: '%Y%m',
-                   8: '%Y%m%d', 10: '%Y%m%d%H'}
+
+    tstr_parser = {4: "%Y", 6: "%Y%m", 8: "%Y%m%d", 10: "%Y%m%d%H"}
 
     # overwrite in child class!!
-    this_ext = '...'
+    this_ext = "..."
 
     def __init__(self, tstr):
         """tstr is of format yyyymm[dd[hh]], used directly by glob.
@@ -782,16 +799,14 @@ class DivXDataPump(object):
         is then more restrictive.
         """
         self.tstr = tstr
-        self.time = dt.strptime(tstr,
-                                self.tstr_parser[len(tstr)])
+        self.time = dt.strptime(tstr, self.tstr_parser[len(tstr)])
         self.fnames = self.find_fnames()
         self.fname = FileName(self.fnames[0])
         self.fnames.sort()
 
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
-        searchpath = pjoin(
-            self.datapath, self.tstr[:6], self.tstr + '*')
+        searchpath = pjoin(self.datapath, self.tstr[:6], self.tstr + "*")
         fnames = glob.glob(searchpath)
         if not fnames:
             print("No files found. Searched like this:\n")
@@ -846,13 +861,13 @@ class DivXDataPump(object):
 
 class Div247DataPump(DivXDataPump):
     "Class to stream div247 data."
-    if sys.platform != 'darwin':
+    if sys.platform != "darwin":
         datapath = "/luna1/marks/div247"
     else:
         datapath = "/Users/maye/data/diviner/div247"
     rec_dtype, keys = get_div247_dtypes()
 
-    this_ext = '.div247'
+    this_ext = ".div247"
 
     def clean_final_df(self, df_in):
         """Declare NaN value and pad nan data for some."""
@@ -864,12 +879,12 @@ class Div247DataPump(DivXDataPump):
 
 
 class Div38DataPump(DivXDataPump):
-    datapath = pjoin(datapath, 'div38')
+    datapath = pjoin(datapath, "div38")
     rec_dtype, keys = get_div38_dtypes()
-    this_ext = '.div38'
+    this_ext = ".div38"
 
     def find_fnames(self):
-        return glob.glob(pjoin(self.datapath, self.tstr + '*'))
+        return glob.glob(pjoin(self.datapath, self.tstr + "*"))
 
 
 class L1ADataFile(object):
@@ -882,11 +897,13 @@ class L1ADataFile(object):
         if not fname:
             fname = self.fname
         try:
-            df = pd.io.parsers.read_csv(fname,
-                                        names=self.header.columns,
-                                        na_values='-9999',
-                                        skiprows=8,
-                                        skipinitialspace=True)
+            df = pd.io.parsers.read_csv(
+                fname,
+                names=self.header.columns,
+                na_values="-9999",
+                skiprows=8,
+                skipinitialspace=True,
+            )
         except IOError as e:
             raise L1ANotFoundError(e)
         return df
@@ -960,15 +977,14 @@ def open_and_accumulate(tstr, minimum_number=1):
         try:
             dataframes.appendleft(previous.get_l1a_dirty())
         except L1ANotFoundError:
-            logging.warning('Could not find previous L1A file {}'
-                            .format(previous.time.tstr))
+            logging.warning(
+                "Could not find previous L1A file {}".format(previous.time.tstr)
+            )
             break
         else:
-            logging.debug("Appending {0} on the left."
-                          .format(previous.time.tstr))
+            logging.debug("Appending {0} on the left.".format(previous.time.tstr))
             appended_counter += 1
-        if any(previous.get_l1a().is_calib) and \
-                (appended_counter >= minimum_number):
+        if any(previous.get_l1a().is_calib) and (appended_counter >= minimum_number):
             break
         current = previous.copy()
 
@@ -981,15 +997,13 @@ def open_and_accumulate(tstr, minimum_number=1):
         try:
             dataframes.append(next.get_l1a_dirty())
         except IOError:
-            logging.warning('Could not find following file {}'
-                            .format(next.time.tstr))
+            logging.warning("Could not find following file {}".format(next.time.tstr))
             break
         else:
             logging.debug("Appending {0} on the right.".format(next.time.tstr))
             appended_counter += 1
 
-        if any(next.get_l1a().is_calib) and \
-                (appended_counter >= minimum_number):
+        if any(next.get_l1a().is_calib) and (appended_counter >= minimum_number):
             break
         current = next.copy()
 
@@ -1001,11 +1015,10 @@ def open_and_accumulate(tstr, minimum_number=1):
 class L1ADataPump(DivXDataPump):
     datapath = l1adatapath
 
-    this_ext = '_L1A.TAB'
+    this_ext = "_L1A.TAB"
 
     def find_fnames(self):
-        return glob.glob(pjoin(self.datapath,
-                               self.tstr + '*' + self.this_ext))
+        return glob.glob(pjoin(self.datapath, self.tstr + "*" + self.this_ext))
 
     def clean_final_df(self, df):
         df = prepare_data(df)
@@ -1031,19 +1044,21 @@ class RDRxReader(object):
 
     def parse_times(self):
         df = self.df
-        timecols = ['yyyy', 'mm', 'dd', 'hh', 'mn', 'ss']
-        secs_only = df.ss.astype('int')
+        timecols = ["yyyy", "mm", "dd", "hh", "mn", "ss"]
+        secs_only = df.ss.astype("int")
         msecs = (df.ss - secs_only).round(3)
         mapper = lambda x: str(int(x)).zfill(2)
-        times = pd.to_datetime(df.yyyy.astype('int').astype('str') +
-                               df.mm.map(mapper) +
-                               df.dd.map(mapper) +
-                               df.hh.map(mapper) +
-                               df.mn.map(mapper) +
-                               df.ss.map(mapper) +
-                               (msecs).astype('str').str[1:],
-                               format='%Y%m%d%H%M%S.%f',
-                               utc=False)
+        times = pd.to_datetime(
+            df.yyyy.astype("int").astype("str")
+            + df.mm.map(mapper)
+            + df.dd.map(mapper)
+            + df.hh.map(mapper)
+            + df.mn.map(mapper)
+            + df.ss.map(mapper)
+            + (msecs).astype("str").str[1:],
+            format="%Y%m%d%H%M%S.%f",
+            utc=False,
+        )
         df.set_index(times, inplace=True)
         self.df = df.drop(timecols, axis=1)
 
@@ -1061,11 +1076,12 @@ class RDRxReader(object):
 
 class RDRR_Reader(RDRxReader):
     exception = RDRR_NotFoundError
-    descriptorpath = pjoin(rdrrdatapath, 'rdrr.des')
-    extension = '.rdrr'
+    descriptorpath = pjoin(rdrrdatapath, "rdrr.des")
+    extension = ".rdrr"
 
 
 class RDRS_Reader(RDRxReader):
     exception = RDRS_NotFoundError
-    descriptorpath = pjoin(rdrsdatapath, 'rdrs.des')
-    extension = '.rdrs'
+    descriptorpath = pjoin(rdrsdatapath, "rdrs.des")
+    extension = ".rdrs"
+
