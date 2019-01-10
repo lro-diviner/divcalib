@@ -1,4 +1,5 @@
-sudo: false
+dist: xenial
+
 language: python
 
 branches:
@@ -6,18 +7,18 @@ branches:
     - gh-pages
 
 python:
-  - "2.7"
+  - "3.7"
 
 before_install:
   - REDIRECT_TO=/dev/stdout
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda &> ${REDIRECT_TO}
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda update --yes --quiet conda &> ${REDIRECT_TO}
-  - pip install codecov
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt -c conda-forge
+  - conda install codecov -y -c conda-forge
 
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   # - pip install -q coveralls pytest-cov
   - pip install .
 cache:
