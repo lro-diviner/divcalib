@@ -111,6 +111,20 @@ def available_rdrs_files(year=None):
 # general utilities
 #
 def get_tstr(indata):
+    """Determine timestring `tstr` from several incoming types
+
+    Parameters
+    ==========
+
+    indata : {datetime.datetime, pandas.Timestamp, str}
+        For all incoming types, the result should be a standard Diviner timestring of
+        10 characters YYYYMMDDHH.
+
+    Returns
+    =======
+
+    str : of format YYYYMMDDHH
+    """
     # datetime type
     if hasattr(indata, "strftime"):
         return indata.strftime("%Y%m%d%H")
