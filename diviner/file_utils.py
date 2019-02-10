@@ -49,11 +49,11 @@ else:
     outpath = pjoin(datapath, "rdr_out")
     kernelpath = pjoin(datapath, "kernels")
     codepath = pjoin(os.environ["HOME"], "src/diviner")
-    feipath = pjoin(path.sep, "raid1", "u", "paige", "marks", "feidata")
+    feipath = pjoin(path.sep, "luna5", "marks", "feidata")
     l1adatapath = pjoin(feipath, "DIV:opsL1A", "data")
     rdrdatapath = pjoin(feipath, "DIV:opsRdr", "data")
     rdrrdatapath = "/luna7/marks/rdrr_data"
-    rdrsdatapath = "/luna6/marks/rdrs_data"
+    rdrsdatapath = "/luna5/marks/rdrs_data"
 
 
 #
