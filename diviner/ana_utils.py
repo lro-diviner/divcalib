@@ -107,10 +107,10 @@ class CalibHelper(object):
         data = col[fu.tstr_to_tindex(tstr)]
         chdata = data.filter(regex="^" + Channel(c).mcs)
         # invert channels if for telescope B
-        renamer = lambda x: int(x[-2:])
         if (c > 6) and invert_dets:
-            renamer = lambda x: 22 - int(x[-2:])
-        return chdata.rename(columns=renamer)
+            return chdata.rename(columns=lambda x: 22 - int(x[-2:]))
+        else:
+            return chdata.rename(columns=lambda x: int(x[-2:]))
 
     def get_c_rad_molten(self, c, tstr, kind="norm", invert_dets=True):
         newrad = self.get_c_rad(c, tstr, kind, invert_dets)
