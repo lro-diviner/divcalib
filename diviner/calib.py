@@ -844,7 +844,7 @@ class Calibrator(object):
             # this filter catches all detectors for the current channel
             abs_radiance[
                 abs_radiance.filter(regex=channel + "_").columns
-            ] *= self.norm_to_abs_converter.get_value(2, channel)
+            ] *= self.norm_to_abs_converter.at[2, channel]
         self.norm_radiance = norm_radiance
         self.abs_radiance = abs_radiance
         module_logger.debug("Calculated radiances.")
