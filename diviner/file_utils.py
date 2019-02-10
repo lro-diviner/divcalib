@@ -858,8 +858,20 @@ class DivXDataPump(object):
         define_sdtype(df)
         return df
 
-    def get_n_hours_from_t(self, n, t):
-        "t in hours, n = how many hours."
+    def get_n_hours_from_t(self, n, t=0):
+        """Get n hours with an offset from now + t hours.
+
+        Parameters
+        ==========
+        n : int
+            How many hour files to collect
+        t : int
+            Number of hours to add on top of `self.time`
+
+        Returns
+        =======
+        pd.DataFrame : Concatenated dataframe of data.
+        """
         start_time = self.time + timedelta(hours=t)
         bucket = []
         for i in range(n):
