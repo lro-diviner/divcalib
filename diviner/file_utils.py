@@ -861,15 +861,15 @@ class DivXDataPump(object):
     def get_n_hours_from_t(self, n, t):
         "t in hours, n = how many hours."
         start_time = self.time + timedelta(hours=t)
-        l = []
+        bucket = []
         for i in range(n):
             new_time = start_time + timedelta(hours=i)
             basename = self.get_fname_from_time(new_time)
             print(basename)
             dirname = path.dirname(self.fnames[0])
             fname = pjoin(dirname, basename)
-            l.append(self.process_one_file(fname))
-        df = pd.concat(l)
+            bucket.append(self.process_one_file(fname))
+        df = pd.concat(bucket)
         return self.clean_final_df(df)
 
 
