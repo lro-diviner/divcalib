@@ -89,7 +89,4 @@ myrad.plot(style='g.', label='new')
 plt.legend(loc='best')
 plt.savefig(divrad_fname+'.png', dpi=100)
 plt.show()
-<< << << < HEAD
 print()
-== == == =
->>>>>> > b39041079ff190a88c0e206d1a5536f622894981
