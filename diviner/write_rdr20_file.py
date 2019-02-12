@@ -13,7 +13,7 @@ header = '#        date,            utc,             jdate, orbit, sundist,   su
 class AFHandler(object):
     def __init__(self, af):
         self.af = np.abs(af)
-        
+
     @property
     def first_digit(self):
         # // is the old truncating way of division
@@ -22,11 +22,11 @@ class AFHandler(object):
     @property
     def second_digit(self):
         return (self.af % 100) / 10
-        
+
     @property
     def third_digit(self):
         return self.af % 10
-        
+
 
 def set_orientation(df):
     df['o'] = AFHandler(df.af).first_digit - 1
@@ -67,7 +67,7 @@ def set_pointing(df):
     df['p']= 0
     for oldval, newval in mapper:
         df.p[np.bitwise_and(df.qge, oldval) !=0] = newval
-        
+
 
 def set_ephemeris(df):
     mapper = ((32, 1),
@@ -76,49 +76,47 @@ def set_ephemeris(df):
     df['e'] = 0
     for oldval, newval in mapper:
         df.e[np.bitwise_and(df.qge, oldval) !=0] = newval
-        
+
 
 def process_qmi(df):
     flags = 'zthdsab'
     for flag in flags:
         df[flag] = 0
-    
+
     vals_to_check = [2, 4, 8, 16, 64]
-    for flag,val in zip('zthds', vals_to_check):
+    for flag, val in zip('zthds', vals_to_check):
         df[flag][np.bitwise_and(df.qmi, val) !=0] = 1
 
 
 def set_noise(df):
     df['n'] = 0
-    df.n[np.bitwise_and(df.qmi, 32) !=0] = 1
+    df.n[np.bitwise_and(df.qmi, 32) != 0] = 1
 
 
 def write_rdr20_file(timestr, ch):
     """Generate format strings for one whole line per dataframe.
-    
+
     this is the alternative, hand-made formatting string for the whole line.
     """
 
-
     formatter = Formatter()
-    
+
     # read in old RDR
     print("Reading old RDR file.")
-    rdr = fu.RDRReader('/u/paige/maye/rdr_data/'+timestr+'_RDR.TAB.zip')
+    rdr = fu.RDRReader('/u/paige/maye/rdr_data/' + timestr + '_RDR.TAB.zip')
     df = rdr.read_df(do_parse_times=False)
     print("Done reading.")
-    
 
     # add cphase and roi
-    df['cphase']=123.45678
-    df['roi' ] = 1234
+    df['cphase'] = 123.45678
+    df['roi'] = 1234
 
-    ### adapt to new format
+    # adapt to new format
     # drop the old quality flags
-    df = df.drop(['qca','qge','qmi'],axis=1)
-    
-    # flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n', 
-    #          's', 'a', 'b']
+    df = df.drop(['qca', 'qge', 'qmi'], axis=1)
+
+    flags = ['o', 'v', 'i', 'm', 'q', 'p', 'e', 'z', 't', 'h', 'd', 'n',
+             's', 'a', 'b']
 
     set_orientation(df)
     set_view(df)
@@ -129,27 +127,26 @@ def write_rdr20_file(timestr, ch):
     set_ephemeris(df)
     process_qmi(df)
     set_noise(df)
-    
+
     for flag in flags:
         df[flag] = 0
-    
-    
+
     # filter for the channel requested:
     df_ch = df[df.c==int(ch)]
 
     # fill the nan values of your tb and radiance calculations with -9999.0
     df_ch.fillna(-9999.0, inplace=True)
-    
+
     # create channel id:
     chid = 'C' + ch
-    
+
     # open file and start write-loop
-    f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'),'w')
+    f = open(os.path.join(fu.outpath, timestr + '_' + chid + '_RDR.TAB'), 'w')
 
     # header defined above, globally for this file.
     print("Starting the write-out.")
-    f.write(header+'\r\n')
-    for i,data in enumerate(df_ch.values):
+    f.write(header + '\r\n')
+    for i, data in enumerate(df_ch.values):
         if all(data[22:30] < -5000):
             fmt = formatter.nan
         # spaceview
@@ -164,15 +161,16 @@ def write_rdr20_file(timestr, ch):
             fmt = formatter.nominal
         # uncaught case, raise exception to notify user!
         else:
-            print(i) # which line
-            print(data) # print whole row
-            print("af:",data[14]) # point out af status, might help to understand
-            for j,item in enumerate(data[22:30]):
-                print(j+22, item)
+            print(i)  # which line
+            print(data)  # print whole row
+            print("af:", data[14])  # point out af status, might help to understand
+            for j, item in enumerate(data[22:30]):
+                print(j + 22, item)
             raise Exception
-        f.write(', '.join(fmt).format(*data)+'\r\n')
+        f.write(', '.join(fmt).format(*data) + '\r\n')
     f.close()
     print("Done writing.")
+
 
 def usage():
     print("Usage: {0} timestr ch"
@@ -180,7 +178,7 @@ def usage():
     "ch is the digital number 1..9 to identify for which channel to create the RDR\n"
     "output file.")
     sys.exit()
-    
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
