@@ -314,8 +314,6 @@ class CalBlock(object):
 
     IN:
         dataframe, containing all meta-data like label numbers, H/K etc.
-        skip_samples, integer, indicating how many samples to skip for
-            mean value calculation
     OUT:
         via several class methods and properties (like members)
     """
@@ -340,7 +338,7 @@ class CalBlock(object):
         """
         self.df = df
         self.offsets_done = False
-        for view in "space bb st".split():
+        for view in ["space", "bb", "st"]:
             viewdf = get_data_columns(self.df[self.df["is_" + view + "view"]])
             setattr(self, view + "views", viewdf)
             label = view + "_block_labels"
@@ -427,6 +425,8 @@ class CalBlock(object):
             )
             # then return mean value of these 2 labels, detectors as index.
             return mean_spaceviews.mean()
+        else:
+            raise NotImplementedError(f"Method {method} not implemented.")
 
     @property
     def offsets_time(self):
@@ -470,7 +470,7 @@ class CalBlock(object):
         # get the mean time for the BB view
 
         # determine the mean value of the interpolated BB temps, minus skipped
-        bbtemps_mean = bbviews_temps[config.BBV_NUM_SKIP_SAMPLE :].mean()
+        bbtemps_mean = bbviews_temps[config.BBV_NUM_SKIP_SAMPLE:].mean()
 
         # convert the mean temps to radiances
         rads = []
