@@ -4,44 +4,51 @@ from create_database import DataPump
 import pandas as pd
 from matplotlib.pylab import show
 import sys
+
 # from multiprocessing import Pool, Lock
 
-datadir = '/luna1/maye/data/div247/'
+datadir = "/luna1/maye/data/div247/"
+
 
 def get_time(df):
     t1 = df.index[0]
     t2 = df.index[-1]
-    t = t1 + (t2-t1)//2
+    t = t1 + (t2 - t1) // 2
     return t
+
 
 def get_first_sv_mean(df):
     """function to return mean value for first spaceview only"""
-    d = dict(list(df.groupby('space_block_labels')))
+    d = dict(list(df.groupby("space_block_labels")))
     return d[min(d.keys())].mean()
-    
-def get_data(month, det, view='is_spaceview', lock=None, container=None):
-    print('Working on',month)
+
+
+def get_data(month, det, view="is_spaceview", lock=None, container=None):
+    print("Working on", month)
     pump = DataPump()
     store = pump.get_month_h5(month)
-    df = store.select('df', (view+'=True'), columns=[det,'calib_block_labels'])
+    df = store.select("df", (view + "=True"), columns=[det, "calib_block_labels"])
     store.close()
     return df
 
-def get_all_dets_per_view(month, view='is_spaceview'):
-    print('Working on',month)
+
+def get_all_dets_per_view(month, view="is_spaceview"):
+    print("Working on", month)
     pump = DataPump()
     store = pump.get_month_h5(month)
-    df = store.select('df', (view+'=True'))
+    df = store.select("df", (view + "=True"))
     store.close()
     return df
+
 
 def get_months_list(start, end):
-    dr = list(pd.date_range(start=start+'01',end=end+'01',freq='M'))
+    dr = list(pd.date_range(start=start + "01", end=end + "01", freq="M"))
     months = [i.strftime("%Y%m") for i in dr]
-    months.append(str(int(months[-1])+1))
+    months.append(str(int(months[-1]) + 1))
     return months
-    
-def by_det(start,end, det, view='is_spaceview'):
+
+
+def by_det(start, end, det, view="is_spaceview"):
     l = []
     for month in get_months_list(start, end):
         df = get_data(month, det, view)
@@ -50,14 +57,15 @@ def by_det(start,end, det, view='is_spaceview'):
         means = grouped[det].mean()
         s = pd.DataFrame(means.values, index=times.values, columns=[det])
         l.append(s)
-        
+
     df = pd.concat(l)
-    df.save(det+'_'+start+'_'+end+'.df')
-    
-    df.plot(style='.-')
+    df.save(det + "_" + start + "_" + end + ".df")
+
+    df.plot(style=".-")
     show()
 
-def for_all_dets(start,end, view='is_spaceview'):
+
+def for_all_dets(start, end, view="is_spaceview"):
     l = []
     for month in get_months_list(start, end):
         df = get_all_dets_per_view(month, view)
@@ -68,22 +76,24 @@ def for_all_dets(start,end, view='is_spaceview'):
         means = grouped.agg(get_first_sv_mean)
         means.index = times
         l.append(means)
-        
-    df = pd.concat(l)
-    df.save('all_means'+'_'+view+'_'+start+'_'+end+'.df')
-    
-    print ("Done.")
 
-if __name__ == '__main__':
+    df = pd.concat(l)
+    df.save("all_means" + "_" + view + "_" + start + "_" + end + ".df")
+
+    print("Done.")
+
+
+if __name__ == "__main__":
     det = None
     try:
-        start, end, view, det  = sys.argv[1:]
+        start, end, view, det = sys.argv[1:]
     except:
         try:
-            det = 'a3_11'
-            print('Using default detector:',det)
-            start, end , view = sys.argv[1:]
+            det = "a3_11"
+            print("Using default detector:", det)
+            start, end, view = sys.argv[1:]
         except:
             print("Usage: {0} startmonth endmonth".format(sys.argv[0]))
             sys.exit()
-    for_all_dets(start,end, view)
+    for_all_dets(start, end, view)
+
