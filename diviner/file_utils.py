@@ -11,6 +11,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from os import path
 from os.path import join as pjoin
+from pathlib import Path
 from subprocess import call
 
 import numpy as np
@@ -441,6 +442,27 @@ class RDRReader(object):
         # to not break existing code refererring to self.open
         self.read_df = self.open
 
+    @property
+    def feather_name(self):
+        return Path(self.fname).with_suffix(".feather")
+    
+    def read_feather(self):
+        return pd.read_feather(self.feather_name)
+    
+    @property
+    def parquet_snappy_name(self):
+        return Path(self.fname).with_suffix(".parquet.snappy")
+    
+    def read_parquet_snappy(self):
+        return pd.read_parquet(self.parquet_snappy_name)
+    
+    @property
+    def hdf_name(self):
+        return Path(self.fname.with_suffix(".hdf"))
+    
+    def read_hdf(self):
+        return pd.read_hdf(self.hdf_name)
+    
     def open_file(self):
         if self.fname.lower().endswith(".zip"):
             zfile = zipfile.ZipFile(self.fname)
@@ -455,7 +477,7 @@ class RDRReader(object):
         self.open_file()
         self.no_to_skip = 0
         while True:
-            line = self.f.readline().decode("utf-8")
+            line = self.f.readline()
             self.no_to_skip += 1
             if not line.startswith("# Header"):
                 break
@@ -1110,4 +1132,15 @@ class RDRS_Reader(RDRxReader):
     exception = RDRS_NotFoundError
     descriptorpath = pjoin(rdrsdatapath, "rdrs.des")
     extension = ".rdrs"
+    
+    def find_fnames(self):
+        "Needs self.datapath to be defined in derived class."
+        searchpath = pjoin(self.datapath, self.tstr + "*")
+        fnames = glob.glob(searchpath)
+        if not fnames:
+            print("No files found. Searched like this:\n")
+            print(searchpath)
+        fnames.sort()
+        return fnames
+
 
