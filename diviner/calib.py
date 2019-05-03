@@ -722,8 +722,16 @@ class Calibrator(object):
             cb = CalBlock(calblock)
             gain_container.append(cb.get_gains())
             offset_container.append(cb.offsets)
-        self.gains = pd.concat(gain_container)
-        self.offsets = pd.concat(offset_container)
+        try:
+            self.gains = pd.concat(gain_container)
+        except ValueError:
+            module_logger.warning(f"No gains found for this data starting at {self.df.index[0]}.")
+            self.gains = None
+        try:
+            self.offsets = pd.concat(offset_container)
+        except ValueError:
+            module_logger.warning(f"No offsets found for this data starting at {self.df.index[0]}.")
+            self.offsets = None
 
     def interpolate_caldata_worker(self, offset_times, bbcal_times, all_times):
 
