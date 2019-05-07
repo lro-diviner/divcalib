@@ -19,8 +19,7 @@ l1afname = '/Users/maye/data/diviner/l1a_data/2013052205_L1A.TAB'
 
 @pytest.mark.luna
 def test_get_rdr_headers():
-    fname_ops = os.path.join(fu.datapath, 'rdr_data', '2013052205_RDR.TAB.zip')
-    rdr = fu.RDRReader(fname_ops)
+    rdr = fu.RDRReader.from_tstr('2013052205')
     answer_ops = [
         'date', 'utc', 'jdate', 'orbit', 'sundist', 'sunlat', 'sunlon', 'sclk',
         'sclat', 'sclon', 'scrad', 'scalt', 'el_cmd', 'az_cmd', 'af',
@@ -46,54 +45,44 @@ def test_parse_times():
 
 class TestDivTime:
 
-    def test_DivHour_failshort(self):
+    def test_DivTime_faillong(self):
         with pytest.raises(DivTimeLengthError):
-            fu.DivHour('20121201')
+            fu.DivTime('201212011012')
 
-    def test_DivHour_faillong(self):
-        with pytest.raises(DivTimeLengthError):
-            fu.DivHour('201212011012')
-
-    def test_DivHour(self):
+    def test_DivTime(self):
         fmt = '%Y%m%d%H'
         tstr = '2012070110'
-        divhour = fu.DivHour(tstr)
+        divhour = fu.DivTime(tstr)
         assert divhour.hour == '10'
         assert divhour.day == '01'
         assert divhour.month == '07'
         assert divhour.year == '2012'
         assert divhour.dtime == dt.datetime.strptime(tstr, fmt)
 
-    def test_DivDay_faillong(self):
+    def test_DivTime_failshort(self):
         with pytest.raises(DivTimeLengthError):
-            fu.DivDay('2012120110')
+            fu.DivTime('201201')
 
-    def test_DivDay_failshort(self):
-        with pytest.raises(DivTimeLengthError):
-            fu.DivDay('201201')
-
-    def test_DivDay(self):
+    def test_DivTime(self):
         tstr = '20120701'
-        divday = fu.DivDay(tstr)
-        assert divday.day == '01'
-        assert divday.year == '2012'
-        assert divday.month == '07'
+        DivTime = fu.DivTime(tstr)
+        assert DivTime.day == '01'
+        assert DivTime.year == '2012'
+        assert DivTime.month == '07'
 
     def test_DivHour_previous(self):
         tstr = '2012010210'
-        divhour = fu.DivHour(tstr)
-        previous = divhour.previous()
-        assert previous.tstr == '2012010209'
+        divhour = fu.DivTime(tstr)
+        assert divhour.previous.tstr == '2012010209'
 
     def test_DivHour_next(self):
         tstr = '2012010210'
-        divhour = fu.DivHour(tstr)
-        next = divhour.next()
-        assert next.tstr == '2012010211'
+        divhour = fu.DivTime(tstr)
+        assert divhour.next.tstr == '2012010211'
 
     def test_DivTime_from_dtime(self):
         now = dt.datetime(2012, 10, 1, 17)
-        divhour = fu.DivHour.from_dtime(now)
+        divhour = fu.DivTime.from_dtime(now)
         assert divhour.dtime == now
 
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # file utilities for Diviner
 import glob
+import io
 import logging
 import os
 import socket
@@ -21,12 +22,8 @@ from dateutil.parser import parse as dateparser
 from diviner import __path__
 
 from .data_prep import define_sdtype, index_by_time, prepare_data
-from .exceptions import (
-    DivTimeLengthError,
-    L1ANotFoundError,
-    RDRR_NotFoundError,
-    RDRS_NotFoundError,
-)
+from .exceptions import (DivTimeLengthError, L1ANotFoundError,
+                         RDRR_NotFoundError, RDRS_NotFoundError)
 
 hostname = socket.gethostname().split(".")[0]
 try:
@@ -50,11 +47,11 @@ else:
     outpath = pjoin(datapath, "rdr_out")
     kernelpath = pjoin(datapath, "kernels")
     codepath = pjoin(os.environ["HOME"], "src/diviner")
-    feipath = pjoin(path.sep, "luna5", "marks", "feidata")
-    l1adatapath = pjoin(feipath, "DIV:opsL1A", "data")
-    rdrdatapath = pjoin(feipath, "DIV:opsRdr", "data")
-    rdrrdatapath = "/luna7/marks/rdrr_data"
-    rdrsdatapath = "/luna5/marks/rdrs_data"
+    feipath = Path("/q/marks/feidata/")
+    l1adatapath = feipath / "DIV:opsL1A/data"
+    rdrdatapath = feipath / "DIV:opsRdr/data"
+    rdrrdatapath = Path("/luna7/marks/rdrr_data")
+    rdrsdatapath = Path("/luna5/marks/rdrs_data")
 
 
 #
@@ -185,23 +182,31 @@ class DivTime(object):
     Abstract class! Use the derivatives!
     """
 
-    fmt = ""  # set in derived class!
+    fmt_hour = "%Y%m%d%H"
+    len_hour = 10
+    fmt_day = "%Y%m%d"
+    len_day = 8
 
     @classmethod
     def from_dtime(cls, dtime):
-        tstr = dtime.strftime(cls.fmt)
+        tstr = dtime.strftime(cls.fmt_hour)
         return cls(tstr)
 
     def __init__(self, tstr):
-        if len(tstr) != self.lentstr:
-            raise DivTimeLengthError(tstr, self.fmt)
+        if not self.len_day <= len(tstr) <= self.len_hour:
+            raise DivTimeLengthError(tstr, "8 <= len(tstr) <= 10")
         self.tstr = tstr
         self.year = self.tstr[:4]
         self.month = self.tstr[4:6]
         self.day = self.tstr[6:8]
-        if self.lentstr > 8:
+        if len(self.tstr) > 8:
             self.hour = self.tstr[8:10]
-        self.dtime = dt.strptime(self.tstr, self.fmt)
+        if len(tstr) == 8:
+            fmt = self.fmt_day
+        elif len(tstr) == 10:
+            fmt = self.fmt_hour
+        self.fmt = fmt
+        self.dtime = dt.strptime(self.tstr, fmt)
 
     def __str__(self):
         s = f"{self.__class__.__name__}\n"
@@ -211,33 +216,17 @@ class DivTime(object):
     def __repr__(self):
         return self.__str__()
 
-
-class DivHour(DivTime):
-
-    """Class for the usual hour-strings."""
-
-    fmt = "%Y%m%d%H"
-    lentstr = 10
-
     @property
     def tindex(self):
         return self.tstr[:8] + " " + self.tstr[8:]
 
     @property
     def previous(self):
-        return DivHour.from_dtime(self.dtime - timedelta(hours=1))
+        return DivTime.from_dtime(self.dtime - timedelta(hours=1))
 
     @property
     def next(self):
-        return DivHour.from_dtime(self.dtime + timedelta(hours=1))
-
-
-class DivDay(DivTime):
-
-    """Class for a full day of Diviner data."""
-
-    fmt = "%Y%m%d"
-    lentstr = 8
+        return DivTime.from_dtime(self.dtime + timedelta(hours=1))
 
 
 class DivObs(object):
@@ -247,7 +236,7 @@ class DivObs(object):
         return cls(basename[:10])
 
     def __init__(self, tstr):
-        self.time = DivHour(tstr)
+        self.time = DivTime(tstr)
         self.l1afname = L1AFileName.from_tstr(tstr)
         self.rdrrfname = RDRRFileName.from_tstr(tstr)
         self.rdrsfname = RDRSFileName.from_tstr(tstr)
@@ -306,9 +295,9 @@ class FileName(object):
         self.dirname = path.dirname(fname)
         self.file_id, self.ext = path.splitext(self.basename)
         self.tstr = self.file_id.split("_")[0]
-        # as Diviner FILES only exist in separations of hours I use DivHour
+        # as Diviner FILES only exist in separations of hours I use DivTime
         # here:
-        self.divhour = DivHour(self.tstr)
+        self.divhour = DivTime(self.tstr)
         # save everything after the first '_' as rest
         self.rest = self.basename[len(self.tstr) :]
 
@@ -476,8 +465,9 @@ class RDRReader(object):
         # skipcounter
         self.open_file()
         self.no_to_skip = 0
+        items_file = io.TextIOWrapper(self.f)
         while True:
-            line = self.f.readline()
+            line = items_file.readline()
             self.no_to_skip += 1
             if not line.startswith("# Header"):
                 break
@@ -495,11 +485,6 @@ class RDRReader(object):
         )
         self.f.close()
         return parse_times(df) if do_parse_times else df
-
-    def gen_open(self):
-        for fname in self.fnames:
-            zfile = zipfile.ZipFile(fname)
-            yield zfile.open(zfile.namelist()[0])
 
 
 def parse_times(df):
@@ -1142,5 +1127,3 @@ class RDRS_Reader(RDRxReader):
             print(searchpath)
         fnames.sort()
         return fnames
-
-
