@@ -63,7 +63,7 @@ class TestDivTime:
         with pytest.raises(DivTimeLengthError):
             fu.DivTime('201201')
 
-    def test_DivTime(self):
+    def test_DivTime_Hour(self):
         tstr = '20120701'
         DivTime = fu.DivTime(tstr)
         assert DivTime.day == '01'
