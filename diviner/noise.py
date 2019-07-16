@@ -1,19 +1,21 @@
 #!/usr/bin/env python
-
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import pyplot as plt
-import pandas
-import numpy as np
-import diviner as div
-from scipy import fft
 import os
 import sys
-from os.path import split, splitext
 from glob import glob
 from multiprocessing import Pool
+from os.path import split, splitext
 
-resultsdir = '/u/paige/maye/WWW/noise'
+import matplotlib
+import numpy as np
+import pandas
+from matplotlib import pyplot as plt
+from scipy import fft
+
+import diviner as div
+
+matplotlib.use("Agg")
+
+resultsdir = "/u/paige/maye/WWW/noise"
 debug = False
 
 
@@ -27,20 +29,20 @@ def get_label(dataframe, label, ch, det=11):
 
 
 def plot_all(ax, tbdata, azdata, elevdata, title):
-    ax.plot(tbdata, label='tb')
-    ax.plot(azdata, label='az_cmd')
-    ax.plot(elevdata, label='el_cmd')
+    ax.plot(tbdata, label="tb")
+    ax.plot(azdata, label="az_cmd")
+    ax.plot(elevdata, label="el_cmd")
     ax.set_title(title)
-    ax.legend(loc='best')
+    ax.legend(loc="best")
 
 
 def get_abs_fft(data):
     f = fft(data)
-    half = len(f)/2
+    half = len(f) / 2
     fix = 0
     if isodd(len(f)):
         fix = 1
-    t = np.arange(-half, half+fix, 1)
+    t = np.arange(-half, half + fix, 1)
     f_sorted = np.concatenate((f[half:], f[:half]))
     return t, abs(f_sorted)
 
@@ -48,41 +50,41 @@ def get_abs_fft(data):
 def plot_fft(ax, datatuple, title):
     t, data = datatuple
     ax.semilogy(t, data)
-    ax.set_xlim(0, 0.5*len(data))
-    ax.set_ylim(0, 0.2*data.max())
+    ax.set_xlim(0, 0.5 * len(data))
+    ax.set_ylim(0, 0.2 * data.max())
     ax.set_title(title)
 
 
 def fix_columns(df):
     headers = df.columns.tolist()
-    headers[0] = 'year'
-    headers[2] = 'date'
+    headers[0] = "year"
+    headers[2] = "date"
     df.columns = headers
 
 
 def prep_data(fname):
     df = div.read_div_data(fname)
     fix_columns(df)
-    df.set_index('jdate', inplace=True)
+    df.set_index("jdate", inplace=True)
     return df
 
 
 def plot_channel_means(ax, df, col_str, ch_start=1, ch_end=9):
-    for i in range(ch_start, ch_end+1):
+    for i in range(ch_start, ch_end + 1):
         series = div.get_channel_mean(df, col_str, i)
         if debug:
             print(i, series.min())
         ax.plot(series, label=str(i))
-    ax.set_ylabel('c_mean('+col_str+')')
+    ax.set_ylabel("c_mean(" + col_str + ")")
 
 
 def plot_channel_stds(ax, df, col_str):
     for i in range(9):
-        series = div.get_channel_std(df, col_str, i+1)
+        series = div.get_channel_std(df, col_str, i + 1)
         if debug:
             print(i, series.min())
-        ax.plot(series, label=str(i+1))
-    ax.set_ylabel('c_std('+col_str+')')
+        ax.plot(series, label=str(i + 1))
+    ax.set_ylabel("c_std(" + col_str + ")")
 
 
 def get_datasetname(fname):
@@ -90,19 +92,19 @@ def get_datasetname(fname):
 
 
 def get_new_fname(datasetname, col_str):
-    basename = '{0}_{1}.png'.format(datasetname, col_str)
+    basename = "{0}_{1}.png".format(datasetname, col_str)
     return os.path.join(resultsdir, basename)
 
 
 def plot_csunzen(ax, df):
-    csunzen = div.get_channel_mean(df, 'csunzen', 1)
+    csunzen = div.get_channel_mean(df, "csunzen", 1)
     # csunzen[csunzen < -360]=np.nan
     ax2 = ax.twinx()
-    ax2.plot(csunzen, label='csunzen', color='blue')
-    ax2.axhline(y=90, color='black')
+    ax2.plot(csunzen, label="csunzen", color="blue")
+    ax2.axhline(y=90, color="black")
     for tl in ax2.get_yticklabels():
-        tl.set_color('blue')
-    ax2.set_ylabel('csunzen')
+        tl.set_color("blue")
+    ax2.set_ylabel("csunzen")
 
 
 def process_fname(fname_col_str):
@@ -117,9 +119,9 @@ def process_fname(fname_col_str):
     plot_channel_means(ax, df, col_str, 3, 5)
     print("Done plotting channels. Plotting csunzen.")
     plot_csunzen(ax, df)
-    ax.legend(loc='best', ncol=3,)
+    ax.legend(loc="best", ncol=3)
     datasetname = get_datasetname(fname)
-    ax.set_title(datasetname+'_'+col_str)
+    ax.set_title(datasetname + "_" + col_str)
     plotfname = get_new_fname(datasetname, col_str)
     print("Result filename: ", plotfname)
     plt.savefig(plotfname)
@@ -171,10 +173,10 @@ def process_fname(fname_col_str):
     # plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     p = Pool(4)
-    workdir = '/luna1/maye/'
-    fnames = glob(workdir+'*.h5')
+    workdir = "/luna1/maye/"
+    fnames = glob(workdir + "*.h5")
     fnames.sort()
     try:
         col_str = sys.argv[1]
