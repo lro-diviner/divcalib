@@ -22,8 +22,12 @@ from dateutil.parser import parse as dateparser
 from diviner import __path__
 
 from .data_prep import define_sdtype, index_by_time, prepare_data
-from .exceptions import (DivTimeLengthError, L1ANotFoundError,
-                         RDRR_NotFoundError, RDRS_NotFoundError)
+from .exceptions import (
+    DivTimeLengthError,
+    L1ANotFoundError,
+    RDRR_NotFoundError,
+    RDRS_NotFoundError,
+)
 
 hostname = socket.gethostname().split(".")[0]
 try:
@@ -434,24 +438,24 @@ class RDRReader(object):
     @property
     def feather_name(self):
         return Path(self.fname).with_suffix(".feather")
-    
+
     def read_feather(self):
         return pd.read_feather(self.feather_name)
-    
+
     @property
     def parquet_snappy_name(self):
         return Path(self.fname).with_suffix(".parquet.snappy")
-    
+
     def read_parquet_snappy(self):
         return pd.read_parquet(self.parquet_snappy_name)
-    
+
     @property
     def hdf_name(self):
         return Path(self.fname.with_suffix(".hdf"))
-    
+
     def read_hdf(self):
         return pd.read_hdf(self.hdf_name)
-    
+
     def open_file(self):
         if self.fname.lower().endswith(".zip"):
             zfile = zipfile.ZipFile(self.fname)
@@ -849,7 +853,7 @@ class DivXDataPump(object):
         return pd.DataFrame(data, columns=self.keys)
 
     def gen_dataframes(self, n=None):
-        # caller actually doesn't allow n=None anyways. FIX?
+        # caller actually doesn't allow n=None anyways. FIXME?
         if n is None:
             n = len(self.fnames)
         openfiles = self.gen_open()
@@ -925,13 +929,12 @@ class L1ADataFile(object):
         self.fname = fname
         self.fn_handler = FileName(fname)
         self.header = L1AHeader()
+        self.df = None
 
-    def parse_tab(self, fname=None):
-        if not fname:
-            fname = self.fname
+    def parse_tab(self):
         try:
             df = pd.io.parsers.read_csv(
-                fname,
+                self.fname,
                 names=self.header.columns,
                 na_values="-9999",
                 skiprows=8,
@@ -941,14 +944,10 @@ class L1ADataFile(object):
             raise L1ANotFoundError(e)
         return df
 
-    def parse_times(self, df=None):
-        if df is None:
-            df = self.df
+    def parse_times(self, df):
         return parse_times(df)
 
-    def clean(self, df=None):
-        if df is None:
-            df = self.df
+    def clean(self, df):
         df = prepare_data(df)
         define_sdtype(df)
         return df
@@ -957,17 +956,15 @@ class L1ADataFile(object):
         return self.read_dirty()
 
     def read_dirty(self):
+        return self.read(dirty=True)
+
+    def read(self, dirty=False):
         df = self.parse_tab()
         df = self.parse_times(df)
-        return df
-
-    def open(self):
-        return self.read()
-
-    def read(self, fname=None):
-        df = self.parse_tab(fname)
-        df = self.parse_times(df)
-        return self.clean(df)
+        if dirty:
+            return df
+        else:
+            return self.clean(df)
 
 
 def get_clean_l1a(tstr):
@@ -1080,7 +1077,7 @@ class RDRxReader(object):
         timecols = ["yyyy", "mm", "dd", "hh", "mn", "ss"]
         secs_only = df.ss.astype("int")
         msecs = (df.ss - secs_only).round(3)
-        mapper = lambda x: str(int(x)).zfill(2)
+        mapper = lambda x: str(int(x)).zfill(2)  # noqa: E731
         times = pd.to_datetime(
             df.yyyy.astype("int").astype("str")
             + df.mm.map(mapper)
@@ -1117,7 +1114,7 @@ class RDRS_Reader(RDRxReader):
     exception = RDRS_NotFoundError
     descriptorpath = pjoin(rdrsdatapath, "rdrs.des")
     extension = ".rdrs"
-    
+
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
         searchpath = pjoin(self.datapath, self.tstr + "*")
