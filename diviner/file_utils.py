@@ -256,7 +256,7 @@ class DivObs(object):
         return DivObs(prevhour.tstr)
 
     def get_l1a(self):
-        return L1ADataFile(self.l1afname.path).open()
+        return L1ADataFile(self.l1afname.path).read()
 
     def get_l1a_dirty(self):
         return L1ADataFile(self.l1afname.path).open_dirty()
@@ -340,6 +340,11 @@ class RDRRFileName(FileName):
 class RDRSFileName(FileName):
     ext = ".rdrs"
     datapath = rdrsdatapath
+
+
+class L1AParquetFileName(FileName):
+    ext = ".parquet"
+    datapath = Path("/luna4/maye/l1a_parquet")
 
 
 #
@@ -922,6 +927,26 @@ class Div38DataPump(DivXDataPump):
 
     def find_fnames(self):
         return glob.glob(pjoin(self.datapath, self.tstr + "*"))
+
+
+class L1AParquetDataPump:
+    datapath = Path("/luna4/maye/l1a_parquet")
+
+    def __init__(self, tstr):
+        self.tstr = tstr
+        self.year = tstr[:4]
+        
+    @property
+    def year_folder(self):
+        return self.datapath / self.year
+    
+    def find_fnames(self):
+        "Needs self.datapath to be defined in derived class."
+        fnames = list(self.year_folder.glob(self.tstr+'*'))
+        if not fnames:
+            print("No files found. Searched like this:\n")
+            print(self.year_folder / (self.tstr + '*'))
+        return sorted(fnames)
 
 
 class L1ADataFile(object):

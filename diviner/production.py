@@ -1,21 +1,24 @@
 #!/usr/bin/env python
 
-from diviner import calib
-from diviner import file_utils as fu
-from diviner import ana_utils as au
-from joblib import Parallel, delayed
-import pandas as pd
-import numpy as np
-import diviner
+import configparser
+import gc
 import logging
 import os
-from os import path
 import sys
-from . import rdrx
-import gc
+from os import path
+
+import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
+
+import diviner
+from diviner import ana_utils as au
+from diviner import calib
+from diviner import file_utils as fu
 from diviner.exceptions import RDRS_NotFoundError
+
+from . import rdrx
 from .bintools import cols_to_descriptor
-import configparser
 
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - " "%(message)s")
 
@@ -213,7 +216,7 @@ def get_data_for_merge(tstr, savedir):
     if not path.exists(get_tb_savename(savedir, tstr)):
         try:
             calibrate_tstr(tstr, savedir, config.do_rad_corr)
-        except:
+        except:  # noqa: E722
             module_logger.error("Calibration failed for {}".format(tstr))
             return
     try:

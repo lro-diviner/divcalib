@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from matplotlib.pyplot import gcf, subplots, figure
+import sys
 
 # from mpl_toolkits.mplot3d import axes3d
 import matplotlib.animation as animation
 import numpy as np
-import sys
 import pandas as pd
+from matplotlib.pyplot import figure, gcf, subplots
 
 
 def save_to_www(fname, **kwargs):
@@ -65,10 +65,11 @@ def plot_all_calib_blocks(df, **kwargs):
     length = len(calib_ids)
     if not length % 2 == 0:
         length += 1
-    fig, axes = subplots(length // 2, 2, figsize=(10, 4))
+    fig, axes = subplots(length // 2, 2, figsize=(10, 4), constrained_layout=False)
     for i, calid in enumerate(calib_ids):
         plot_calib_block(df, "calib", calid, ax=axes.flatten()[i], **kwargs)
     fig.suptitle("Cal-Blocks {0}".format(calib_ids))
+    # fig.subplots_adjust(bottom=0.1)
 
 
 def plot_all_channels(df_in, det_list, only_thermal=True, **kwargs):
