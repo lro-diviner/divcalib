@@ -35,7 +35,7 @@ cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
 class Configurator(object):
     def __init__(
         self,
-        startstop=None,
+        startstop,
         overwrite=False,
         c_start=3,
         c_end=9,
