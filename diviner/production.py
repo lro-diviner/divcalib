@@ -5,30 +5,31 @@ import gc
 import logging
 import os
 import sys
+from importlib.resources import path as resource_path
 from os import path
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-import diviner
 from diviner import ana_utils as au
 from diviner import calib
 from diviner import file_utils as fu
 from diviner.exceptions import RDRS_NotFoundError
 
-from . import rdrx
+from . import configuration, rdrx
 from .bintools import cols_to_descriptor
 
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - " "%(message)s")
 
 module_logger = logging.getLogger(name="diviner.production")
 
-formats = pd.read_csv(path.join(diviner.__path__[0], "data", "joined_format_file.csv"))
+with resource_path('diviner.data', 'joined_format_file.csv') as p:
+    formats = pd.read_csv(p)
 
 cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
 cols_skip = "c det tb radiance".split()
-cols_to_melt = set(formats.colname) - set(cols_no_melt) - set(cols_skip)
+cols_to_melt = list(set(formats.colname) - set(cols_no_melt) - set(cols_skip))
 cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
 
 
