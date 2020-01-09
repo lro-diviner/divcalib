@@ -162,13 +162,30 @@ def melt_and_merge_rdr1(rdrxobject, c):
     return final
 
 
+def symlink_existing_files(config, tstr):
+    """Find and symlink existing files to avoid duplication."""
+
+    for c in range(config.c_start, config.c_end + 1):
+        path_here = config.get_rdr2_savename(tstr, c)
+        # if I have the file in current folder, no need to look it up in others
+        if path.exists(path_here):
+            continue
+        for folder in config.get_other_folders():
+            othersavedir = path.join(config.rdr2_root, folder)
+            otherpath = config.get_rdr2_savename(tstr, c, savedir=othersavedir)
+            if path.exists(otherpath):
+                os.symlink(otherpath, path_here)
+                module_logger.info("Symlinked {} into {}".format(otherpath, path_here))
+
+
+
 def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
     c = indf.filter(regex=channel.mcs + "_")[obs.time.tindex]
+    renamer = lambda x: int(x[-2:])
     # for telescope B (channel.div > 6):
     if (channel.div > 6) and invert_dets:
-        c = c.rename(columns=lambda x: 22 - int(x[-2:]))
-    else:
-        c = c.rename(columns=lambda x: int(x[-2:]))
+        renamer = lambda x: 22 - int(x[-2:])
+    c = c.rename(columns=renamer)
     c_molten = pd.melt(
         c.reset_index(), id_vars=["index"], var_name="det", value_name=colname
     )
@@ -210,6 +227,7 @@ def get_data_for_merge(tstr, savedir):
     obs = fu.DivObs(tstr)
     try:
         rdr1 = rdrx.RDRS(obs.rdrsfname.path)
+        # rdr1 = rdrx.RDRR(obs.rdrrfname.path)
     except RDRS_NotFoundError:
         module_logger.warning("RDRS not found for {}".format(tstr))
         return
@@ -240,7 +258,9 @@ def produce_tstr(args):
     rdr2savedir = config.rdr2savedir
     savedir = config.savedir
 
-    # determine what is left to do:
+    # first create symlinks to avoid duplication
+    # symlink_existing_files(config, tstr)
+    # now determine whatever else is left to do:
     all_done, channels_to_do = check_for_existing_files(config, tstr)
 
     if all_done:
@@ -253,12 +273,14 @@ def produce_tstr(args):
         obs, rdr1, tb, rad = get_data_for_merge(tstr, savedir)
     except Exception as e:
         module_logger.error("Error in get_data_for_merge: {}".format(e))
+        raise(e)
 
     mergecols = ["index", "det"]
     for c in channels_to_do:
         module_logger.debug("Processing channel {} of {}".format(c, tstr))
-        if not path.exists(rdr2savedir):
-            os.mkdir(rdr2savedir)
+        # do this earlier!
+        # if not path.exists(rdr2savedir):
+        #     os.mkdir(rdr2savedir)
         fname = config.get_rdr2_savename(tstr, c)
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
