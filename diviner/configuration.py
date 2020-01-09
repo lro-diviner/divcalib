@@ -31,26 +31,37 @@ class Config:
             print("No config file found.")
             return None
 
+        for k,v in self.data['calibration'].items():
+            setattr(self, k, v)
+
     @property
     def root(self):
         return Path(self.data['paths']['root'])
 
     @property
-    def rdr2savedir(self):
-        p = self.root / self.data['paths']['prodrun']
+    def prodrun(self):
+        return self.root / self.data['paths']['prodrun']
+
+    @property
+    def savedir(self):
+        p = self.prodrun / self.data['paths']['rad_tb']
         if not p.exists():
-            print(f"Creating {p}")
+            print(f"Creating {p}.")
             p.mkdir(parents=True)
         return p
 
     @property
-    def out_format(self):
-        return self.data['calibration']['out_format']
+    def rdr2savedir(self):
+        p = self.prodrun / self.data['paths']['pipes']
+        if not p.exists():
+            print(f"Creating {p}.")
+            p.mkdir(parents=True)
+        return p
 
     def get_rdr2_savename(self, tstr, c, savedir=None):
         if savedir is None:
             savedir = self.rdr2savedir
-        return path.join(savedir, "{0}_C{1}_RDR_2.{2}".format(tstr, c, self.out_format))
+        return savedir / f"{tstr}_C{c}_RDR_2.{self.out_format}"
 
 
 class Configurator:
