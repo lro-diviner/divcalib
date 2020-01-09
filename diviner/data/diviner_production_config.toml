@@ -1,0 +1,34 @@
+[paths]
+# basic root folder where this production run will place stuff. Will be generated if not available
+root = "/luna4/maye/rdr_out/production"
+prodrun = "no_correction"
+rad_tb = "radiance_tb_hdf"
+pipes = "binary_pipes"
+
+[calibration]
+# Controls if this run should continue where it left off or overwrite existing files
+overwrite = true
+#  Channel at which to start production
+c_start = 3
+# Channel at which to end production (inclusive)
+c_end = 9
+# perform radiance correction. As current one is not good, we don't do it for now
+do_rad_corr = false
+# swap clons from 0-360 (as required for PDS) to -180..180 (as implemented for divdata)
+swap_clons = true
+# save as pipes or CSV files (CSV is MUCH slower)
+save_as_pipes = true
+
+[run_control]
+# start stop timestrings to restrict the times for which the production run is performed
+start = "2010-04-01"
+stop = "2010-04-02"
+
+[production_sets]
+test_names = [
+    "Ben_2012_2",
+    "beta_0_circular",
+    "beta_0_elliptical",
+    "beta_90_circular",
+    "beta_90_elliptical",
+]
