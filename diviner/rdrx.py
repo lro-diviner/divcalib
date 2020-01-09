@@ -1,6 +1,7 @@
 """This module provides utilities to deal with RDRx files."""
-from diviner import file_utils as fu
 import pandas as pd
+
+from diviner import file_utils as fu
 
 # this list are the column names in rdrr that have detector specific data.
 to_melt = [
@@ -71,6 +72,36 @@ class RDRR(object):
     def get_edr_data(self):
         return self.df.filter(regex='edr_')
 
+
+class RDRS(object):
+    """Class to enable extracting data from RDRx."""
+
+    def __init__(self, tstr_or_filename):
+        self.df = fu.RDRS_Reader(tstr_or_filename).open()
+
+    @property
+    def columns(self):
+        return self.df.columns
+
+    def get_column(self, colbase):
+        return self.df.filter(regex='^' + colbase + '_')
+
+    def get_counts(self):
+        return self.get_column('counts')
+
+    def get_molten_col(self, colbase, channel):
+        rdr1 = self.df
+        df = rdr1[colnames(colbase, channel)]
+        df = df.rename(columns=lambda x: int(x.split('_')[-1]))
+        return pd.melt(df.reset_index(), id_vars=['index'],
+                       var_name='det', value_name=colbase)
+
+    def merge_with_molten(self, colbase, channel, target_df):
+        molten = self.get_molten_col(colbase, channel)
+        return target_df.merge(molten, on=['index', 'det'])
+
+    def get_edr_data(self):
+        return self.df.filter(regex='edr_')
 
 no_melt = [
     'jdate',
