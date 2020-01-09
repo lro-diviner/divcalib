@@ -64,3 +64,8 @@ docs/*build*
 
 
 \.vscode/
+
+.mypy_cache
+
+test*.csv
+test*.txt
