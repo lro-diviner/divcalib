@@ -10,6 +10,7 @@ import zipfile
 from collections import deque
 from datetime import datetime as dt
 from datetime import timedelta
+from importlib.resources import path as resource_path
 from os import path
 from os.path import join as pjoin
 from pathlib import Path
@@ -19,15 +20,9 @@ import numpy as np
 import pandas as pd
 from dateutil.parser import parse as dateparser
 
-from diviner import __path__
-
 from .data_prep import define_sdtype, index_by_time, prepare_data
-from .exceptions import (
-    DivTimeLengthError,
-    L1ANotFoundError,
-    RDRR_NotFoundError,
-    RDRS_NotFoundError,
-)
+from .exceptions import (DivTimeLengthError, L1ANotFoundError,
+                         RDRR_NotFoundError, RDRS_NotFoundError)
 
 hostname = socket.gethostname().split(".")[0]
 try:
@@ -625,13 +620,13 @@ def read_binary_pipe(fpath):
 
 
 def get_div247_dtypes():
-    despath = pjoin(__path__[0], "data", "div247.des")
-    return parse_descriptor(despath)
+    with resource_path("diviner.data", "div247.des") as p:
+        return parse_descriptor(p)
 
 
 def get_div38_dtypes():
-    despath = pjoin(__path__[0], "data", "div38.des")
-    return parse_descriptor(despath)
+    with resource_path("diviner.data", "div38.des") as p:
+        return parse_descriptor(p)
 
 
 #
@@ -935,11 +930,11 @@ class L1AParquetDataPump:
     def __init__(self, tstr):
         self.tstr = tstr
         self.year = tstr[:4]
-        
+
     @property
     def year_folder(self):
         return self.datapath / self.year
-    
+
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
         fnames = list(self.year_folder.glob(self.tstr+'*'))
