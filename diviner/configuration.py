@@ -35,6 +35,10 @@ class Config:
         for k, v in self.data["calibration"].items():
             setattr(self, k, v)
 
+        # this status attribute determines if paths are created for
+        # corrected or uncorrected data
+        self.corrected = False
+
     @property
     def root(self):
         return Path(self.data["paths"]["root"])
@@ -52,14 +56,25 @@ class Config:
         return p
 
     @property
-    def pipes_dir(self):
-        p = self.prodrun / self.data["paths"]["pipes"]
+    def corr(self):
+        return "corrected" if self.corrected else "uncorrected"
+
+    @property
+    def rdr2_savedir(self):
+        p = self.prodrun / "rdr2"
         if not p.exists():
             print(f"Creating {p}.")
             p.mkdir(parents=True)
         return p
 
-    def get_rdr2_pipes_savename(self, tstr, c, savedir=None, corrected="corrected"):
+    def get_tb_savename(self, tstr):
+        return self.savedir / f"{self.corr}/{tstr}_{self.corr}_tb.hdf"
+
+    def get_rad_savename(self, tstr):
+        return self.savedir / f"{self.corr}/{tstr}_{self.corr}_radiance.hdf"
+
+    def get_rdr2_pipes_savename(self, tstr, c, savedir=None):
+        corr = self.corr
         if savedir is None:
-            savedir = self.pipes_dir
-        return savedir / f"{tstr}_C{c}_RDR_2.{self.out_format}"
+            savedir = self.rdr2_savedir
+        return savedir / f"{corr}/{tstr}_C{c}_RDR2_{corr}.{self.out_format}"
