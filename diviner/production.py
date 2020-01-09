@@ -24,70 +24,16 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - " "%(mes
 
 module_logger = logging.getLogger(name="diviner.production")
 
-with resource_path('diviner.data', 'joined_format_file.csv') as p:
+with resource_path("diviner.data", "joined_format_file.csv") as p:
     formats = pd.read_csv(p)
+
+with resource_path("diviner.data", "newfmt_master.txt") as p:
+    newformat = pd.read_table(p, sep=" ", skipinitialspace=True, header=None)
 
 cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
 cols_skip = "c det tb radiance".split()
 cols_to_melt = list(set(formats.colname) - set(cols_no_melt) - set(cols_skip))
 cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
-
-
-class Configurator(object):
-    def __init__(
-        self,
-        startstop,
-        overwrite=False,
-        c_start=3,
-        c_end=9,
-        do_rad_corr=False,
-        swap_clons=True,
-        save_as_pipes=True,
-    ):
-        # time scope of run definition
-        self.start, self.stop = startstop
-        self.tstrings = fu.calc_daterange(self.start, self.stop)
-        self.run_name = start + "_" + stop
-
-        self.overwrite = overwrite
-
-        self.c_start = c_start
-        self.c_end = c_end
-
-        self.do_rad_corr = do_rad_corr
-        self.swap_clons = swap_clons
-        self.save_as_pipes = save_as_pipes
-        if save_as_pipes is True:
-            self.out_format = "bin"
-        else:
-            self.out_format = "csv"
-
-        # set up paths
-        self.savedir = self.paths.savedir
-        self.rdr2_root = self.paths.rdr2_root
-
-        # logging setup
-        logger = logging.getLogger(name="diviner")
-        logger.setLevel(logging.DEBUG)
-        logfname = "divcalib_verif_" + self.run_name + ".log"
-        fh = logging.FileHandler(logfname)
-        fh.setLevel(logging.DEBUG)
-        ch = logging.StreamHandler(stream=None)
-        ch.setLevel(logging.INFO)
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        logger.addHandler(fh)
-        logger.addHandler(ch)
-
-        if not os.path.exists(self.savedir):
-            os.makedirs(self.savedir)
-        if not os.path.exists(self.rdr2_root):
-            os.makedirs(self.rdr2_root)
-
-    def get_rdr2_savename(self, tstr, c, savedir=None):
-        if savedir is None:
-            savedir = self.rdr2savedir
-        return path.join(savedir, "{0}_C{1}_RDR_2.{2}".format(tstr, c, self.out_format))
 
 
 def get_tb_savename(savedir, tstr):
@@ -112,6 +58,7 @@ def get_example_data():
 
 
 def calibrate_tstr(tstr, savedir, do_rad_corr):
+    "Main function for pure calibration part."
     module_logger.info("Calibrating {}".format(tstr))
     sys.stdout.flush()
     df = fu.open_and_accumulate(tstr=tstr)
@@ -120,10 +67,11 @@ def calibrate_tstr(tstr, savedir, do_rad_corr):
             return
     except TypeError:
         return
-    rdr2 = calib.Calibrator(df, fix_noise=True, do_rad_corr=do_rad_corr)
-    rdr2.calibrate()
-    rdr2.Tb.to_hdf(get_tb_savename(savedir, tstr), "df")
-    rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), "df")
+    if do_rad_corr in ("both", True):
+        rdr2 = calib.Calibrator(df, fix_noise=False, do_rad_corr=True)
+        rdr2.calibrate()
+        rdr2.Tb.to_hdf(get_tb_savename(savedir, tstr), "df")
+        rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), "df")
 
 
 def only_calibrate(timestrings):
@@ -177,7 +125,6 @@ def symlink_existing_files(config, tstr):
             if path.exists(otherpath):
                 os.symlink(otherpath, path_here)
                 module_logger.info("Symlinked {} into {}".format(otherpath, path_here))
-
 
 
 def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
@@ -251,7 +198,7 @@ def get_data_for_merge(tstr, savedir):
     return obs, rdr1, tb, rad
 
 
-def produce_tstr(args):
+def produce_tstr(args, return_df=False, convert_to_RDR2=True):
     tstr, config = args
 
     module_logger.debug("Entered produce_tstr()")
@@ -274,14 +221,11 @@ def produce_tstr(args):
         obs, rdr1, tb, rad = get_data_for_merge(tstr, savedir)
     except Exception as e:
         module_logger.error("Error in get_data_for_merge: {}".format(e))
-        raise(e)
+        raise (e)
 
     mergecols = ["index", "det"]
     for c in channels_to_do:
         module_logger.debug("Processing channel {} of {}".format(c, tstr))
-        # do this earlier!
-        # if not path.exists(rdr2savedir):
-        #     os.mkdir(rdr2savedir)
         fname = config.get_rdr2_savename(tstr, c)
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
@@ -300,18 +244,58 @@ def produce_tstr(args):
         if config.swap_clons:
             for col in clon_cols:
                 rdr2[col] = rdr2[col].map(lambda x: -(360 - x) if x > 180 else x)
-        if not config.save_as_pipes:
+        if convert_to_RDR2:
+            # big restructure, reshuffling of columns happens now:
+            rdr2 = reformat_for_pipes(rdr2)
+        if config.out_format == "csv":
             rdr2.to_csv(fname, index=False)
-        else:
+        elif config.out_format == "bin":
             # first put a descriptor file next to it if it doesn't exist
-            descpath = rdr2savedir + "/rdr2_verif.des"
-            if not os.path.exists(descpath):
-                with open(descpath, "w") as f:
-                    f.write(cols_to_descriptor(rdr2.columns))
+            descpath = rdr2savedir / "rdr2_verif.des"
+            with open(descpath, "w") as f:
+                f.write(cols_to_descriptor(rdr2.columns))
             # now write the values in binary form
-            rdr2.values.astype(np.double).tofile(fname)
+            rdr2.values.astype(np.double).tofile(str(fname))
     gc.collect()
-    return "{} done.".format(tstr)
+    if return_df:
+        return rdr2
+
+
+def reformat_for_pipes(df):
+    # adapt to new format
+    # drop the old quality flags
+    df = df.drop(["qca", "qge"], axis=1)
+
+    # get utc column
+    df.rename({"date": "day"}, axis=1, inplace=True)
+    time_cols = "year month day hour minute second".split()
+    utc = pd.to_datetime(df[time_cols])
+    df = df.drop(time_cols, axis=1)
+
+    df["date"] = utc.dt.strftime("%Y%m%d")
+    seconds = (
+        utc.dt.hour * 3600
+        + utc.dt.minute * 60
+        + utc.dt.second
+        + utc.dt.microsecond * 1e-6
+    )
+    df["time"] = seconds
+    # df['utc'] = df.utc.dt.strftime("%H:%M:%S.%f").str[:-3]
+
+    # add cphase and roi
+    df["cphase"] = 123.45678
+    df["roi"] = 1234
+
+    flags = ["o", "v", "i", "m", "q", "p", "e", "z", "t", "h", "d", "n", "s", "a", "b"]
+
+    for flag in flags:
+        df[flag] = 0
+
+    newcols = newformat[1]
+    # dropping UTC column
+    newcols = newcols.drop(1).values.tolist()
+    newcols.insert(1, "time")
+    return df[newcols]
 
 
 if __name__ == "__main__":
