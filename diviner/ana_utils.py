@@ -1,4 +1,5 @@
 import pandas as pd
+
 from diviner import file_utils as fu
 
 mcs_div_mapping = {
@@ -14,14 +15,14 @@ mcs_div_mapping = {
 }
 
 
-class Channel(object):
+class Channel:
 
     div_mcs_mapping = {key: value for value, key in mcs_div_mapping.items()}
 
     def __init__(self, c):
         if str(c).lower()[0] in ["a", "b"]:
             self._mcs = c[:2]
-            self._div = self.mcs_div_mapping[c[:2]]
+            self._div = mcs_div_mapping[c[:2]]
         else:
             c = int(c)
             self._div = c
@@ -33,7 +34,7 @@ class Channel(object):
 
     @property
     def div(self):
-        return self.mcs_div_mapping[self._mcs]
+        return mcs_div_mapping[self._mcs]
 
 
 class CDet(object):
