@@ -17,23 +17,12 @@ from diviner import calib
 from diviner import file_utils as fu
 from diviner.exceptions import DivCalibError, RDRS_NotFoundError
 
-from . import configuration, rdrx
+from . import columns, configuration, rdrx
 from .bintools import cols_to_descriptor
 
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - " "%(message)s")
 
 module_logger = logging.getLogger(name="diviner.production")
-
-with resource_path("diviner.data", "joined_format_file.csv") as p:
-    formats = pd.read_csv(p)
-
-with resource_path("diviner.data", "newfmt_master.txt") as p:
-    newformat = pd.read_table(p, sep=" ", skipinitialspace=True, header=None)
-
-cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
-cols_skip = "c det tb radiance".split()
-cols_to_melt = list(set(formats.colname) - set(cols_no_melt) - set(cols_skip))
-cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
 
 
 def get_example_data():
@@ -45,21 +34,31 @@ def get_example_data():
     return rdr1, rdr2
 
 
-def calibrate_tstr(tstr, savedir, do_rad_corr):
+def calibrate_tstr(tstr, config):
     "Main function for pure calibration part."
     module_logger.info("Calibrating {}".format(tstr))
     sys.stdout.flush()
+    do_rad_corr = config.do_rad_corr
     df = fu.open_and_accumulate(tstr=tstr)
     try:
         if len(df) == 0:
             return
     except TypeError:
         return
-    if do_rad_corr in ("both", True):
-        rdr2 = calib.Calibrator(df, fix_noise=False, do_rad_corr=True)
-        rdr2.calibrate()
-        rdr2.Tb.to_hdf(get_tb_savename(savedir, tstr), "df")
-        rdr2.abs_radiance.to_hdf(get_rad_savename(savedir, tstr), "df")
+
+    # produce both corrected and uncorrected
+    # corrected
+    config.corrected = True
+    rdr2 = calib.Calibrator(df, fix_noise=False, do_rad_corr=config.corrected)
+    rdr2.calibrate()
+    rdr2.Tb.to_hdf(config.get_tb_savename(tstr), "df")
+    rdr2.abs_radiance.to_hdf(config.get_rad_savename(tstr), "df")
+    # uncorrected
+    config.corrected = False
+    rdr2 = calib.Calibrator(df, fix_noise=False, do_rad_corr=config.corrected)
+    rdr2.calibrate()
+    rdr2.Tb.to_hdf(config.get_tb_savename(tstr), "df")
+    rdr2.abs_radiance.to_hdf(config.get_rad_savename(tstr), "df")
 
 
 def only_calibrate(timestrings):
@@ -77,21 +76,19 @@ def melt_and_merge_rdr1(rdrxobject, c):
     production function.
     """
     # first get the columns that do not need melting
-    no_melts = rdrxobject.df[cols_no_melt]
+    no_melts = rdrxobject.df[columns.cols_no_melt]
 
     # now go through each column of format that needs melting and save it in
     # a temp. container
     container = []
-    for col in cols_to_melt:
+    for col in columns.cols_to_melt:
         container.append(rdrxobject.get_molten_col(col, c))
 
     # now merge each entry of the container, until it's empty (IndexError)
     mergecols = "index det".split()
-    res = None
+    res = container.pop()
     while True:
         try:
-            if res is None:
-                res = container.pop()
             res = res.merge(container.pop(), left_on=mergecols, right_on=mergecols)
         except IndexError:
             break
@@ -115,7 +112,26 @@ def melt_and_merge_rdr1(rdrxobject, c):
 #                 module_logger.info("Symlinked {} into {}".format(otherpath, path_here))
 
 
-def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
+def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True, suffix=""):
+    """This function only splits out the data for the time of the DivObs.
+
+    The in-dataframe `indf` is covering a time range of 3 hours to reduce boundary fitting/interpolation effects for the central hour that is being delivered here.
+
+    Parameters
+    ----------
+    indf : pd.DataFrame
+        Either the T_b or Radiance dataframe from the calibration procedure. It has the same "wide" layout as the EDR data.
+    channel : diviner.ana_utils.Channel
+        A Channel object that can map between Diviner and MCS channel/detector identifiers.
+    obs : diviver.file_utils.DivObs
+        DivObs object that links between several different products for the same observation.
+    invert_dets : bool, optional
+        Boolean switch to control if the detectors of Telescope B should be inverted to match numbering of Telesecope A.
+
+    Returns
+    -------
+    Returns indf data for the precise obs.time.tindex hour, filtered for the requested channel, and transformed into "long" (a.k.a. tidy ) dataframe layout.
+    """
     c = indf.filter(regex=channel.mcs + "_")[obs.time.tindex]
     renamer = lambda x: int(x[-2:])
     # for telescope B (channel.div > 6):
@@ -125,20 +141,9 @@ def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
     c_molten = pd.melt(
         c.reset_index(), id_vars=["index"], var_name="det", value_name=colname
     )
+    if suffix:
+        c_molten.rename({colname: colname + suffix}, axis=1, inplace=True)
     return c_molten
-
-
-def add_time_columns(df):
-    tindex = pd.DatetimeIndex(df["index"])
-    df["hour"] = tindex.hour
-    df["minute"] = tindex.minute
-    df["second"] = tindex.second
-    df["micro"] = tindex.microsecond // 1000
-    df["year"] = tindex.year
-    df["month"] = tindex.month
-    df["date"] = tindex.day
-    df["second"] = df.second.astype("str") + "." + df.micro.astype("str")
-    df.drop("micro", axis=1, inplace=True)
 
 
 # def check_for_existing_files(config, tstr):
@@ -157,7 +162,19 @@ def add_time_columns(df):
 #     return all_done, channels_to_do
 
 
-def get_data_for_merge(tstr, config):
+def get_obs_and_rdr1(tstr, config):
+    obs = fu.DivObs(tstr)
+
+    try:
+        rdr1 = rdrx.RDRS(obs.rdrsfname.path)
+    except RDRS_NotFoundError:
+        module_logger.warning("RDRS not found for {}".format(tstr))
+        raise RDRS_NotFoundError
+
+    return obs, rdr1
+
+
+def get_newly_calibrated(tstr, config):
     """get_data_for merge does many things.
 
     1. Get the older, unchanged RDRS data, to be merged into the new RDR
@@ -175,40 +192,46 @@ def get_data_for_merge(tstr, config):
     obs, rdr1, tb, rad
     DivObs object, rdr1 reference, newly calibrated tb and rad data.
     """
-    savedir = config.savedir
     # start processing
     module_logger.info("Processing {0}".format(tstr))
-    obs = fu.DivObs(tstr)
-    try:
-        rdr1 = rdrx.RDRS(obs.rdrsfname.path)
-    except RDRS_NotFoundError:
-        module_logger.warning("RDRS not found for {}".format(tstr))
-        raise RDRS_NotFoundError
-    if not path.exists(get_tb_savename(savedir, tstr)):
+
+    tb_savename = config.get_tb_savename(tstr)
+    rad_savename = config.get_rad_savename(tstr)
+    if not all([tb_savename.exists(), rad_savename.exists()]):
         try:
-            calibrate_tstr(tstr, savedir, config.do_rad_corr)
+            calibrate_tstr(tstr, config)
         except:  # noqa: E722
             module_logger.error("Calibration failed for {}".format(tstr))
             raise DivCalibError
-    try:
-        tb = pd.read_hdf(get_tb_savename(savedir, tstr), "df")
-    except KeyError:
-        module_logger.error("Could not find key 'df' in tb file for {}".format(tstr))
-        return
-    try:
-        rad = pd.read_hdf(get_rad_savename(savedir, tstr), "df")
-    except KeyError:
-        module_logger.error("Could not find key 'df' in rad file for {}".format(tstr))
-        return
-    return obs, rdr1, tb, rad
+    tb = pd.read_hdf(tb_savename, "df")
+    rad = pd.read_hdf(rad_savename, "df")
+
+    return tb, rad
+
+
+def get_tb_and_rad(tstr, config):
+    # False = uncorrected, True = corrected
+    newly_calibrated = {
+        True: {"tb": None, "rad": None},
+        False: {"tb": None, "rad": None},
+    }
+    for corr in [True, False]:
+        config.corrected = corr
+
+        try:
+            tb, rad = get_newly_calibrated(tstr, config)
+        except Exception as e:
+            module_logger.error("Error in get_data_for_merge: {}".format(e))
+            raise (e)
+        newly_calibrated[corr]["tb"] = tb
+        newly_calibrated[corr]["rad"] = rad
+    return newly_calibrated
 
 
 def produce_tstr(args, return_df=False, convert_to_RDR2=True):
     tstr, config = args
 
     module_logger.debug("Entered produce_tstr()")
-
-    savedir = config.savedir
 
     # first create symlinks to avoid duplication
     # symlink_existing_files(config, tstr)
@@ -221,88 +244,115 @@ def produce_tstr(args, return_df=False, convert_to_RDR2=True):
     #     )
     #     return
 
-    try:
-        obs, rdr1, tb, rad = get_data_for_merge(tstr, config)
-    except Exception as e:
-        module_logger.error("Error in get_data_for_merge: {}".format(e))
-        raise (e)
+    obs, rdr1 = get_obs_and_rdr1(tstr, config)
+
+    newly_calibrated = get_tb_and_rad(tstr, config)
 
     mergecols = ["index", "det"]
-    for c in channels_to_do:
+
+    for c in range(config.c_start, config.c_end + 1):
+
         module_logger.debug("Processing channel {} of {}".format(c, tstr))
+
         channel = au.Channel(c)
+
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
 
-        tb_molten_c = grep_channel_and_melt(tb, "tb", channel, obs)
-        return tb_molten_c
-        rad_molten_c = grep_channel_and_melt(rad, "radiance", channel, obs)
+        # False = uncorrected, True = corrected
+        new_data = {False: {"tb": None, "rad": None}, True: {"tb": None, "rad": None}}
 
-        rdr2 = rdr1_merged.merge(tb_molten_c, left_on=mergecols, right_on=mergecols)
-        rdr2 = rdr2.merge(rad_molten_c, left_on=mergecols, right_on=mergecols)
-        add_time_columns(rdr2)
-        rdr2.fillna(-9999, inplace=True)
-        rdr2.det = rdr2.det.astype("int")
-        rdr2.drop("index", inplace=True, axis=1)
-        rdr2["c"] = channel.div
-        clon_cols = rdr2.filter(regex="^clon_").columns
-        if config.swap_clons:
-            for col in clon_cols:
-                rdr2[col] = rdr2[col].map(lambda x: -(360 - x) if x > 180 else x)
-        if convert_to_RDR2:
-            # big restructure, reshuffling of columns happens now:
-            rdr2 = reformat_for_pipes(rdr2)
-        # storing results
-        fname = config.get_rdr2_savename(tstr, c)
-        if config.out_format == "csv":
-            rdr2.to_csv(fname, index=False)
-        elif config.out_format == "bin":
-            # put a descriptor file next to the data
-            descpath = config.pipes_dir / "rdr2_verif.des"
-            with open(descpath, "w") as f:
-                f.write(cols_to_descriptor(rdr2.columns))
-            # now write the values in binary form
-            rdr2.values.astype(np.double).tofile(str(fname))
+        for corr in [True, False]:
+            suffix = "_corr" if corr is True else ""
+            for col in ["tb", "rad"]:
+                new_data[corr][col] = grep_channel_and_melt(
+                    newly_calibrated[corr][col], col, channel, obs, suffix=suffix,
+                )
+
+            config.corrected = corr
+            rdr2 = single_merge(rdr1_merged, new_data, config.corrected)
+            post_merge(rdr2, channel, config)
+            store(rdr2, config, tstr, c)
+
+        config.corrected = "both"
+        rdr2 = double_merge(rdr1_merged, new_data)
+        post_merge(rdr2, channel, config)
+        rdr2 = reformat_for_pipes(rdr2)
+        store(rdr2, config, tstr, c)
+
     gc.collect()
-    if return_df:
-        return rdr2
+
+
+def add_time_columns(df):
+    tindex = pd.DatetimeIndex(df["index"])
+    df["hour"] = tindex.hour
+    df["minute"] = tindex.minute
+    df["second"] = tindex.second
+    df["micro"] = tindex.microsecond // 1000
+    df["year"] = tindex.year
+    df["month"] = tindex.month
+    df["date"] = tindex.day
+    df["second"] = df.second.astype("str") + "." + df.micro.astype("str")
+    df.drop("micro", axis=1, inplace=True)
+
+
+def store(rdr2, config, tstr, c):
+    # storing results
+    fname = config.get_rdr2_savename(tstr, c)
+    if config.out_format == "csv":
+        rdr2.to_csv(fname, index=False)
+    elif config.out_format == "bin":
+        # put a descriptor file next to the data
+        descpath = fname.parent / "rdr2.des"
+        with open(descpath, "w") as f:
+            f.write(cols_to_descriptor(rdr2.columns))
+        # now write the values in binary form
+        rdr2.values.astype(np.double).tofile(str(fname))
+
+
+def single_merge(rdr1_merged, new_data, corr):
+    mergecols = ["index", "det"]
+    rdr2 = rdr1_merged.merge(new_data[corr]["tb"], on=mergecols)
+    rdr2 = rdr2.merge(new_data[corr]["rad"], on=mergecols)
+    return rdr2
+
+
+def double_merge(rdr1_merged, new_data):
+    mergecols = ["index", "det"]
+    rdr2 = single_merge(rdr1_merged, new_data, True)
+    for col in ["tb", "rad"]:
+        rdr2 = rdr2.merge(new_data[False][col], on=mergecols)
+    return rdr2
+
+
+def post_merge(rdr2, channel, config):
+    add_time_columns(rdr2)
+    rdr2.fillna(-9999, inplace=True)
+    rdr2.det = rdr2.det.astype("int")
+    rdr2.drop("index", inplace=True, axis=1)
+    rdr2["c"] = channel.div
+    clon_cols = rdr2.filter(regex="^clon_").columns
+    if config.swap_clons:
+        for col in clon_cols:
+            rdr2[col] = rdr2[col].map(lambda x: -(360 - x) if x > 180 else x)
 
 
 def reformat_for_pipes(df):
-    # adapt to new format
-    # drop the old quality flags
-    df = df.drop(["qca", "qge"], axis=1)
+    """Reformat dataframe for RDR2 pipes.
 
-    # get utc column
-    df.rename({"date": "day"}, axis=1, inplace=True)
-    time_cols = "year month day hour minute second".split()
-    utc = pd.to_datetime(df[time_cols])
-    df = df.drop(time_cols, axis=1)
-
-    df["date"] = utc.dt.strftime("%Y%m%d")
-    seconds = (
-        utc.dt.hour * 3600
-        + utc.dt.minute * 60
-        + utc.dt.second
-        + utc.dt.microsecond * 1e-6
-    )
-    df["time"] = seconds
-    # df['utc'] = df.utc.dt.strftime("%H:%M:%S.%f").str[:-3]
-
+    This funcion works for a dataframe that has both corrected and uncorrected Tb and
+    Radiances.
+    """
     # add cphase and roi
     df["cphase"] = 123.45678
     df["roi"] = 1234
 
-    flags = ["o", "v", "i", "m", "q", "p", "e", "z", "t", "h", "d", "n", "s", "a", "b"]
-
-    for flag in flags:
+    for flag in columns.flags:
         df[flag] = 0
 
-    newcols = newformat[1]
-    # dropping UTC column
-    newcols = newcols.drop(1).values.tolist()
-    newcols.insert(1, "time")
-    return df[newcols]
+    # conform to previous divdata name "radiance" (instead of "rad")
+    df = df.rename({'rad':'radiance', 'rad_corr':'radiance_corrected'}, axis=1)
 
+    return df[columns.rdr2_pipe_cols]
 
 
 # def prepare_rdr2_write(df):
