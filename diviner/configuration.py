@@ -53,7 +53,12 @@ class Config:
 
     @property
     def corr(self):
-        return "corrected" if self.corrected else "uncorrected"
+        if self.corrected is True:
+            return "corrected"
+        elif self.corrected is False:
+            return "uncorrected"
+        else:
+            return "merged"
 
     @property
     def rdr2_savedir(self):
@@ -69,10 +74,9 @@ class Config:
         p.parent.mkdir(exist_ok=True, parents=True)
         return p
 
-    def get_rdr2_savename(self, tstr, c, savedir=None):
+    def get_rdr2_savename(self, tstr, c):
         corr = self.corr
-        if savedir is None:
-            savedir = self.rdr2_savedir
+        savedir = self.rdr2_savedir
         p = savedir / f"{corr}/{self.out_format}/{tstr}_C{c}_RDR2_{corr}.{self.out_format}"
         p.parent.mkdir(exist_ok=True, parents=True)
         return p
