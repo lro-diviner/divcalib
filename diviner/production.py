@@ -15,7 +15,7 @@ from joblib import Parallel, delayed
 from diviner import ana_utils as au
 from diviner import calib
 from diviner import file_utils as fu
-from diviner.exceptions import RDRS_NotFoundError
+from diviner.exceptions import DivCalibError, RDRS_NotFoundError
 
 from . import configuration, rdrx
 from .bintools import cols_to_descriptor
@@ -34,18 +34,6 @@ cols_no_melt = [i for i in formats.colname if i in rdrx.no_melt]
 cols_skip = "c det tb radiance".split()
 cols_to_melt = list(set(formats.colname) - set(cols_no_melt) - set(cols_skip))
 cols_to_melt = [i for i in cols_to_melt if i in rdrx.to_melt]
-
-
-def get_tb_savename(savedir, tstr):
-    return path.join(savedir, tstr + "_tb.hdf")
-
-
-def get_rad_savename(savedir, tstr):
-    return path.join(savedir, tstr + "_radiance.hdf")
-
-
-def get_rdr2_savename(savedir, tstr, c):
-    return path.join(savedir, "{0}_C{1}_RDR_2.CSV".format(tstr, c))
 
 
 def get_example_data():
@@ -111,20 +99,20 @@ def melt_and_merge_rdr1(rdrxobject, c):
     return final
 
 
-def symlink_existing_files(config, tstr):
-    """Find and symlink existing files to avoid duplication."""
+# def symlink_existing_files(config, tstr):
+#     """Find and symlink existing files to avoid duplication."""
 
-    for c in range(config.c_start, config.c_end + 1):
-        path_here = config.get_rdr2_savename(tstr, c)
-        # if I have the file in current folder, no need to look it up in others
-        if path.exists(path_here):
-            continue
-        for folder in config.get_other_folders():
-            othersavedir = path.join(config.rdr2_root, folder)
-            otherpath = config.get_rdr2_savename(tstr, c, savedir=othersavedir)
-            if path.exists(otherpath):
-                os.symlink(otherpath, path_here)
-                module_logger.info("Symlinked {} into {}".format(otherpath, path_here))
+#     for c in range(config.c_start, config.c_end + 1):
+#         path_here = config.get_rdr2_savename(tstr, c)
+#         # if I have the file in current folder, no need to look it up in others
+#         if path.exists(path_here):
+#             continue
+#         for folder in config.get_other_folders():
+#             othersavedir = path.join(config.rdr2_root, folder)
+#             otherpath = config.get_rdr2_savename(tstr, c, savedir=othersavedir)
+#             if path.exists(otherpath):
+#                 os.symlink(otherpath, path_here)
+#                 module_logger.info("Symlinked {} into {}".format(otherpath, path_here))
 
 
 def grep_channel_and_melt(indf, colname, channel, obs, invert_dets=True):
@@ -153,38 +141,55 @@ def add_time_columns(df):
     df.drop("micro", axis=1, inplace=True)
 
 
-def check_for_existing_files(config, tstr):
-    channels_to_do = []
-    # check which channels are not done yet, if so.
-    all_done = True
-    for c in range(config.c_start, config.c_end + 1):
-        fname = config.get_rdr2_savename(tstr, c)
-        if path.exists(fname) and (not config.overwrite):
-            module_logger.debug(
-                "Found existing RDR2, skipping: {}".format(path.basename(fname))
-            )
-        else:
-            all_done = False
-            channels_to_do.append(c)
-    return all_done, channels_to_do
+# def check_for_existing_files(config, tstr):
+#     channels_to_do = []
+#     # check which channels are not done yet, if so.
+#     all_done = True
+#     for c in range(config.c_start, config.c_end + 1):
+#         fname = config.get_rdr2_savename(tstr, c)
+#         if path.exists(fname) and (not config.overwrite):
+#             module_logger.debug(
+#                 "Found existing RDR2, skipping: {}".format(path.basename(fname))
+#             )
+#         else:
+#             all_done = False
+#             channels_to_do.append(c)
+#     return all_done, channels_to_do
 
 
-def get_data_for_merge(tstr, savedir):
+def get_data_for_merge(tstr, config):
+    """get_data_for merge does many things.
+
+    1. Get the older, unchanged RDRS data, to be merged into the new RDR
+    2. Perform the new calibration if the Tb and Radiance files aren't there yet.
+
+    Parameters
+    ----------
+    tstr : str
+        Format: %Y%m%d%H, a standard EDR time string to identify a data file
+    config : configuration.Config
+        config object holding all the paths.
+
+    Returns
+    -------
+    obs, rdr1, tb, rad
+    DivObs object, rdr1 reference, newly calibrated tb and rad data.
+    """
+    savedir = config.savedir
     # start processing
     module_logger.info("Processing {0}".format(tstr))
     obs = fu.DivObs(tstr)
     try:
         rdr1 = rdrx.RDRS(obs.rdrsfname.path)
-        # rdr1 = rdrx.RDRR(obs.rdrrfname.path)
     except RDRS_NotFoundError:
         module_logger.warning("RDRS not found for {}".format(tstr))
-        return
+        raise RDRS_NotFoundError
     if not path.exists(get_tb_savename(savedir, tstr)):
         try:
             calibrate_tstr(tstr, savedir, config.do_rad_corr)
         except:  # noqa: E722
             module_logger.error("Calibration failed for {}".format(tstr))
-            return
+            raise DivCalibError
     try:
         tb = pd.read_hdf(get_tb_savename(savedir, tstr), "df")
     except KeyError:
@@ -203,22 +208,21 @@ def produce_tstr(args, return_df=False, convert_to_RDR2=True):
 
     module_logger.debug("Entered produce_tstr()")
 
-    rdr2savedir = config.rdr2savedir
     savedir = config.savedir
 
     # first create symlinks to avoid duplication
     # symlink_existing_files(config, tstr)
     # now determine whatever else is left to do:
-    all_done, channels_to_do = check_for_existing_files(config, tstr)
+    # all_done, channels_to_do = check_for_existing_files(config, tstr)
 
-    if all_done:
-        module_logger.info(
-            "Not overwriting existing files for {}. Returning.".format(tstr)
-        )
-        return
+    # if all_done:
+    #     module_logger.info(
+    #         "Not overwriting existing files for {}. Returning.".format(tstr)
+    #     )
+    #     return
 
     try:
-        obs, rdr1, tb, rad = get_data_for_merge(tstr, savedir)
+        obs, rdr1, tb, rad = get_data_for_merge(tstr, config)
     except Exception as e:
         module_logger.error("Error in get_data_for_merge: {}".format(e))
         raise (e)
@@ -226,11 +230,11 @@ def produce_tstr(args, return_df=False, convert_to_RDR2=True):
     mergecols = ["index", "det"]
     for c in channels_to_do:
         module_logger.debug("Processing channel {} of {}".format(c, tstr))
-        fname = config.get_rdr2_savename(tstr, c)
         channel = au.Channel(c)
         rdr1_merged = melt_and_merge_rdr1(rdr1, channel.div)
 
         tb_molten_c = grep_channel_and_melt(tb, "tb", channel, obs)
+        return tb_molten_c
         rad_molten_c = grep_channel_and_melt(rad, "radiance", channel, obs)
 
         rdr2 = rdr1_merged.merge(tb_molten_c, left_on=mergecols, right_on=mergecols)
@@ -247,11 +251,13 @@ def produce_tstr(args, return_df=False, convert_to_RDR2=True):
         if convert_to_RDR2:
             # big restructure, reshuffling of columns happens now:
             rdr2 = reformat_for_pipes(rdr2)
+        # storing results
+        fname = config.get_rdr2_savename(tstr, c)
         if config.out_format == "csv":
             rdr2.to_csv(fname, index=False)
         elif config.out_format == "bin":
-            # first put a descriptor file next to it if it doesn't exist
-            descpath = rdr2savedir / "rdr2_verif.des"
+            # put a descriptor file next to the data
+            descpath = config.pipes_dir / "rdr2_verif.des"
             with open(descpath, "w") as f:
                 f.write(cols_to_descriptor(rdr2.columns))
             # now write the values in binary form
@@ -297,46 +303,6 @@ def reformat_for_pipes(df):
     newcols.insert(1, "time")
     return df[newcols]
 
-
-if __name__ == "__main__":
-
-    try:
-        configfile = sys.argv[1]
-    except IndexError:
-        print("Provide config file as argument")
-        sys.exit()
-
-    config = configparser.ConfigParser()
-    config.read(configfile)
-
-    # paths and scope of production run
-    start = config.get("run_control", "start")
-    stop = config.get("run_control", "stop")
-    rad_tb_path = config.get("paths", "rad_tb")
-    pipes_path = config.get("paths", "pipes")
-
-    # calibration control options
-    overwrite = config.getbool("calibration", "overwrite")
-    c_start = config.getint("calibration", "c_start")
-    c_end = config.getint("calibration", "c_end")
-    do_rad_corr = config.getbool("calibration", "do_rad_corr")
-    swap_clons = config.getbool("calibration", "swap_clons")
-    save_as_pipes = config.getbool("calibration", "save_as_pipes")
-
-    config = Configurator(
-        startstop=(start, stop),
-        overwrite=overwrite,
-        do_rad_corr=do_rad_corr,
-        save_as_pipes=save_as_pipes,
-        swap_clons=swap_clons,
-    )
-    if not path.exists(config.rdr2savedir):
-        os.mkdir(config.rdr2savedir)
-
-    tstrings = config.tstrings
-    Parallel(n_jobs=8, verbose=20)(
-        delayed(produce_tstr)((tstr, config)) for tstr in tstrings
-    )
 
 
 # def prepare_rdr2_write(df):
