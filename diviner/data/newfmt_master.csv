@@ -1,0 +1,48 @@
+,colname,type,length,description
+0,date,CHARACTER,11,"Date at the midpoint of observation (SCET, UTC). E.g. '25-Jun-2009'"
+1,utc,CHARACTER,12,"Time at the midpoint of observation (SCET, UTC). E.g. '19:35.37.440'"
+2,jdate,ASCII_REAL,17,"Julian Date at the midpoint of observation (SCET, UTC). E.g. 2454102.123456789"
+3,orbit,ASCII_INTEGER,5,Orbit number. 0 to 99999
+4,sundist,ASCII_REAL,7,The distance from the center of the moon to the sun (AU). E.g. 1.00001
+5,sunlat,ASCII_REAL,8,Subsolar Latitude (deg). E.g. -1.54333
+6,sunlon,ASCII_REAL,9,Subsolar East Longitude (deg). 0.00000 to 360.00000
+7,sclk,ASCII_REAL,16,"Spacecraft clock at midpoint of observation (seconds.subseconds). The seconds are relative to the 2001 epoch. The numbers to the right of the decimal point are not decimal fraction of a second but rather subseconds. Each second is divided into 65536 subseconds, thus the range for subseconds is 0 - 65535. Example: 123456789.00001"
+8,sclat,ASCII_REAL,9,Subspacecraft Latitude (deg). -90.00000 to 90.00000
+9,sclon,ASCII_REAL,9,Subspacecraft East Longitude (deg). 0 to 360.00000
+10,scrad,ASCII_REAL,11,Distance from the center of moon to the spacecraft (km). E.g.: 11000.00000
+11,scalt,ASCII_REAL,11,Distance from the surface of the moon to the spacecraft (km). E.g.: 11000.00000. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS.
+12,el_cmd,ASCII_REAL,7,Last Elevation Command (deg). 0 to 270.000
+13,az_cmd,ASCII_REAL,7,Last Azimuth Command (deg). 0 to 270.000
+14,af,ASCII_INTEGER,4,Activity Flag. See Appendix B of DLRE RDR SIS for description
+15,orientlat,ASCII_REAL,9,"Orientation Latitude (deg). The latitudinal component of the 'orientation vector', a vector from the center of the moon in the direction of the detector array direction (defined as from detector 21 to detector 1). Provides angular orientation of the FOV's. -90.00000 to 90.00000"
+16,orientlon,ASCII_REAL,9,"Orientation Longitude (deg). The east longitudinal component of the 'orientation vector', a vector from the center of the moon in the direction of the detector array direction (defined as from detector 21 to detector 1). Provides angular orientation of the FOV's. 0 to 360.00000"
+17,c,ASCII_INTEGER,1,Diviner Channel Number. 1 to 9
+18,det,ASCII_INTEGER,3,Diviner Detector Number. 1 to 21
+19,vlookx,ASCII_REAL,9,"The X component of the Diviner Look Unit Vector, using the lunar coordinate system described in Section 2.4.3 of the RDR SIS. E.g. -0.999999"
+20,vlooky,ASCII_REAL,9,"The Y component of the Diviner Look Unit Vector, using the lunar coordinate system described in Section 2.4.3 of the RDR SIS. E.g. -0.999999"
+21,vlookz,ASCII_REAL,9,"The Z component of the Diviner Look Unit Vector, using the lunar coordinate system described in Section 2.4.3 of the RDR SIS. E.g. -0.999999"
+22,radiance,ASCII_REAL,10,Calibrated Radiance (W m**-2 sr**-1). Range is -1000.0000 to 1000.0000
+23,tb,ASCII_REAL,8,"Calibrated Brightness Temperature (K). Except for Channels 1 and 2, which is radiance relative to normally illuminated Lambert surface at sun-moon distance. Range is -450.000 to 450.000, where negative tb values correspond to negative radiance values."
+24,clat,ASCII_REAL,9,Latitude of FOV center (deg). Undefined if off planet. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS. -90.00000 to 90.00000
+25,clon,ASCII_REAL,9,East longitude of FOV center (deg). Undefined if off planet. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS. 0 to 360.00000
+26,cemis,ASCII_REAL,9,Emission Angle at FOV center (deg). Undefined if off planet. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS. 0 to 90.00000
+27,csunzen,ASCII_REAL,9,Solar Zenith angle at FOV center (deg). Undefined when off planet except during solar calibrations when it is defined as the solar zenith angle of the detector FOV center projected onto the solar calibration target. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS. 0 to 180.00000
+28,csunazi,ASCII_REAL,9,Solar Azimuth Angle at FOV Center (deg). 0 degrees when aligned with the solar vector and measured counter-clockwise when looking down at the planet. Undefined when off planet except during solar calibrations when it is defined as the solar azimuth angle of the detector FOV center projected onto the solar calibration target. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS. 0 to 360.00000
+29,cloctime,ASCII_REAL,8,Local time at FOV Center (hours past midnight). Undefined if off planet. Uses ellipsoidal moon approximation as described in Section 2.4.3 of the RDR SIS. 0 to 24.00000
+30,cphase,ASCII_REAL,9,Phase Angle at FOV Center (deg). 0 to 180
+31,roi,ASCII_INTEGER,4,ROI 0 to 9999
+32,o,ASCII_INTEGER,1,Orientation 0 to 9
+33,v,ASCII_INTEGER,1,View 0 to 9
+34,i,ASCII_INTEGER,1,Instrument 0 to 9
+35,m,ASCII_INTEGER,1,Moving 0 to 1
+36,q,ASCII_INTEGER,1,Quality of Calibration 0 to 9
+37,p,ASCII_INTEGER,1,Pointing Type 0 to 9
+38,e,ASCII_INTEGER,1,Ephemeris Type 0 to 9
+39,z,ASCII_INTEGER,1,Eclipse 0 to 1
+40,t,ASCII_INTEGER,1,Turn on transient 0 to 1
+41,h,ASCII_INTEGER,1,Abnormal instrument thermal state 0 to 1
+42,d,ASCII_INTEGER,1,Temperature Drift 0 to 1
+43,n,ASCII_INTEGER,1,Noise level 0 to 9
+44,s,ASCII_INTEGER,1,Channel 1 Saturation 0 to 1
+45,a,ASCII_INTEGER,1,Reserved 0 to 9
+46,b,ASCII_INTEGER,1,Reserved 0 to 9
