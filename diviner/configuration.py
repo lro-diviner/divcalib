@@ -49,11 +49,7 @@ class Config:
 
     @property
     def savedir(self):
-        p = self.prodrun / self.data["paths"]["rad_tb"]
-        if not p.exists():
-            print(f"Creating {p}.")
-            p.mkdir(parents=True)
-        return p
+        return self.prodrun / self.data["paths"]["rad_tb"]
 
     @property
     def corr(self):
@@ -61,20 +57,22 @@ class Config:
 
     @property
     def rdr2_savedir(self):
-        p = self.prodrun / "rdr2"
-        if not p.exists():
-            print(f"Creating {p}.")
-            p.mkdir(parents=True)
-        return p
+        return self.prodrun / "rdr2"
 
     def get_tb_savename(self, tstr):
-        return self.savedir / f"{self.corr}/{tstr}_{self.corr}_tb.hdf"
+        p = self.savedir / f"{self.corr}/{tstr}_{self.corr}_tb.hdf"
+        p.parent.mkdir(exist_ok=True, parents=True)
+        return p
 
     def get_rad_savename(self, tstr):
-        return self.savedir / f"{self.corr}/{tstr}_{self.corr}_radiance.hdf"
+        p = self.savedir / f"{self.corr}/{tstr}_{self.corr}_radiance.hdf"
+        p.parent.mkdir(exist_ok=True, parents=True)
+        return p
 
-    def get_rdr2_pipes_savename(self, tstr, c, savedir=None):
+    def get_rdr2_savename(self, tstr, c, savedir=None):
         corr = self.corr
         if savedir is None:
             savedir = self.rdr2_savedir
-        return savedir / f"{corr}/{tstr}_C{c}_RDR2_{corr}.{self.out_format}"
+        p = savedir / f"{corr}/{self.out_format}/{tstr}_C{c}_RDR2_{corr}.{self.out_format}"
+        p.parent.mkdir(exist_ok=True, parents=True)
+        return p
