@@ -30,22 +30,22 @@ try:
 except KeyError:
     user = "none"
 
-home = os.environ["HOME"]
+home = Path.home()
 
 if sys.platform == "darwin":
-    datapath = pjoin(home, "data", "diviner")
-    outpath = pjoin(datapath, "out")
-    kernelpath = pjoin(home, "data", "spice", "diviner")
-    codepath = pjoin(home, "Dropbox", "src", "diviner")
-    l1adatapath = pjoin(datapath, "l1a_data")
-    rdrdatapath = pjoin(datapath, "opsRDR")
-    rdrrdatapath = pjoin(os.environ["HOME"], "data", "diviner", "rdrr_data")
-    rdrsdatapath = pjoin(os.environ["HOME"], "data", "diviner", "rdrs_data")
+    datapath = home / "Dropbox/data/diviner"
+    outpath = datapath / "out"
+    kernelpath = home / "data/spice/diviner"
+    codepath = home / "Dropbox/src/diviner"
+    l1adatapath = datapath / "l1a_data"
+    rdrdatapath = datapath / "opsRDR"
+    rdrrdatapath = datapath / "rdrr_data"
+    rdrsdatapath = datapath / "rdrs_data"
 else:
-    datapath = pjoin(path.sep, hostname, user)
-    outpath = pjoin(datapath, "rdr_out")
-    kernelpath = pjoin(datapath, "kernels")
-    codepath = pjoin(os.environ["HOME"], "src/diviner")
+    datapath = Path(hostname) / user
+    outpath = datapath / "rdr_out"
+    kernelpath = datapath / "kernels"
+    codepath = home / "src/diviner"
     feipath = Path("/q/marks/feidata/")
     l1adatapath = feipath / "DIV:opsL1A/data"
     rdrdatapath = feipath / "DIV:opsRdr/data"
@@ -59,7 +59,7 @@ else:
 def scp_l1a_file(tstr):
     src_host = "luna4"
     target_path = pjoin(datapath, "l1a_data")
-    src_datadir = "/luna1/marks/feidata/DIV:opsL1A/data"
+    src_datadir = l1adatapath
     cmd = f"scp {src_host}:{src_datadir}/{tstr}_L1A.TAB {target_path}"
     print(cmd)
     call(cmd, shell=True)
@@ -281,7 +281,7 @@ class FileName(object):
     """Managing class for file name attributes."""
 
     ext = ""  # fill in child class !
-    datapath = ""  # fill in child class !
+    datapath = Path.home()  # fill in child class !
 
     @classmethod
     def from_tstr(cls, tstr):
@@ -937,10 +937,10 @@ class L1AParquetDataPump:
 
     def find_fnames(self):
         "Needs self.datapath to be defined in derived class."
-        fnames = list(self.year_folder.glob(self.tstr+'*'))
+        fnames = list(self.year_folder.glob(self.tstr + "*"))
         if not fnames:
             print("No files found. Searched like this:\n")
-            print(self.year_folder / (self.tstr + '*'))
+            print(self.year_folder / (self.tstr + "*"))
         return sorted(fnames)
 
 
