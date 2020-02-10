@@ -28,6 +28,7 @@ class Config:
         if p.exists():
             print(f"Found config {config_fname} in home directory.")
             self.data = read_config(p)
+            self.path = p
         else:
             print("No config file found.")
             return None
@@ -37,7 +38,16 @@ class Config:
 
         # this status attribute determines if paths are created for
         # corrected or uncorrected data
-        self.corrected = False
+        self._corrected = self.data['calibration']['do_rad_corr']
+
+
+    @property
+    def corrected(self):
+        return self._corrected
+
+    @corrected.setter
+    def corrected(self, value):
+        self._corrected = value
 
     @property
     def root(self):

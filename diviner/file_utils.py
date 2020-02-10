@@ -23,6 +23,7 @@ from dateutil.parser import parse as dateparser
 from .data_prep import define_sdtype, index_by_time, prepare_data
 from .exceptions import (DivTimeLengthError, L1ANotFoundError,
                          RDRR_NotFoundError, RDRS_NotFoundError)
+from .time import DivTime
 
 hostname = socket.gethostname().split(".")[0]
 try:
@@ -172,60 +173,6 @@ def calc_daterange(start, end):
 #
 def get_month_sample_path_from_mode(mode):
     return pjoin(datapath, "rdr20_month_samples", mode)
-
-
-class DivTime(object):
-
-    """Manage time-related metadata for Diviner observations.
-
-    Abstract class! Use the derivatives!
-    """
-
-    fmt_hour = "%Y%m%d%H"
-    len_hour = 10
-    fmt_day = "%Y%m%d"
-    len_day = 8
-
-    @classmethod
-    def from_dtime(cls, dtime):
-        tstr = dtime.strftime(cls.fmt_hour)
-        return cls(tstr)
-
-    def __init__(self, tstr):
-        if not self.len_day <= len(tstr) <= self.len_hour:
-            raise DivTimeLengthError(tstr, "8 <= len(tstr) <= 10")
-        self.tstr = tstr
-        self.year = self.tstr[:4]
-        self.month = self.tstr[4:6]
-        self.day = self.tstr[6:8]
-        if len(self.tstr) > 8:
-            self.hour = self.tstr[8:10]
-        if len(tstr) == 8:
-            fmt = self.fmt_day
-        elif len(tstr) == 10:
-            fmt = self.fmt_hour
-        self.fmt = fmt
-        self.dtime = dt.strptime(self.tstr, fmt)
-
-    def __str__(self):
-        s = f"{self.__class__.__name__}\n"
-        s += f"{self.dtime}"
-        return s
-
-    def __repr__(self):
-        return self.__str__()
-
-    @property
-    def tindex(self):
-        return self.tstr[:8] + " " + self.tstr[8:]
-
-    @property
-    def previous(self):
-        return DivTime.from_dtime(self.dtime - timedelta(hours=1))
-
-    @property
-    def next(self):
-        return DivTime.from_dtime(self.dtime + timedelta(hours=1))
 
 
 class DivObs(object):
