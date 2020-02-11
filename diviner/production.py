@@ -38,7 +38,6 @@ def calibrate_tstr(tstr, config):
     "Main function for pure calibration part."
     module_logger.info("Calibrating {}".format(tstr))
     sys.stdout.flush()
-    do_rad_corr = config.do_rad_corr
     df = fu.open_and_accumulate(tstr=tstr)
     try:
         if len(df) == 0:
@@ -248,8 +247,6 @@ def produce_tstr(args, return_df=False, convert_to_RDR2=True):
 
     newly_calibrated = get_tb_and_rad(tstr, config)
 
-    mergecols = ["index", "det"]
-
     for c in range(config.c_start, config.c_end + 1):
 
         module_logger.debug("Processing channel {} of {}".format(c, tstr))
@@ -350,7 +347,7 @@ def reformat_for_pipes(df):
         df[flag] = 0
 
     # conform to previous divdata name "radiance" (instead of "rad")
-    df = df.rename({'rad':'radiance', 'rad_corr':'radiance_corrected'}, axis=1)
+    df = df.rename({"rad": "radiance", "rad_corr": "radiance_corrected"}, axis=1)
 
     return df[columns.rdr2_pipe_cols]
 
