@@ -21,8 +21,12 @@ import pandas as pd
 from dateutil.parser import parse as dateparser
 
 from .data_prep import define_sdtype, index_by_time, prepare_data
-from .exceptions import (DivTimeLengthError, L1ANotFoundError,
-                         RDRR_NotFoundError, RDRS_NotFoundError)
+from .exceptions import (
+    DivTimeLengthError,
+    L1ANotFoundError,
+    RDRR_NotFoundError,
+    RDRS_NotFoundError,
+)
 from .time import DivTime
 
 hostname = socket.gethostname().split(".")[0]
@@ -196,6 +200,10 @@ class DivObs(object):
     def previous(self):
         prevhour = self.time.previous
         return DivObs(prevhour.tstr)
+
+    @property
+    def tstr(self):
+        return self.time.tstr
 
     def get_l1a(self):
         return L1ADataFile(self.l1afname.path).read()
